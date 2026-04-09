@@ -1,0 +1,22 @@
+# OpenTofu / Terraform
+tofu/.terraform/
+tofu/*.tfstate
+tofu/*.tfstate.*
+tofu/*.tfplan
+tofu/.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# Environment (credentials loaded by mise)
+.env
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
