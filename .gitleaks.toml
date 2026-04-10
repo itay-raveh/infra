@@ -11,5 +11,6 @@ paths = [
   '''.*\.sops\.ya?ml$''',
   '''bootstrap/cluster-age\.key\.sops$''',
   '''tofu/encryption-passphrase\.sops\.txt$''',
+  '''talos/tailscale-authkey\.sops\.txt$''',
   '''docs/design\.md$''',
 ]

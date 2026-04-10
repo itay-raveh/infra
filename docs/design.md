@@ -156,7 +156,7 @@ infra/
 ├── .pre-commit-config.yaml     # gitleaks, sops-verify, tofu fmt, yamllint
 │                               # REQUIRED to install: `pre-commit install` in every clone
 │
-├── .mise.toml                  # opentofu, talosctl, talhelper, flux, sops, age, age-plugin-yubikey,
+├── .mise.toml                  # opentofu, talosctl, flux, sops, age, age-plugin-yubikey,
 │                               # kubectl, gh, gitleaks, pre-commit, jq, yq, tailscale, yamllint
 │
 ├── .sops.yaml                  # age recipients (2 YubiKeys + 1 cluster software key) + path regexes
@@ -168,20 +168,16 @@ infra/
 │
 ├── tofu/
 │   ├── backend.tf              # S3 backend on Hetzner Object Storage, client-side encryption
-│   ├── versions.tf             # provider pins (hcloud, cloudflare, talos, random, sops)
-│   ├── variables.tf            # hcloud_token, cloudflare_*, ssh pub key (for Hetzner rescue)
+│   ├── versions.tf             # provider pins (hcloud, cloudflare, talos, imager, random, sops)
+│   ├── variables.tf            # hcloud_token, tailscale_auth_key, cloudflare_*, ssh pub key
 │   ├── locals.tf               # cluster name, region, version pins (tofu-side source of truth)
-│   ├── main.tf                 # calls hcloud-talos module, hcloud_volume, volume_attachment
-│   ├── talos.tf                # talos_image_factory_schematic, talhelper data source
+│   ├── main.tf                 # hcloud-talos module, imager_image, hcloud_volume, volume_attachment, patch locals
+│   ├── talos.tf                # talos_image_factory_schematic + raw.xz URL local
 │   ├── cloudflare.tf           # tunnel, tunnel config (* → traefik.svc:80), DNS
-│   └── outputs.tf              # tunnel_token, kubeconfig path, tailscale node name
+│   └── outputs.tf              # tunnel_token, server IPv4, kubeconfig path
 │
 ├── talos/
-│   ├── talconfig.yaml          # cluster name, version pins, node list, extraMounts
-│   ├── talsecret.sops.yaml     # SOPS-encrypted cluster secrets (PKI, bootstrap token)
-│   └── patches/
-│       ├── kubelet-extra-mounts.yaml
-│       └── tailscale-authkey.sops.yaml   # ExtensionServiceConfig for siderolabs/tailscale
+│   └── tailscale-authkey.sops.txt   # SOPS-encrypted Tailscale pre-auth key (single string)
 │
 └── clusters/frodo/
     ├── flux-system/            # written by `flux bootstrap`, don't hand-edit
@@ -243,7 +239,8 @@ resource "talos_image_factory_schematic" "frodo" {
 }
 
 locals {
-  talos_installer_image = "factory.talos.dev/installer/${talos_image_factory_schematic.frodo.id}:${local.talos_version}"
+  # Raw disk image URL consumed by the hcloud-talos/imager provider (§5.3).
+  talos_image_raw_url = "https://factory.talos.dev/image/${talos_image_factory_schematic.frodo.id}/${local.talos_version}/hcloud-arm64.raw.xz"
 }
 ```
 
@@ -253,120 +250,119 @@ locals {
 |---|---|
 | `siderolabs/hcloud` | Hetzner metadata integration, sets hostname and networking from Hetzner's metadata service |
 | `siderolabs/qemu-guest-agent` | Hetzner uses QEMU; lets Hetzner host issue graceful reboots, freeze filesystem on snapshot |
-| `siderolabs/tailscale` | Runs `tailscaled` as a host-level `ExtensionService`, managed by Talos. Brings `frodo` onto the tailnet at first boot using the SOPS-encrypted auth key in `talos/patches/tailscale-authkey.sops.yaml` |
+| `siderolabs/tailscale` | Runs `tailscaled` as a host-level `ExtensionService`, managed by Talos. Auth key is injected via the `hcloud-talos/talos/hcloud` module's `tailscale` input (§5.3), which we feed from a SOPS-encrypted file at apply time. |
 
-Schematic ID → installer image URL → `hcloud-talos` module consumes it as the `image` input for the control-plane nodepool.
+Schematic ID → `hcloud-arm64.raw.xz` URL → `imager_image` resource uploads it to Hetzner as a snapshot → `hcloud-talos/talos/hcloud` module consumes the snapshot ID. The Image Factory's container-image "installer" URL is not used here because v3.2.3 of the module only accepts Hetzner snapshot/ISO IDs, not factory URLs.
 
-### 5.3 Server + volume (via module)
+### 5.3 Server + volume (via module + imager)
+
+**Image snapshot step.** The `hcloud-talos/talos/hcloud` module v3.2.3 does not consume a factory URL directly — it expects a pre-built Hetzner snapshot. The companion `hcloud-talos/imager` Terraform provider bridges that gap: given a `.raw.xz` URL, it uploads the disk image to Hetzner and returns a snapshot ID.
+
+```hcl
+resource "imager_image" "frodo" {
+  architecture = "arm"
+  image_url    = local.talos_image_raw_url
+  location     = local.hcloud_location
+  description  = "Talos ${local.talos_version} (frodo schematic)"
+  labels       = { os = "talos", schematic = talos_image_factory_schematic.frodo.id }
+}
+```
+
+**Module call.** Note the v3.2.3 API: flat `control_plane_nodes` list (no nodepools, no per-node `image` field), `location_name` at module level, built-in `tailscale` wiring, and both API firewalls defaulting closed (we just leave them unset).
 
 ```hcl
 module "talos" {
   source  = "hcloud-talos/talos/hcloud"
-  version = "x.y.z"  # pinned, Renovate-managed
+  version = "= 3.2.3"
 
-  cluster_name       = "frodo"
+  cluster_name       = local.cluster_name
+  cluster_prefix     = true                              # so server name becomes "frodo-control-plane-1"
+  location_name      = local.hcloud_location
   hcloud_token       = var.hcloud_token
-  cluster_endpoint   = "https://<server-ipv4>:6443"
-  talos_version      = "v1.12.x"
-  kubernetes_version = "v1.35.x"
+  talos_version      = local.talos_version
+  kubernetes_version = local.kubernetes_version
 
-  controlplane_nodepools = [{
-    name                              = "cp"
-    type                              = "cax21"
-    location                          = "hel1"
-    count                             = 1
-    image                             = "..."  # from talos_image_factory_schematic
-  }]
-  worker_nodepools                    = []
-  allow_scheduling_on_control_plane   = true
+  # Custom snapshot from imager_image carries our Image Factory extensions.
+  talos_image_id_arm = imager_image.frodo.id
+  disable_x86        = true
+
+  control_plane_nodes = [
+    { id = 1, type = local.hcloud_server_type },
+  ]
+  worker_nodes                 = []
+  control_plane_allow_schedule = true
 
   # Cluster API (6443) and Talos API (50000) are NOT exposed to the public
-  # internet at all. Access happens over Tailscale (§0.5). The hcloud-talos
-  # module's firewall is configured to block both ports; everything reaches
-  # the cluster through the Tailscale mesh once tailscaled comes up inside
-  # the Talos system extension.
-  firewall_use_current_ip             = false
-  firewall_kube_api_source            = []  # empty = closed
-  firewall_talos_api_source           = []
+  # internet at all. Access happens over Tailscale (§0.5). The module's default
+  # is "block all", which is what we want, so firewall_kube_api_source and
+  # firewall_talos_api_source are left at null.
+  firewall_use_current_ip = false
+
+  # Tailscale as a Talos ExtensionService, managed by the module. The auth key
+  # is a sensitive tofu variable that the mise tofu-apply task fills in from
+  # talos/tailscale-authkey.sops.txt at apply time.
+  tailscale = {
+    enabled  = true
+    auth_key = var.tailscale_auth_key
+  }
+
+  # Patches the module can't express directly — e.g. mounting the Hetzner
+  # Volume into the Talos host namespace so workloads can bind it in.
+  talos_control_plane_extra_config_patches = [local.patch_data_volume_mount]
 }
 
+locals {
+  patch_data_volume_mount = yamlencode({
+    machine = {
+      kubelet = {
+        extraMounts = [{
+          destination = "/var/mnt/data"
+          type        = "bind"
+          source      = "/var/mnt/data"
+          options     = ["bind", "rshared", "rw"]
+        }]
+      }
+    }
+  })
+}
+```
+
+**Volume + attachment.** The module doesn't know about our data volume, so we create and attach it ourselves after the server is up. Server IDs are not exported by the module, so we look up the first control-plane server by its deterministic name (`frodo-control-plane-1`, because `cluster_prefix = true`).
+
+```hcl
 resource "hcloud_volume" "data" {
   name     = "frodo-data"
   size     = 40
-  location = "hel1"
+  location = local.hcloud_location
   format   = "ext4"
 
   lifecycle { prevent_destroy = true }
 }
 
+data "hcloud_server" "frodo_cp1" {
+  name       = "${local.cluster_name}-control-plane-1"
+  depends_on = [module.talos]
+}
+
 resource "hcloud_volume_attachment" "data" {
   volume_id = hcloud_volume.data.id
-  server_id = module.talos.control_plane_ids[0]
+  server_id = data.hcloud_server.frodo_cp1.id
   automount = false
 }
 ```
 
-### 5.4 Talos machineconfig via talhelper
+### 5.4 Talos machineconfig (patches as tofu locals, no talhelper)
 
-`hcloud-talos` gives us working base configs out of the box; `talhelper` is the layer where we express "our cluster's specific intent" as YAML and let it render the machineconfig deterministically. Flow:
+`hcloud-talos/talos/hcloud` v3.2.3 renders the base machineconfig internally (it owns PKI, bootstrap token, CNI, CCM, control-plane API endpoint) and applies it to the node itself via the `talos_machine_configuration_apply` resource in its own `talos.tf`. Everything we'd otherwise express in a `talhelper` rendering step becomes either:
 
-```
-talos/talconfig.yaml + talos/talsecret.sops.yaml + talos/patches/*.yaml
-                            │
-                            ▼   talhelper genconfig
-                            │
-                            ▼
-                     rendered machineconfigs
-                            │
-                            ▼   talosctl apply-config (from tofu's null_resource)
-                            │
-                            ▼
-                       frodo boot
-```
+- **A direct module input** — Tailscale, Kubernetes version, extra kubelet args, etc.
+- **An extra YAML patch string** passed via `talos_control_plane_extra_config_patches = [yamlencode({...}), ...]` — for things the module doesn't express directly (like our `kubelet.extraMounts` for the Hetzner Volume, above).
 
-`talos/talconfig.yaml`:
+This means the repo does **not** contain `talos/talconfig.yaml`, `talos/talsecret.sops.yaml`, or `talos/patches/*.yaml`. The only file under `talos/` is `tailscale-authkey.sops.txt` — a SOPS-encrypted text file containing the Tailscale pre-auth key as a single string. The `mise run tofu-apply` task decrypts it (YubiKey touch), exports it as `TF_VAR_tailscale_auth_key`, and runs tofu — the passphrase and Tailscale key then both travel through process memory, never hitting disk in plaintext.
 
-```yaml
-clusterName: frodo
-endpoint: https://frodo.<tailnet>.ts.net:6443   # Tailscale Magic DNS (§8.2)
-talosVersion: v1.12.x                            # Renovate-bumped
-kubernetesVersion: v1.35.x                       # Renovate-bumped
+Talos cluster PKI + bootstrap token + etcd encryption key are generated and stored inside the module's tofu state, protected by the same client-side state encryption as everything else (§5.1). No separate `talsecret.sops.yaml` to manage.
 
-cniConfig: { name: flannel }
-allowSchedulingOnControlPlanes: true
-
-nodes:
-  - hostname: frodo-cp-1
-    ipAddress: <tofu output: public IPv4>
-    controlPlane: true
-    installDisk: /dev/sda
-    extraMounts:
-      - destination: /var/mnt/data
-        type: bind
-        source: /var/mnt/data
-        options: [bind, rshared, rw]
-
-patches:
-  - "@./patches/kubelet-extra-mounts.yaml"
-  - "@./patches/hetzner-ccm-args.yaml"
-  - "@./patches/tailscale-authkey.sops.yaml"
-```
-
-`talos/patches/tailscale-authkey.sops.yaml` (sketched plaintext; committed as SOPS-encrypted):
-
-```yaml
-apiVersion: v1alpha1
-kind: ExtensionServiceConfig
-name: tailscale
-environment:
-  - TS_AUTHKEY=tskey-auth-<redacted>
-  - TS_HOSTNAME=frodo
-  - TS_EXTRA_ARGS=--advertise-tags=tag:frodo --ssh=false
-```
-
-**Why the endpoint uses Tailscale Magic DNS instead of the public IP:** once `tailscaled` comes up inside the Talos extension, `frodo` is reachable at `frodo.<tailnet>.ts.net` from any node on your tailnet. Using the Magic DNS name in the cluster endpoint means kubeconfig / talosconfig survive IP changes (Hetzner rarely rotates IPs, but more importantly: your laptop IP is now irrelevant). It also means 6443 never needs a public listener.
-
-`talos/talsecret.sops.yaml` holds PKI, bootstrap token, etcd encryption key — generated once by `talhelper gensecret`, immediately SOPS-encrypted to the YubiKey recipients. Never exists as plaintext on disk after initial bootstrap.
+**Cluster endpoint:** the module writes the kubeconfig with `kubeconfig_endpoint_mode = "public_ip"` by default, which bakes the public IPv4 into the local kubeconfig file — fine for `kubectl` from your laptop as long as you're inside a Tailscale-authenticated path. The Kubernetes API firewall is closed to the public internet (§5.3), so `kubectl` only works when you're on the tailnet and reach the server over Tailscale. The kubeconfig's SAN certs include the public IP so TLS validates cleanly.
 
 ### 5.5 Cloudflare
 
@@ -405,7 +401,7 @@ These steps produce committed artifacts that make the repo self-bootstrapping th
 
    Phase 2 (§16) adds: a second Object Storage bucket + scoped credential for backups, an ntfy.sh topic, and any admin-email allowlists for Cloudflare Access.
 
-2. **Laptop prereqs.** `mise install` reads `.mise.toml` and pulls: `opentofu`, `talosctl`, `talhelper`, `flux`, `kubectl`, `gh`, `sops`, `age`, `age-plugin-yubikey`, `gitleaks`, `pre-commit`, `jq`, `yq`, `tailscale`, `yamllint`. `pre-commit install` in the repo activates the hooks.
+2. **Laptop prereqs.** `mise install` reads `.mise.toml` and pulls: `opentofu`, `talosctl`, `flux`, `kubectl`, `gh`, `sops`, `age`, `age-plugin-yubikey`, `gitleaks`, `pre-commit`, `jq`, `yq`, `tailscale`, `yamllint`. `pre-commit install` in the repo activates the hooks.
 
 3. **Initialize both YubiKeys.** Plug in primary: `age-plugin-yubikey --generate --slot 1 --touch-policy cached --pin-policy once`. Record the public key (`age1yubikey1...`). Repeat for the backup YubiKey in a separate slot. **Store one YubiKey offsite** immediately after this step.
 
@@ -428,21 +424,21 @@ These steps produce committed artifacts that make the repo self-bootstrapping th
    ```
    Touch YubiKey. This satisfies §0.8.
 
-8. **Encrypt the Tailscale auth key** into `talos/patches/tailscale-authkey.sops.yaml` as an `ExtensionServiceConfig` for the `siderolabs/tailscale` extension (template in §5.4).
+8. **Encrypt the Tailscale auth key.** Generate a reusable pre-auth key for `tag:frodo` in the Tailscale admin console, then:
+    ```
+    printf '%s' 'tskey-auth-<redacted>' \
+      | sops --encrypt --input-type binary /dev/stdin \
+      > talos/tailscale-authkey.sops.txt
+    ```
+    The `mise run tofu-apply` task (§6.B step 3) decrypts this and exports it as `TF_VAR_tailscale_auth_key`, which the `hcloud-talos/talos/hcloud` module consumes via its `tailscale = { enabled, auth_key }` input (§5.3). The key never lands on disk in plaintext after this step.
 
-9. **Generate Talos cluster secrets.**
-    ```
-    talhelper gensecret > /tmp/talsecret.yaml
-    sops --encrypt /tmp/talsecret.yaml > talos/talsecret.sops.yaml
-    shred -u /tmp/talsecret.yaml
-    ```
-    These are the cluster PKI root, bootstrap token, etcd encryption key. Generated once, encrypted once, committed.
+9. **Talos cluster secrets are handled by the module.** Cluster PKI root, bootstrap token, and etcd encryption key are generated by `hcloud-talos/talos/hcloud` on first apply and live inside tofu state — which is itself AES-GCM encrypted (§5.1). No separate `talsecret.sops.yaml` to manage, no `talhelper gensecret` step.
 
 10. **Write `.env.example`** with the variable names (no values). Commit.
 
 11. **Apply branch protection on `main`.** `mise run branch-protect`. The task calls `gh api repos/itay-raveh/infra/branches/main/protection --method PUT` with the rules from §5.6. One-shot; re-run anytime to reassert.
 
-12. **Commit and push everything.** At this point `bootstrap/`, `.sops.yaml`, `tofu/encryption-passphrase.sops.txt`, `talos/talsecret.sops.yaml`, `talos/patches/tailscale-authkey.sops.yaml`, and `.env.example` are all in git. The repo is now self-bootstrapping.
+12. **Commit and push everything.** At this point `bootstrap/`, `.sops.yaml`, `tofu/encryption-passphrase.sops.txt`, `talos/tailscale-authkey.sops.txt`, and `.env.example` are all in git. The repo is now self-bootstrapping.
 
 ### 6.B Every-rebuild path (runs on any clean laptop + Hetzner account)
 
@@ -458,15 +454,15 @@ This is the disaster-recovery path and the "I'm setting this up on a new laptop"
 
    Plus: run `gh auth login` so `flux bootstrap github` (step 5) can read `GITHUB_TOKEN` via `gh auth token`.
 
-3. **`mise run tofu-apply`.** The task unwraps the state passphrase from `tofu/encryption-passphrase.sops.txt` (YubiKey touch), runs `tofu apply`, which:
-   - Creates the CAX21 server with the Talos Image Factory installer image (extensions baked in: hcloud, qemu-guest-agent, tailscale)
-   - Attaches the persistent Hetzner Volume at `/var/mnt/data`
+3. **`mise run tofu-apply`.** The task unwraps the state passphrase from `tofu/encryption-passphrase.sops.txt` AND the Tailscale auth key from `talos/tailscale-authkey.sops.txt` (one YubiKey touch per file), exports them as `TF_VAR_encryption_passphrase` and `TF_VAR_tailscale_auth_key`, then runs `tofu apply`, which:
+   - Builds the custom Talos schematic at the Image Factory (extensions baked in: hcloud, qemu-guest-agent, tailscale), then uploads the `hcloud-arm64.raw.xz` image into Hetzner as a snapshot via the `imager` provider
+   - Creates the CAX21 server from that snapshot
+   - Attaches the persistent Hetzner Volume at `/var/mnt/data` via a `kubelet.extraMounts` patch
    - Closes 6443 + 50000 in the Hetzner firewall (§5.3)
-   - Renders Talos machineconfig via talhelper (YubiKey touch to decrypt `talsecret.sops.yaml` + `tailscale-authkey.sops.yaml`)
-   - Applies machineconfig to the node, bootstraps etcd
-   - At first boot, `tailscaled` starts inside the Talos extension, reads `TS_AUTHKEY`, joins the tailnet as `frodo`
-   - Writes `~/.kube/config-frodo` pointing at `https://frodo.<tailnet>.ts.net:6443`
-   - Outputs: tunnel token, Tailscale node name
+   - Lets the `hcloud-talos` module render the Talos machineconfig with the Tailscale input wired in, apply it to the node, and bootstrap etcd
+   - At first boot, `tailscaled` starts inside the Talos extension, reads the auth key, joins the tailnet as `frodo`
+   - Writes a local kubeconfig pointing at the server's public IP (kubectl only reaches it when you're on the tailnet, since 6443 is firewalled)
+   - Outputs: tunnel token, public IP, Tailscale node name
 
 4. **`mise run tofu-secrets-sync`.** Pipes the two tofu outputs that are runtime secrets (not inputs) through SOPS and into the cluster config tree:
    ```
@@ -548,21 +544,26 @@ Everything decrypt-then-apply happens locally on the operator's laptop with the 
 
 ```yaml
 creation_rules:
-  - path_regex: talos/.*\.sops\.yaml$
-    age: >-
-      age1yubikey1primary...,
-      age1yubikey1backup...,
-      age1cluster...
   - path_regex: clusters/.*\.sops\.(yaml|json)$
     age: >-
       age1yubikey1primary...,
       age1yubikey1backup...,
       age1cluster...
+  # Tailscale auth key: consumed by tofu apply, never by Flux, so YubiKeys only.
+  - path_regex: talos/tailscale-authkey\.sops\.txt$
+    age: >-
+      age1yubikey1primary...,
+      age1yubikey1backup...
+  # Tofu state passphrase: YubiKeys only — Flux never runs tofu.
+  - path_regex: tofu/encryption-passphrase\.sops\.txt$
+    age: >-
+      age1yubikey1primary...,
+      age1yubikey1backup...
+  # Cluster software age key: YubiKeys only — it can't decrypt itself.
   - path_regex: bootstrap/cluster-age\.key\.sops$
     age: >-
       age1yubikey1primary...,
       age1yubikey1backup...
-    # NOT the cluster key itself — it can't decrypt itself
 ```
 
 ### 7.4 Operator workflow
@@ -577,9 +578,9 @@ Add a new secret: `sops -e -i <new-file>.sops.yaml` (encrypts from scratch using
 |---|---|---|
 | Tofu state encryption passphrase | `tofu/encryption-passphrase.sops.txt` | Encrypted to YubiKeys only; not in cluster at all |
 | Cluster software age key | `bootstrap/cluster-age.key.sops` | Encrypted to YubiKeys only |
-| Talos PKI + etcd encryption key | `talos/talsecret.sops.yaml` | Needed only at apply-time by talhelper |
+| Talos PKI + etcd encryption key | Inside tofu state | Generated by `hcloud-talos` module on first apply; protected by state encryption (§5.1) |
+| Tailscale auth key | `talos/tailscale-authkey.sops.txt` | Decrypted at apply time, exported as `TF_VAR_tailscale_auth_key`, consumed by the module's `tailscale` input |
 | Cloudflare tunnel token | `clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml` | Output of tofu, piped through sops (§6.B step 4) |
-| Tailscale auth key | `talos/patches/tailscale-authkey.sops.yaml` | Used once at Talos bootstrap to join the tailnet; rotate if leaked |
 
 Phase 2 (§16) adds secrets for the backup bucket, ntfy topic URL, Grafana admin, Renovate PAT, and the hcloud-ccm API token. All follow the same `*.sops.yaml` convention.
 
@@ -823,7 +824,7 @@ Per §0.3: **big-bang replace**. Nuke the current Komodo VM, stand up the Talos 
 
 1. On `main`: rewrite the repo per §4 — delete `komodo/`, `stacks/`, and the old `tofu/` contents, write the new layout. All changes land on a single branch `feat/talos`.
 2. Green CI on `feat/talos` (§10 gates). Merge to `main`.
-3. **Run §6.A once** if this is the first time any of the bootstrap artifacts (`tofu/encryption-passphrase.sops.txt`, `bootstrap/cluster-age.key.sops`, `talos/talsecret.sops.yaml`, etc.) have been generated. They live in git after this, so subsequent rebuilds skip straight to §6.B.
+3. **Run §6.A once** if this is the first time any of the bootstrap artifacts (`tofu/encryption-passphrase.sops.txt`, `bootstrap/cluster-age.key.sops`, `talos/tailscale-authkey.sops.txt`) have been generated. They live in git after this, so subsequent rebuilds skip straight to §6.B.
 4. **Tear down the old stack.** From a checkout of `archive/komodo`: `tofu destroy`. This removes the old frodo VM, the old Hetzner volume (yes, deliberately — new design uses a fresh volume), and releases the Cloudflare DNS records so the new tofu run can claim them cleanly.
 5. **Stand up the new stack.** Back on `main`: run **§6.B end-to-end**. At step 7 (Flux reconciled `infrastructure/`), the platform is up: Traefik returns 404 for every host via the tunnel, which is the expected v1 end state.
 6. Verify per §6.B step 8. Total downtime from step 4 to here: ~20 min, dominated by Talos install + Flux first reconcile.
