@@ -1,26 +1,26 @@
 # Age public keys are generated in §6.A steps 3-4 of docs/design.md and substituted here in step 5.
 # PLACEHOLDERS BELOW  - not real keys.
 creation_rules:
-  - path_regex: talos/.*\.sops\.yaml$
-    age: >-
-      age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
-      age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5,
-      age1clusterPLACEHOLDERREPLACEINSETUPA6
-
   - path_regex: clusters/.*\.sops\.(yaml|json)$
     age: >-
       age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
       age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5,
       age1clusterPLACEHOLDERREPLACEINSETUPA6
 
-  # cluster-age.key.sops is the cluster software key itself  - it cannot decrypt itself.
-  - path_regex: bootstrap/cluster-age\.key\.sops$
+  # Tailscale auth key: consumed by tofu apply, Flux never reads it, so YubiKeys only.
+  - path_regex: talos/tailscale-authkey\.sops\.txt$
     age: >-
       age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
       age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5
 
   # Tofu state passphrase: YubiKeys only  - Flux never runs tofu.
   - path_regex: tofu/encryption-passphrase\.sops\.txt$
+    age: >-
+      age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
+      age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5
+
+  # cluster-age.key.sops is the cluster software key itself  - it cannot decrypt itself.
+  - path_regex: bootstrap/cluster-age\.key\.sops$
     age: >-
       age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
       age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5
