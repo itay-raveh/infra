@@ -140,7 +140,7 @@ infra/
 ├── README.md                   # overview, architecture diagram, quickstart, link to docs/setup.md
 ├── LICENSE                     # MIT, Itay Raveh
 ├── .gitignore                  # .env, *.tfstate, *.tfplan, .terraform/, kubeconfig, talosconfig, *.decrypted.*
-├── .env.example                # TF_VAR_*, TF_ENCRYPTION_PASSPHRASE source, SOPS_AGE_KEY_FILE
+├── .env.example                # TF_VAR_* (incl. TF_VAR_encryption_passphrase), AWS_*, SOPS_AGE_KEY_FILE
 ├── .editorconfig
 │
 ├── docs/
@@ -218,9 +218,9 @@ v1 ships with **no `apps/` subtree at all** — the platform has nothing to host
 
 ### 5.1 State encryption
 
-`backend.tf` declares an S3 backend on Hetzner Object Storage (`raveh-infra-tfstate` bucket, `hel1` endpoint, path-style, `skip_*` flags for non-AWS S3) plus an `encryption` block: PBKDF2 key provider reading `TF_ENCRYPTION_PASSPHRASE` from the environment, AES-GCM method, applied to both `state` and `plan`. ([OpenTofu state encryption](https://opentofu.org/docs/language/state/encryption/))
+`backend.tf` declares an S3 backend on Hetzner Object Storage (`raveh-infra-tfstate` bucket, `hel1` endpoint, path-style, `skip_*` flags for non-AWS S3) plus an `encryption` block: PBKDF2 key provider whose `passphrase` is sourced from `var.encryption_passphrase` (declared `sensitive = true` in `variables.tf`), AES-GCM method, applied to both `state` and `plan`. OpenTofu's early-evaluation in encryption blocks supports `var.*` references but not a generic `env()` reader, so the passphrase travels in via the standard `TF_VAR_*` mechanism. ([OpenTofu state encryption](https://opentofu.org/docs/language/state/encryption/))
 
-**Passphrase flow (§0.8):** `tofu/encryption-passphrase.sops.txt` is committed to the repo, encrypted to both YubiKey recipients. A `mise run tofu-apply` task unwraps it (`sops --decrypt`), exports it as `TF_ENCRYPTION_PASSPHRASE`, and runs `tofu -chdir=tofu apply "$@"`. YubiKey touch once per invocation; passphrase never lands on disk in plaintext. AWS creds for the S3 backend come from the same flow (Hetzner Object Storage access key + secret, SOPS-wrapped).
+**Passphrase flow (§0.8):** `tofu/encryption-passphrase.sops.txt` is committed to the repo, encrypted to both YubiKey recipients. A `mise run tofu-apply` task unwraps it (`sops --decrypt`), exports it as `TF_VAR_encryption_passphrase`, and runs `tofu -chdir=tofu apply "$@"`. OpenTofu picks it up as `var.encryption_passphrase` at plan/apply time. YubiKey touch once per invocation; passphrase never lands on disk in plaintext. AWS creds for the S3 backend come from the same flow (Hetzner Object Storage access key + secret, SOPS-wrapped).
 
 ### 5.2 Talos image (Image Factory)
 
