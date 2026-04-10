@@ -1,0 +1,29 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# OpenTofu / Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+
+# SOPS decrypted output
+*.decrypted.*
+
+# Cluster credentials
+kubeconfig
+*kubeconfig*
+talosconfig
+*talosconfig*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
