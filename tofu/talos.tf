@@ -16,5 +16,16 @@ resource "talos_image_factory_schematic" "frodo" {
 }
 
 locals {
-  talos_installer_image = "factory.talos.dev/installer/${talos_image_factory_schematic.frodo.id}:${local.talos_version}"
+  talos_image_raw_url = "https://factory.talos.dev/image/${talos_image_factory_schematic.frodo.id}/${local.talos_version}/hcloud-arm64.raw.xz"
+}
+
+resource "imager_image" "frodo" {
+  architecture = "arm"
+  image_url    = local.talos_image_raw_url
+  location     = local.hcloud_location
+  description  = "Talos ${local.talos_version} (frodo schematic)"
+  labels = {
+    os        = "talos"
+    schematic = talos_image_factory_schematic.frodo.id
+  }
 }
