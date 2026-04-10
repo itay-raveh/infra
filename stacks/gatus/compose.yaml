@@ -1,0 +1,24 @@
+services:
+  gatus:
+    image: twinproduction/gatus:v5.17.0
+    restart: unless-stopped
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - gatus-data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gatus.rule=Host(`status.raveh.dev`)
+      - traefik.http.routers.gatus.entrypoints=web
+      - traefik.http.services.gatus.loadbalancer.server.port=8080
+
+volumes:
+  gatus-data:
+
+networks:
+  traefik:
+    external: true
+    name: traefik

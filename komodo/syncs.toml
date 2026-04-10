@@ -1,0 +1,10 @@
+[[resource_sync]]
+name = "platform"
+description = "The one sync. Declares the sync itself, the server, and the platform stacks."
+tags = ["platform"]
+[resource_sync.config]
+git_provider = "github.com"
+repo = "itay-raveh/infra"
+branch = "main"
+resource_path = ["komodo"]
+webhook_enabled = true

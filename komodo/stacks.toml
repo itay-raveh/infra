@@ -1,0 +1,28 @@
+[[stack]]
+name = "traefik"
+description = "Reverse proxy  - fronts all user-facing apps on *.raveh.dev"
+deploy = true
+tags = ["platform"]
+[stack.config]
+server = "frodo"
+git_provider = "github.com"
+repo = "itay-raveh/infra"
+branch = "main"
+run_directory = "stacks/traefik"
+webhook_enabled = true
+poll_for_updates = true
+
+[[stack]]
+name = "gatus"
+description = "Public status page at status.raveh.dev and internal uptime checks"
+deploy = true
+tags = ["platform"]
+after = ["traefik"]
+[stack.config]
+server = "frodo"
+git_provider = "github.com"
+repo = "itay-raveh/infra"
+branch = "main"
+run_directory = "stacks/gatus"
+webhook_enabled = true
+poll_for_updates = true

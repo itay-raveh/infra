@@ -18,8 +18,8 @@ description = "SSH into frodo"
 run = "ssh root@$(cd tofu && tofu output -raw server_ip)"
 
 [tasks.tunnel]
-description = "Open SSH tunnel to Dokploy UI (http://localhost:3000)"
-run = "ssh -N -L 3000:localhost:3000 root@$(cd tofu && tofu output -raw server_ip)"
+description = "Break-glass: SSH tunnel to Komodo panel when Cloudflare Access is unavailable"
+run = "ssh -N -L 9120:localhost:9120 root@$(cd tofu && tofu output -raw server_ip)"
 
 [tasks.destroy]
 description = "Tear down all infrastructure (DESTRUCTIVE)"

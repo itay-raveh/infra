@@ -21,8 +21,23 @@ variable "cloudflare_zone_id" {
   type        = string
 }
 
+variable "cloudflare_account_id" {
+  description = "Cloudflare account ID (needed for Zero Trust resources)"
+  type        = string
+}
+
+variable "admin_email" {
+  description = "Email allowed through Cloudflare Access to reach the Komodo panel"
+  type        = string
+}
+
+variable "komodo_bootstrap_password" {
+  description = "First-boot admin password for Komodo. Only read by KOMODO_INIT_ADMIN_PASSWORD on initial container start  - later changes do nothing; rotate via the Komodo UI."
+  type        = string
+  sensitive   = true
+}
+
 variable "ssh_public_key_path" {
   description = "Path to the SSH public key to install on the server"
   type        = string
-  default     = "~/.ssh/id_ed25519.pub"
 }
