@@ -1,0 +1,7 @@
+[[server]]
+name = "frodo"
+description = "Hetzner CAX11 ARM in hel1. The only server."
+tags = ["platform"]
+[server.config]
+address = "http://periphery:8120"
+enabled = true
