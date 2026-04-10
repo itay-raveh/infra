@@ -25,3 +25,9 @@ variable "ssh_public_key_path" {
   type        = string
   description = "Filesystem path to the SSH public key used only for Hetzner rescue-mode break-glass (Talos itself does not use SSH)."
 }
+
+variable "tailscale_auth_key" {
+  type        = string
+  sensitive   = true
+  description = "Reusable Tailscale pre-auth key tagged with tag:frodo. Injected as TF_VAR_tailscale_auth_key by the mise tofu-apply task, which sops-decrypts talos/tailscale-authkey.sops.txt."
+}
