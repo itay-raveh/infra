@@ -1,0 +1,15 @@
+# Extends the built-in gitleaks ruleset. Do not disable default rules.
+# See docs/design.md §1 and §10 for the assume-public threat model and CI usage.
+
+[extend]
+useDefault = true
+
+# Files that intentionally contain ciphertext patterns or example keys.
+[[allowlists]]
+description = "SOPS ciphertext and example keys"
+paths = [
+  '''.*\.sops\.ya?ml$''',
+  '''bootstrap/cluster-age\.key\.sops$''',
+  '''tofu/encryption-passphrase\.sops\.txt$''',
+  '''docs/design\.md$''',
+]
