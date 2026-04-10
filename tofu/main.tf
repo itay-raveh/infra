@@ -108,7 +108,6 @@ resource "hcloud_server" "frodo" {
     KOMODO_DISABLE_USER_REGISTRATION=true
     KOMODO_INIT_ADMIN_USERNAME=admin
     KOMODO_INIT_ADMIN_PASSWORD=${var.komodo_bootstrap_password}
-    KOMODO_FIRST_SERVER_NAME=frodo
     KOMODO_WEBHOOK_SECRET=${random_password.komodo_webhook.result}
     KOMODO_JWT_SECRET=${random_password.komodo_jwt.result}
     PERIPHERY_CORE_ADDRESS=ws://core:9120
@@ -116,7 +115,113 @@ resource "hcloud_server" "frodo" {
     PERIPHERY_ROOT_DIRECTORY=/etc/komodo
     KOMODOENV
 
-    docker compose --env-file /etc/komodo/compose.env -f /etc/komodo/compose.yaml up -d
+    # --- Bootstrap the platform sync ---
+    # Headless GitOps seed, idempotent across server rebuilds. The canonical
+    # Komodo flow for trustless Periphery onboarding is:
+    #   1. Bring up Core alone (Periphery has nothing to connect to yet).
+    #   2. POST /write CreateOnboardingKey → returns a one-time shared-secret
+    #      string (form "O_<28-alnum>_O"). This authorizes exactly one
+    #      Periphery-to-Core handshake.
+    #   3. Inject the secret as PERIPHERY_ONBOARDING_KEY and bring Periphery
+    #      up. Periphery presents it during the Noise handshake, Core
+    #      auto-creates the Server entity with Periphery's real public key
+    #      recorded, Periphery reconnects normally, and the onboarding key
+    #      is burned.
+    # After that, CreateResourceSync + RunSync against the committed
+    # komodo/ directory takes over — every later change is a git push.
+    #
+    # Idempotency: FerretDB, the Docker keys volume, and compose.env live on
+    # the persistent /mnt/data mount. On a server rebuild Periphery's
+    # private key is already in the shared volume and Core already trusts
+    # it, so we skip onboarding entirely and go straight to compose up.
+    apt-get install -y jq
+
+    # Phase 1 — start Core + database only so we can hit the admin API.
+    docker compose --env-file /etc/komodo/compose.env \
+      -f /etc/komodo/compose.yaml up -d postgres ferretdb core
+
+    # Wait for Komodo Core's API (up to 2 min).
+    for i in $(seq 1 60); do
+      curl -sf -o /dev/null http://localhost:9120/auth/login -X POST \
+        -H 'Content-Type: application/json' \
+        -d '{"type":"GetLoginOptions","params":{}}' && break
+      sleep 2
+    done
+
+    KOMODO_JWT=$(curl -sf -X POST http://localhost:9120/auth/login \
+      -H 'Content-Type: application/json' \
+      -d '{"type":"LoginLocalUser","params":{"username":"admin","password":"${var.komodo_bootstrap_password}"}}' \
+      | jq -r '.data.jwt')
+
+    if [ -z "$KOMODO_JWT" ] || [ "$KOMODO_JWT" = "null" ]; then
+      echo "ERROR: Komodo login failed" >&2
+      exit 1
+    fi
+
+    KOMODO_AUTH="Authorization: Bearer $KOMODO_JWT"
+
+    # Fresh install vs rebuild: if the frodo Server entity already has a
+    # public_key recorded, Periphery is already trusted — skip onboarding.
+    FRODO_PUBKEY=$(curl -s -X POST http://localhost:9120/read \
+      -H "$KOMODO_AUTH" -H 'Content-Type: application/json' \
+      -d '{"type":"GetServer","params":{"server":"frodo"}}' \
+      | jq -r '.info.public_key // ""')
+
+    if [ -z "$FRODO_PUBKEY" ]; then
+      ONBOARDING_KEY=$(curl -sf -X POST http://localhost:9120/write \
+        -H "$KOMODO_AUTH" -H 'Content-Type: application/json' \
+        -d '{"type":"CreateOnboardingKey","params":{"name":"frodo-bootstrap","privileged":false}}' \
+        | jq -r '.private_key // .data.private_key // ""')
+
+      if [ -z "$ONBOARDING_KEY" ] || [ "$ONBOARDING_KEY" = "null" ]; then
+        echo "ERROR: Failed to create Komodo onboarding key" >&2
+        exit 1
+      fi
+
+      # Onboarding key format is [A-Za-z0-9_], safe for compose env files.
+      echo "PERIPHERY_ONBOARDING_KEY=$ONBOARDING_KEY" >> /etc/komodo/compose.env
+    fi
+
+    # Phase 2 — start Periphery (and re-assert Core + database idempotently).
+    # On fresh install, Periphery presents the onboarding key, Core creates
+    # the frodo Server with Periphery's real public_key, and reconnects.
+    docker compose --env-file /etc/komodo/compose.env \
+      -f /etc/komodo/compose.yaml up -d
+
+    # Wait for the frodo Server to reach Ok state (up to 2 min).
+    for i in $(seq 1 60); do
+      STATE=$(curl -s -X POST http://localhost:9120/read \
+        -H "$KOMODO_AUTH" -H 'Content-Type: application/json' \
+        -d '{"type":"GetServerState","params":{"server":"frodo"}}' \
+        | jq -r '.status // ""')
+      [ "$STATE" = "Ok" ] && break
+      sleep 2
+    done
+
+    if [ "$STATE" != "Ok" ]; then
+      echo "ERROR: frodo Server did not reach Ok state" >&2
+      exit 1
+    fi
+
+    # Create the platform sync if it doesn't already exist.
+    SYNC_EXISTS=$(curl -sf -X POST http://localhost:9120/read \
+      -H "$KOMODO_AUTH" -H 'Content-Type: application/json' \
+      -d '{"type":"ListResourceSyncs","params":{}}' \
+      | jq -r '[.[] | select(.name == "platform")] | length')
+
+    if [ "$SYNC_EXISTS" = "0" ]; then
+      curl -sf -X POST http://localhost:9120/write \
+        -H "$KOMODO_AUTH" -H 'Content-Type: application/json' \
+        -d '{"type":"CreateResourceSync","params":{"name":"platform","config":{"git_provider":"github.com","repo":"itay-raveh/infra","branch":"main","resource_path":["komodo"],"webhook_enabled":true}}}' \
+        > /dev/null
+    fi
+
+    # Run the sync. Commits the frodo Server declaration, deploys traefik +
+    # gatus, and takes over management of the sync itself.
+    curl -sf -X POST http://localhost:9120/execute \
+      -H "$KOMODO_AUTH" -H 'Content-Type: application/json' \
+      -d '{"type":"RunSync","params":{"sync":"platform"}}' \
+      > /dev/null
 
     # --- Install cloudflared and connect to the tunnel ---
     mkdir -p --mode=0755 /usr/share/keyrings
