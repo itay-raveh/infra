@@ -96,7 +96,7 @@ Numbers below are conservative steady-state RSS from upstream chart defaults + c
 | Component | RSS | Source / note |
 |---|---|---|
 | Talos + kubelet + containerd | ~400 MB | Talos system requirements page, single-node control-plane profile |
-| kube-apiserver + etcd + controller-manager + scheduler | ~700 MB | Vanilla k8s 1.31 footprint, small cluster |
+| kube-apiserver + etcd + controller-manager + scheduler | ~700 MB | Vanilla k8s 1.35 footprint, small cluster |
 | Flannel | ~80 MB | Default DaemonSet |
 | Flux core (source, kustomize, helm, notification) | ~200 MB | No image-automation controllers |
 | cloudflared | ~80 MB | Single replica Deployment; tunnel routes `* → traefik.svc:80` |
@@ -267,8 +267,8 @@ module "talos" {
   cluster_name       = "frodo"
   hcloud_token       = var.hcloud_token
   cluster_endpoint   = "https://<server-ipv4>:6443"
-  talos_version      = "v1.9.x"
-  kubernetes_version = "v1.31.x"
+  talos_version      = "v1.12.x"
+  kubernetes_version = "v1.35.x"
 
   controlplane_nodepools = [{
     name                              = "cp"
@@ -329,8 +329,8 @@ talos/talconfig.yaml + talos/talsecret.sops.yaml + talos/patches/*.yaml
 ```yaml
 clusterName: frodo
 endpoint: https://frodo.<tailnet>.ts.net:6443   # Tailscale Magic DNS (§8.2)
-talosVersion: v1.9.x                             # Renovate-bumped
-kubernetesVersion: v1.31.x                       # Renovate-bumped
+talosVersion: v1.12.x                            # Renovate-bumped
+kubernetesVersion: v1.35.x                       # Renovate-bumped
 
 cniConfig: { name: flannel }
 allowSchedulingOnControlPlanes: true
