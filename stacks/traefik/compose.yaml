@@ -1,13 +1,7 @@
 services:
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3.6
     restart: unless-stopped
-    environment:
-      # Traefik's Docker provider doesn't call NegotiateAPIVersion, so the
-      # embedded Go client falls back to its compiled default (1.24) which
-      # Docker 29+ rejects (min 1.40). Pin to a modern version the daemon
-      # accepts.
-      DOCKER_API_VERSION: "1.44"
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
