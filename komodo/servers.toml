@@ -3,5 +3,8 @@ name = "frodo"
 description = "Hetzner CAX11 ARM in hel1. The only server."
 tags = ["platform"]
 [server.config]
-address = "http://periphery:8120"
+# No address: Periphery connects out to Core over WebSocket (connect-as
+# mode), driven by PERIPHERY_CORE_ADDRESS + PERIPHERY_CONNECT_AS in the
+# Komodo compose env set during cloud-init. Core approves Periphery's key
+# during cloud-init bootstrap, after which this sync takes over.
 enabled = true
