@@ -9,7 +9,7 @@ repos:
       - id: sops-verify
         name: Verify SOPS-named files are encrypted
         language: system
-        entry: bash -c 'for f in "$@"; do grep -q "^sops:" "$f" || { echo "not SOPS-encrypted: $f" >&2; exit 1; }; done' --
+        entry: bash -c 'for f in "$@"; do grep -q "ENC\[" "$f" || { echo "not SOPS-encrypted: $f" >&2; exit 1; }; done' --
         files: '\.sops\.(yaml|json)$|bootstrap/cluster-age\.key\.sops$|tofu/encryption-passphrase\.sops\.txt$'
 
   - repo: https://github.com/tofuutils/pre-commit-opentofu
