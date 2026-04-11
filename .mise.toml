@@ -14,6 +14,71 @@ opentofu = "1.11.6"
 "pipx:pre-commit" = "4.5.1"
 sops = "3.12.2"
 talosctl = "1.12.6"
-talhelper = "3.1.7"
 "pipx:yamllint" = "1.38.0"
 yq = "4.52.5"
+
+# Tasks below assume the operator's YubiKey is plugged in. Each sops
+# decryption triggers one touch (cached for ~15s). Decrypted material
+# stays in process env vars and never lands on disk.
+
+[tasks.tofu-plan]
+description = "tofu plan with state passphrase + tailscale key unwrapped from SOPS"
+dir = "{{config_root}}"
+run = """
+export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
+export TF_VAR_tailscale_auth_key="$(sops --decrypt talos/tailscale-authkey.sops.txt)"
+tofu -chdir=tofu plan "$@"
+"""
+
+[tasks.tofu-apply]
+description = "tofu apply with state passphrase + tailscale key unwrapped from SOPS"
+dir = "{{config_root}}"
+run = """
+export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
+export TF_VAR_tailscale_auth_key="$(sops --decrypt talos/tailscale-authkey.sops.txt)"
+tofu -chdir=tofu apply "$@"
+"""
+
+[tasks.tofu-secrets-sync]
+description = "Pipe runtime tofu outputs through SOPS into the cluster tree"
+dir = "{{config_root}}"
+run = """
+export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
+mkdir -p clusters/frodo/infrastructure/controllers/cloudflared
+tofu -chdir=tofu output -raw tunnel_token \\
+  | sops --encrypt --input-type binary --output-type yaml /dev/stdin \\
+  > clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml
+echo "wrote clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml"
+echo "review with: git diff -- clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml"
+"""
+
+[tasks.tofu-output]
+description = "Decrypt state and dump a tofu output to stdout (e.g. mise run tofu-output kubeconfig)"
+dir = "{{config_root}}"
+run = """
+export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
+tofu -chdir=tofu output -raw "$@"
+"""
+
+[tasks.flux-bootstrap]
+description = "Bootstrap Flux into the freshly-built cluster against this repo"
+dir = "{{config_root}}"
+run = """
+flux bootstrap github \\
+  --owner=itay-raveh \\
+  --repository=infra \\
+  --path=clusters/frodo \\
+  --personal \\
+  --branch=main
+"""
+
+[tasks.branch-protect]
+description = "Apply main-branch protection rules via gh api"
+dir = "{{config_root}}"
+run = """
+gh api \\
+  --method PUT \\
+  -H "Accept: application/vnd.github+json" \\
+  repos/itay-raveh/infra/branches/main/protection \\
+  --input scripts/branch-protection.json
+"""
