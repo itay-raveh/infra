@@ -21,6 +21,11 @@ variable "cloudflare_zone_id" {
   description = "Cloudflare zone ID for raveh.dev."
 }
 
+variable "cloudflare_account_id" {
+  type        = string
+  description = "Cloudflare account ID that owns the raveh.dev zone and the Zero Trust tunnel."
+}
+
 variable "ssh_public_key_path" {
   type        = string
   description = "Filesystem path to the SSH public key used only for Hetzner rescue-mode break-glass (Talos itself does not use SSH)."
