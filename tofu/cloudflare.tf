@@ -51,10 +51,3 @@ resource "cloudflare_record" "wildcard" {
   proxied = true
   ttl     = 1
 }
-
-# Consumed post-apply by `mise run tofu-secrets-sync`, sops-encrypted
-# into clusters/frodo/infrastructure/controllers/cloudflared/.
-output "cloudflared_tunnel_token" {
-  value     = cloudflare_zero_trust_tunnel_cloudflared.frodo.tunnel_token
-  sensitive = true
-}
