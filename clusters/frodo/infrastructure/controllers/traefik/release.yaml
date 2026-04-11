@@ -1,0 +1,65 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  interval: 1h
+  targetNamespace: traefik
+  chart:
+    spec:
+      chart: traefik
+      version: 39.0.7
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+        namespace: flux-system
+      interval: 1h
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    deployment:
+      kind: Deployment
+      replicas: 1
+    providers:
+      kubernetesCRD:
+        enabled: true
+      kubernetesIngress:
+        enabled: true
+    ports:
+      traefik:
+        expose:
+          default: false
+      web:
+        port: 8000
+        expose:
+          default: true
+        exposedPort: 80
+      websecure:
+        port: 8443
+        expose:
+          default: true
+        exposedPort: 443
+    service:
+      enabled: true
+      type: ClusterIP
+      annotations: {}
+    ingressRoute:
+      dashboard:
+        enabled: false
+      healthcheck:
+        enabled: false
+    metrics:
+      prometheus: null
+    logs:
+      general:
+        level: INFO
+    persistence:
+      enabled: false
