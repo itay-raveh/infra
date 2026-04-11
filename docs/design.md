@@ -312,8 +312,18 @@ module "talos" {
 }
 
 locals {
+  # Two layers for one mount: machine.disks formats/mounts the Hetzner block
+  # device at /var/mnt/data on the host, kubelet.extraMounts then bind-mounts
+  # that into the kubelet namespace so PVC bind-mounts inside pods see it.
+  # See §9.1 for the full chain.
   patch_data_volume_mount = yamlencode({
     machine = {
+      disks = [{
+        device = "/dev/disk/by-id/scsi-0HC_Volume_${hcloud_volume.data.id}"
+        partitions = [{
+          mountpoint = "/var/mnt/data"
+        }]
+      }]
       kubelet = {
         extraMounts = [{
           destination = "/var/mnt/data"
