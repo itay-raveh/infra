@@ -1,0 +1,45 @@
+---
+name: validate
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  sops-sanity:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/ci/sops-sanity.sh
+
+  flux-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fluxcd/flux2/action@main
+      - run: flux build kustomization infrastructure --path=clusters/frodo --dry-run
+
+  tofu-validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.11.6
+      - run: tofu -chdir=tofu fmt -check -recursive
+      - run: tofu -chdir=tofu init -backend=false
+      - run: tofu -chdir=tofu validate
