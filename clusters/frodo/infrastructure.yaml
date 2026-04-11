@@ -1,10 +1,7 @@
 ---
-# The single Flux Kustomization at cluster root. Reconciles the
-# infrastructure/ subtree against the in-cluster API and decrypts
-# any *.sops.yaml file it encounters using the cluster software age
-# key (installed once during bootstrap as the sops-age Secret in
-# flux-system, see design.md §6.B step 6). Phase 2 (§16) adds an
-# apps Kustomization here that dependsOn this one.
+# Cluster-root Flux Kustomization. Reconciles the infrastructure/
+# subtree and decrypts any *.sops.yaml it encounters using the
+# sops-age Secret installed in flux-system during bootstrap.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

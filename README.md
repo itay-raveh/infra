@@ -6,11 +6,11 @@ GitOps-managed personal infrastructure for `raveh.dev`. Everything sensitive is 
 
 ## Repo layout
 
-See [docs/design.md §4](docs/design.md) for the full annotated tree. The three top-level planes are:
+Three top-level planes, each with one owner:
 
 - `tofu/`  - OpenTofu: Hetzner server, volume, Cloudflare tunnel and DNS
-- `talos/`  - talhelper input: machineconfig for the Talos node
-- `clusters/frodo/`  - Flux manifests: in-cluster state (Helm releases, SOPS secrets)
+- `talos/`  - SOPS-encrypted Tailscale auth key (Talos machineconfig is rendered by the hcloud-talos tofu module)
+- `clusters/frodo/`  - Flux manifests: in-cluster state (HelmReleases, SOPS-encrypted secrets)
 
 ## Getting started
 
