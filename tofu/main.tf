@@ -31,6 +31,12 @@ module "talos" {
 locals {
   patch_data_volume_mount = yamlencode({
     machine = {
+      disks = [{
+        device = "/dev/disk/by-id/scsi-0HC_Volume_${hcloud_volume.data.id}"
+        partitions = [{
+          mountpoint = "/var/mnt/data"
+        }]
+      }]
       kubelet = {
         extraMounts = [{
           destination = "/var/mnt/data"
