@@ -1,5 +1,5 @@
 # Extends the built-in gitleaks ruleset. Do not disable default rules.
-# See docs/design.md §1 and §10 for the assume-public threat model and CI usage.
+# Repo is treated as assume-public; CI runs gitleaks on every push and PR.
 
 [extend]
 useDefault = true

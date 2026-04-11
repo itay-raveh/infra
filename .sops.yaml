@@ -1,5 +1,5 @@
-# Age public keys are generated in §6.A steps 3-4 of docs/design.md and substituted here in step 5.
-# PLACEHOLDERS BELOW — not real keys.
+# Age public keys are generated during one-time setup (see docs/setup.md)
+# and substituted in here. PLACEHOLDERS BELOW — not real keys.
 creation_rules:
   - path_regex: clusters/.*\.sops\.(yaml|json)$
     age: >-

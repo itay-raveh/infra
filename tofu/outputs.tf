@@ -1,5 +1,5 @@
-# Consumed post-apply by `mise run tofu-secrets-sync` (§6.B step 4):
-# the token is sops-encrypted into clusters/frodo/.../cloudflared/.
+# Consumed post-apply by `mise run tofu-secrets-sync`, which sops-encrypts
+# the token into the cloudflared controller directory under clusters/.
 output "tunnel_token" {
   value     = cloudflare_zero_trust_tunnel_cloudflared.frodo.tunnel_token
   sensitive = true
