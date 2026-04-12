@@ -105,7 +105,7 @@ run = """
 set -euo pipefail
 repo=itay-raveh/infra
 # Remove legacy branch protection (ignore 404 if already gone)
-gh api --method DELETE "repos/$repo/branches/main/protection" &>/dev/null || true
+gh api --method DELETE "repos/$repo/branches/main/protection" >/dev/null 2>&1 || true
 # Delete existing rulesets for idempotent re-apply
 for id in $(gh api "repos/$repo/rulesets" --jq '.[].id'); do
   gh api --method DELETE "repos/$repo/rulesets/$id"
