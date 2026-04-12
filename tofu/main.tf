@@ -1,3 +1,8 @@
+data "sops_file" "tailscale_auth_key" {
+  source_file = "${path.root}/../talos/tailscale-authkey.sops.txt"
+  input_type  = "raw"
+}
+
 module "talos" {
   source  = "hcloud-talos/talos/hcloud"
   version = "= 3.2.3"
@@ -8,27 +13,35 @@ module "talos" {
   hcloud_token       = var.hcloud_token
   talos_version      = local.talos_version
   kubernetes_version = local.kubernetes_version
+  ssh_public_key     = file(var.ssh_public_key_path)
 
-  talos_image_id_arm = imager_image.frodo.id
+  # ARM-only (CAX21); skip downloading the x86 schematic.
+  talos_image_id_arm = imager_image.shire.id
   disable_x86        = true
 
   control_plane_nodes = [
     { id = 1, type = local.hcloud_server_type },
   ]
-  worker_nodes                 = []
+  worker_nodes = []
+
+  # Single-node cluster: workloads run on the control plane.
   control_plane_allow_schedule = true
 
+  # Talos + k8s APIs closed to the public internet; we reach them via Tailscale.
   firewall_use_current_ip = false
 
   tailscale = {
     enabled  = true
-    auth_key = var.tailscale_auth_key
+    auth_key = data.sops_file.tailscale_auth_key.raw
   }
 
   talos_control_plane_extra_config_patches = [local.patch_data_volume_mount]
 }
 
 locals {
+  # Talos kubelet runs in its own container, so the host bind-mount at
+  # /var/mnt/data is invisible to pods unless extraMounts re-binds it with
+  # rshared propagation.
   patch_data_volume_mount = yamlencode({
     machine = {
       disks = [{
@@ -60,13 +73,13 @@ resource "hcloud_volume" "data" {
   }
 }
 
-data "hcloud_server" "frodo_cp1" {
+data "hcloud_server" "cp1" {
   name       = "${local.cluster_name}-control-plane-1"
   depends_on = [module.talos]
 }
 
 resource "hcloud_volume_attachment" "data" {
   volume_id = hcloud_volume.data.id
-  server_id = data.hcloud_server.frodo_cp1.id
+  server_id = data.hcloud_server.cp1.id
   automount = false
 }

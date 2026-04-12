@@ -18,13 +18,13 @@ Everything below assumes you've completed the one-time setup in
 ## 1. Cluster state changes (the common case)
 
 The Flux loop is: edit → commit → push → wait. Flux polls this repo
-every minute and reconciles `clusters/frodo/infrastructure/` against
+every minute and reconciles `clusters/shire/infrastructure/` against
 the live cluster.
 
 ### Bumping a Helm chart version
 
-1. Edit `clusters/frodo/infrastructure/controllers/<chart>/release.yaml`
-   and change `spec.chart.spec.version`.
+1. Edit `clusters/shire/infrastructure/controllers/<chart>.yaml` and
+   change `spec.chart.spec.version` on the HelmRelease.
 2. Read the chart's release notes if it's a major bump. Adjust
    `spec.values` if anything became non-default.
 3. Commit, push, wait. Watch with `flux get hr -A --watch`.
@@ -34,12 +34,12 @@ the live cluster.
 
 ### Adding a new HelmRelease
 
-1. If the chart's source isn't already pulled, add a `HelmRepository`
-   under `clusters/frodo/infrastructure/sources/` and reference it
-   from `sources/kustomization.yaml`.
-2. Create `clusters/frodo/infrastructure/controllers/<name>/release.yaml`.
-3. Add the file path to `clusters/frodo/infrastructure/controllers/kustomization.yaml`.
-4. Commit, push, wait.
+1. Create `clusters/shire/infrastructure/controllers/<name>.yaml`
+   containing a `HelmRepository` and a `HelmRelease` (and a `Namespace`
+   if the chart needs one) as a single YAML stream separated by `---`.
+2. Add the filename to
+   `clusters/shire/infrastructure/controllers/kustomization.yaml`.
+3. Commit, push, wait.
 
 ### Adding a SOPS-encrypted Secret
 
@@ -47,15 +47,15 @@ The cluster can decrypt anything encrypted to the cluster software age
 key. To add one:
 
 1. Create the plaintext Secret manifest in your editor.
-2. Save it under `clusters/frodo/...` with a `.sops.yaml` suffix
+2. Save it under `clusters/shire/...` with a `.sops.yaml` suffix
    (e.g. `my-app.sops.yaml`). The pre-commit hook refuses to commit
    the file without `ENC[` markers, so you cannot accidentally push
    plaintext.
-3. `sops --encrypt --in-place clusters/frodo/.../my-app.sops.yaml`.
+3. `sops --encrypt --in-place clusters/shire/.../my-app.sops.yaml`.
    YubiKey touch.
 4. Commit, push.
 
-To edit an existing one: `sops clusters/frodo/.../my-app.sops.yaml`
+To edit an existing one: `sops clusters/shire/.../my-app.sops.yaml`
 opens it decrypted in `$EDITOR`; saving re-encrypts to all configured
 recipients automatically.
 
@@ -90,8 +90,8 @@ Anything in `tofu/` is operator-driven, not Flux-driven.
 
 1. Edit the relevant `.tf` file.
 2. `mise run tofu-plan` — review the diff. The task unwraps the state
-   passphrase and Tailscale auth key from SOPS automatically; you'll
-   touch the YubiKey twice.
+   passphrase from SOPS (one YubiKey touch); the `sops` Terraform
+   provider reads the Tailscale auth key during plan (second touch).
 3. `mise run tofu-apply` — same dance, then apply. Targeted changes
    (firewall rules, DNS records, Cloudflare tunnel config) are
    non-disruptive. Server-replacement changes (server type bump,
@@ -121,7 +121,7 @@ in tofu protects it).
 # 1. Edit tofu/main.tf, change hcloud_volume.data.size
 # 2. mise run tofu-apply
 # 3. The volume grows online. Resize the filesystem inside Talos:
-talosctl --talosconfig=./talosconfig -n frodo \
+talosctl --talosconfig=./talosconfig -n shire-control-plane-1 \
   volumes mount filesystem-resize /var/mnt/data
 ```
 
@@ -163,6 +163,9 @@ The local pre-commit hooks run on every commit:
 - `gitleaks` — scans the diff for secret patterns
 - `sops-verify` — refuses to commit any `*.sops.*` file that isn't
   actually encrypted
+- `no-plaintext-secrets` — refuses to commit any `kind: Secret` under
+  `clusters/` that isn't `.sops.`-named
+- `shellcheck` — lints shell scripts
 - `tofu_fmt` — formats `tofu/` in place
 - `yamllint` — lints YAML
 
@@ -193,7 +196,7 @@ and never touch a runner.
 - **Forgetting to commit a fresh tunnel token after rebuild.** Step 4
   of the every-rebuild path is the one bespoke step — Flux can't
   reconcile cloudflared until it lands.
-- **Touching `clusters/frodo/flux-system/`.** Flux owns that directory.
+- **Touching `clusters/shire/flux-system/`.** Flux owns that directory.
   If `flux bootstrap` regenerates it, hand-edits get clobbered.
 - **YubiKey touch timeouts.** Touch policy is `cached` (~15s window),
   so multiple decryptions in quick succession only need one touch.

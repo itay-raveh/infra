@@ -5,7 +5,7 @@ data "talos_image_factory_extensions_versions" "this" {
   }
 }
 
-resource "talos_image_factory_schematic" "frodo" {
+resource "talos_image_factory_schematic" "shire" {
   schematic = yamlencode({
     customization = {
       systemExtensions = {
@@ -15,17 +15,9 @@ resource "talos_image_factory_schematic" "frodo" {
   })
 }
 
-locals {
-  talos_image_raw_url = "https://factory.talos.dev/image/${talos_image_factory_schematic.frodo.id}/${local.talos_version}/hcloud-arm64.raw.xz"
-}
-
-resource "imager_image" "frodo" {
+resource "imager_image" "shire" {
   architecture = "arm"
-  image_url    = local.talos_image_raw_url
+  image_url    = "https://factory.talos.dev/image/${talos_image_factory_schematic.shire.id}/${local.talos_version}/hcloud-arm64.raw.xz"
   location     = local.hcloud_location
-  description  = "Talos ${local.talos_version} (frodo schematic)"
-  labels = {
-    os        = "talos"
-    schematic = talos_image_factory_schematic.frodo.id
-  }
+  description  = "Talos ${local.talos_version} (shire schematic)"
 }

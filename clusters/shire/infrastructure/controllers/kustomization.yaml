@@ -3,5 +3,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - cloudflared.yaml
-  - traefik.yaml
+  - cloudflared-tunnel-token.sops.yaml
   - local-path-provisioner.yaml
+  - traefik.yaml

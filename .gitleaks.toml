@@ -1,16 +1,8 @@
-# Extends the built-in gitleaks ruleset. Do not disable default rules.
-# Repo is treated as assume-public; CI runs gitleaks on every push and PR.
-
 [extend]
 useDefault = true
 
-# Files that intentionally contain ciphertext patterns or example keys.
 [[allowlists]]
-description = "SOPS ciphertext and example keys"
+description = "SOPS ciphertext"
 paths = [
-  '''.*\.sops\.ya?ml$''',
-  '''bootstrap/cluster-age\.key\.sops$''',
-  '''tofu/encryption-passphrase\.sops\.txt$''',
-  '''talos/tailscale-authkey\.sops\.txt$''',
-  '''docs/design\.md$''',
+  '''\.sops\.(yaml|json|txt)$''',
 ]
