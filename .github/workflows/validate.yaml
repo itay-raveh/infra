@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Operator-only tools that need YubiKey hardware or libpcsclite
+  MISE_DISABLE_TOOLS: pipx:yubikey-manager,aqua:str4d/age-plugin-yubikey
+
 concurrency:
   group: validate-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -28,6 +32,7 @@ jobs:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
   sops-sanity:
