@@ -83,7 +83,7 @@ hardware failure from total loss  - initialize a replacement immediately.
 There is no recovery path. The repo's encrypted material becomes
 permanent ciphertext. Treat this as "start over":
 
-1. Buy new YubiKeys and re-run `scripts/bootstrap.sh` from a clean
+1. Buy new YubiKeys and re-run `bootstrap/bootstrap.sh` from a clean
    working tree (delete the old `.sops.yaml`,
    `bootstrap/cluster-age-key.sops.txt`,
    `tofu/encryption-passphrase.sops.txt`, and

@@ -74,7 +74,7 @@ Both are hardware-generated and unextractable. Run the ceremony with
 both YubiKeys nearby:
 
 ```
-scripts/bootstrap.sh
+bootstrap/bootstrap.sh
 ```
 
 The script prompts you to plug in each YubiKey in turn, generates the
@@ -87,15 +87,15 @@ passphrase (the AES-GCM key for the S3-backed state file) and encrypts
 it to `tofu/encryption-passphrase.sops.txt`, prompts you to paste a
 fresh Tailscale pre-auth key (generated in the Tailscale admin UI -
 instructions print in-terminal) and wraps it to
-`talos/tailscale-authkey.sops.txt`, and finally applies branch
-protection to `main` via `mise run branch-protect`. From that point
-on `git commit` requires a touch on the primary YubiKey.
+`talos/tailscale-authkey.sops.txt`, and finally applies repository
+rulesets to `main` via `mise run rulesets-apply`. From that point on
+`git commit` requires a touch on the primary YubiKey.
 
 **Store the backup YubiKey offsite** as soon as the script finishes.
 
-Branch protection is also reassertable standalone via
-`mise run branch-protect` if you ever edit
-`scripts/branch-protection.json`.
+Rulesets are also reassertable standalone via
+`mise run rulesets-apply` if you ever edit
+`.github/rulesets/*.json`.
 
 ### 4. Commit everything
 

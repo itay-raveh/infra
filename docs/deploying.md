@@ -179,8 +179,9 @@ on every PR and push to `main`:
   substitutions before they reach the cluster
 - `tofu-validate`  - `tofu fmt -check -recursive` + `tofu validate`
 
-All four are required green for a merge to `main`. Branch protection
-disallows force-push and admin bypass.
+All four are required green for a merge to `main`. Repository rulesets
+block force-push and deletion; the repo admin is a bypass actor for
+cases like history rewrites.
 
 `tofu plan` does **not** run in CI  - it needs the state encryption
 passphrase and live cloud credentials, both of which are operator-local

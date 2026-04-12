@@ -98,14 +98,21 @@ sops --decrypt bootstrap/cluster-age-key.sops.txt \\
       --from-file=age.agekey=/dev/stdin
 """
 
-[tasks.branch-protect]
-description = "Apply main-branch protection rules via gh api"
+[tasks.rulesets-apply]
+description = "Replace legacy branch protection with repository rulesets"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
-gh api \\
-  --method PUT \\
-  -H "Accept: application/vnd.github+json" \\
-  repos/itay-raveh/infra/branches/main/protection \\
-  --input scripts/branch-protection.json
+repo=itay-raveh/infra
+# Remove legacy branch protection (ignore 404 if already gone)
+gh api --method DELETE "repos/$repo/branches/main/protection" 2>/dev/null || true
+# Delete existing rulesets for idempotent re-apply
+for id in $(gh api "repos/$repo/rulesets" --jq '.[].id'); do
+  gh api --method DELETE "repos/$repo/rulesets/$id"
+done
+# Create fresh rulesets from JSON
+gh api --method POST "repos/$repo/rulesets" --input .github/rulesets/main-branch.json
+gh api --method POST "repos/$repo/rulesets" --input .github/rulesets/tags.json
+echo "Rulesets applied:"
+gh api "repos/$repo/rulesets" --jq '.[] | "  \\(.name) (\\(.target), \\(.enforcement))"'
 """

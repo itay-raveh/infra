@@ -140,7 +140,7 @@ printf '%s' "$TS_KEY" | sops_encrypt_to "$tailscale_authkey"
 unset TS_KEY
 printf '    encrypted to %s\n' "$tailscale_authkey" >&2
 
-step "applying main branch protection"
-mise run branch-protect >/dev/null
+step "applying repository rulesets"
+mise run rulesets-apply >/dev/null
 
 step "done. next: commit and push."
