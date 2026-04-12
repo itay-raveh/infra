@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   # Operator-only tools that need YubiKey hardware or libpcsclite
