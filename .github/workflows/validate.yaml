@@ -74,7 +74,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tofu-plugins-${{ hashFiles('tofu/.terraform.lock.hcl', 'tofu/versions.tf') }}
+          key: tofu-plugins-${{ hashFiles('tofu/.terraform.lock.hcl', 'tofu/providers.tf') }}
       - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
       - run: tofu -chdir=tofu fmt -check -recursive
       - run: tofu -chdir=tofu init -backend=false
