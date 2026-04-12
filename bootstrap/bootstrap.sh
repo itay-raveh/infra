@@ -141,6 +141,12 @@ unset TS_KEY
 printf '    encrypted to %s\n' "$tailscale_authkey" >&2
 
 step "applying repository rulesets"
-mise run rulesets-apply >/dev/null
+repo=itay-raveh/infra
+gh api --method DELETE "repos/$repo/branches/main/protection" >/dev/null 2>&1 || true
+for id in $(gh api "repos/$repo/rulesets" --jq '.[].id'); do
+  gh api --method DELETE "repos/$repo/rulesets/$id" >/dev/null
+done
+gh api --method POST "repos/$repo/rulesets" --input .github/rulesets/main-branch.json >/dev/null
+gh api --method POST "repos/$repo/rulesets" --input .github/rulesets/tags.json >/dev/null
 
 step "done. next: commit and push."

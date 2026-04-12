@@ -88,14 +88,10 @@ it to `tofu/encryption-passphrase.sops.txt`, prompts you to paste a
 fresh Tailscale pre-auth key (generated in the Tailscale admin UI -
 instructions print in-terminal) and wraps it to
 `talos/tailscale-authkey.sops.txt`, and finally applies repository
-rulesets to `main` via `mise run rulesets-apply`. From that point on
-`git commit` requires a touch on the primary YubiKey.
+rulesets to `main`. From that point on `git commit` requires a touch
+on the primary YubiKey.
 
 **Store the backup YubiKey offsite** as soon as the script finishes.
-
-Rulesets are also reassertable standalone via
-`mise run rulesets-apply` if you ever edit
-`.github/rulesets/*.json`.
 
 ### 4. Commit everything
 
