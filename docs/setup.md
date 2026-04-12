@@ -23,12 +23,12 @@ to git.
 These live outside any tool we run; create them manually first.
 
 - **Hetzner Cloud project** with an API token scoped `Read & Write`.
-- **Hetzner Object Storage bucket** named `raveh-infra-tfstate` (in `hel1`),
+- **Hetzner Object Storage bucket** named `raveh-infra-tfstate` (in `fsn1`),
   plus an S3 credential pair for it. This holds the encrypted tofu state.
 - **Cloudflare account** with `raveh.dev` on it. Create an API token
   scoped to `Zone:DNS edit` + `Zero Trust edit` on that one zone.
 - **GitHub account** (`itay-raveh`) and a local `gh auth login` session.
-- **Tailscale account** with a tailnet, an ACL tag `tag:frodo` defined,
+- **Tailscale account** with a tailnet, an ACL tag `tag:shire` defined,
   and a reusable pre-auth key for that tag. 90-day expiry is fine because
   the key is captured in SOPS, not re-typed.
 
@@ -39,86 +39,70 @@ mise install        # reads .mise.toml and pulls every tool
 pre-commit install  # activates the local hooks
 ```
 
-### 3. Initialize both YubiKeys
-
-Plug in primary:
-
-```
-age-plugin-yubikey --generate --slot 1 --touch-policy cached --pin-policy once
-```
-
-Record the public key (`age1yubikey1...`). Repeat with the backup
-YubiKey, in a separate slot. **Store one YubiKey offsite** as soon as
-you've recorded both public keys.
-
-### 4. Generate the cluster software age key
+On Linux, also install the PC/SC daemon so `age-plugin-yubikey` can
+reach the YubiKey's PIV applet (FIDO2 uses HID directly and works
+without it), plus the dev headers and toolchain that `pyscard`
+(ykman's smartcard dep) needs to build from source under pipx:
 
 ```
-age-keygen -o /tmp/cluster.key
+sudo apt-get install -y pcscd libpcsclite-dev build-essential swig python3-dev
+sudo systemctl enable --now pcscd.socket
 ```
 
-This is the key Flux's kustomize-controller uses inside the cluster to
-decrypt `*.sops.yaml` files. It exists in plaintext for about 30 seconds.
+`ykman` itself is pinned in `.mise.toml` (`pipx:yubikey-manager`), so
+`mise install` pulls it in once the build deps above are present. It's used by the pre-ceremony sanity
+checks (`ykman piv info`, `ykman fido credentials list`) and for
+rotation and troubleshooting, but the bootstrap script itself doesn't
+shell out to it.
 
-### 5. Write `.sops.yaml`
+**Ubuntu 24.04 gotcha:** if you've installed the Yubico Authenticator
+from the Snap Store, it ships its own `pcscd` inside the snap and
+grabs the USB interface exclusively. The system `pcscd.socket`
+silently fails to talk to the YubiKey while the snap is running. Use
+the `.deb` from yubico.com instead, or stop the snap before running
+any PIV command.
 
-Substitute the placeholders with the three real public keys (both
-YubiKeys + the cluster software key from step 4). Verify the
-`creation_rules:` paths still match the repo layout.
+### 3. Run the bootstrap ceremony
 
-### 6. Encrypt the cluster software key to YubiKeys only
+Each YubiKey holds two on-device keys in independent applets:
 
-```
-sops --encrypt --age <yubikey1>,<yubikey2> /tmp/cluster.key \
-  > bootstrap/cluster-age.key.sops
-shred -u /tmp/cluster.key
-```
+- **PIV slot 1**  - age P-256 key for SOPS (decrypts `.sops.*` files)
+- **FIDO2 resident**  - ed25519 SSH key for Hetzner rescue-mode
+  break-glass and git commit signing
 
-The cluster key cannot decrypt itself, so the `.sops.yaml` rule for
-`bootstrap/cluster-age.key.sops` deliberately excludes it from the
-recipient list  - only the two YubiKeys can read this file.
-
-### 7. Encrypt the state passphrase
-
-```
-openssl rand -base64 48 \
-  | sops --encrypt --input-type binary /dev/stdin \
-  > tofu/encryption-passphrase.sops.txt
-```
-
-YubiKey touch. This is the passphrase that AES-GCM-encrypts the tofu
-state file in the S3 backend bucket.
-
-### 8. Encrypt the Tailscale auth key
-
-Generate a reusable pre-auth key for `tag:frodo` in the Tailscale admin
-console, then:
+Both are hardware-generated and unextractable. Run the ceremony with
+both YubiKeys nearby:
 
 ```
-printf '%s' 'tskey-auth-<redacted>' \
-  | sops --encrypt --input-type binary /dev/stdin \
-  > talos/tailscale-authkey.sops.txt
+scripts/bootstrap.sh
 ```
 
-The `mise run tofu-apply` task decrypts this on each rebuild and exports
-it as `TF_VAR_tailscale_auth_key`. The key never lands on disk in
-plaintext after this step.
+The script prompts you to plug in each YubiKey in turn, generates the
+age + SSH keys on both, generates the cluster software age key in
+memory, registers both SSH pubkeys with GitHub as signing keys, sets
+git's global SSH signing config, writes `.sops.yaml` with all three
+recipients, encrypts the cluster key to
+`bootstrap/cluster-age-key.sops.txt`, generates the tofu state
+passphrase (the AES-GCM key for the S3-backed state file) and encrypts
+it to `tofu/encryption-passphrase.sops.txt`, prompts you to paste a
+fresh Tailscale pre-auth key (generated in the Tailscale admin UI -
+instructions print in-terminal) and wraps it to
+`talos/tailscale-authkey.sops.txt`, and finally applies branch
+protection to `main` via `mise run branch-protect`. From that point
+on `git commit` requires a touch on the primary YubiKey.
 
-### 9. Apply branch protection on `main`
+**Store the backup YubiKey offsite** as soon as the script finishes.
 
-```
-mise run branch-protect
-```
+Branch protection is also reassertable standalone via
+`mise run branch-protect` if you ever edit
+`scripts/branch-protection.json`.
 
-Posts the rules in `scripts/branch-protection.json` to the GitHub API.
-One-shot; re-run any time to reassert the rules.
+### 4. Commit everything
 
-### 10. Commit everything
-
-At this point `bootstrap/cluster-age.key.sops`, `.sops.yaml`,
-`tofu/encryption-passphrase.sops.txt`, `talos/tailscale-authkey.sops.txt`,
-and `.env.example` are all in git. Commit and push them. The repo is
-now self-bootstrapping.
+At this point `.sops.yaml`, `bootstrap/cluster-age-key.sops.txt`,
+`tofu/encryption-passphrase.sops.txt`, and
+`talos/tailscale-authkey.sops.txt` are all new in the working tree.
+Commit and push them. The repo is now self-bootstrapping.
 
 ---
 
@@ -147,9 +131,9 @@ Copy `.env.example` to `.env` and fill in:
 - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`  - the tfstate bucket credential
 - `TF_VAR_cloudflare_api_token`, `TF_VAR_cloudflare_zone_id`,
   `TF_VAR_cloudflare_account_id`
-- `TF_VAR_ssh_public_key_path`  - absolute path to your SSH public key
-  (used only by Hetzner rescue mode break-glass; Talos itself does not
-  use SSH)
+- `TF_VAR_ssh_public_key_path`  - absolute path to the primary YubiKey's
+  FIDO2-sk pubkey (e.g. `~/.ssh/id_ed25519_sk.pub`). Used only by
+  Hetzner rescue-mode break-glass.
 - `SOPS_AGE_KEY_FILE`  - path to your age-plugin-yubikey identity stub
 
 Then `gh auth login` so `flux bootstrap github` (step 5) can read
@@ -158,37 +142,38 @@ Then `gh auth login` so `flux bootstrap github` (step 5) can read
 ### 3. `mise run tofu-apply`
 
 The task unwraps the state passphrase from
-`tofu/encryption-passphrase.sops.txt` and the Tailscale auth key from
-`talos/tailscale-authkey.sops.txt` (one YubiKey touch each), exports
-them, then runs `tofu apply`. That:
+`tofu/encryption-passphrase.sops.txt` (one YubiKey touch), exports it,
+then runs `tofu apply`. The `sops` Terraform provider reads the
+Tailscale auth key from `talos/tailscale-authkey.sops.txt` during the
+plan phase (second YubiKey touch). That:
 
 - Builds the custom Talos schematic at the Image Factory (extensions
   baked in: `siderolabs/hcloud`, `qemu-guest-agent`, `tailscale`)
 - Uploads the resulting `hcloud-arm64.raw.xz` into Hetzner as a snapshot
   via the `imager` provider
 - Creates a CAX21 ARM server from that snapshot in `hel1`
-- Creates the persistent `frodo-data` Hetzner Volume and attaches it
+- Creates the persistent `shire-data` Hetzner Volume and attaches it
 - Closes the Talos API (50000) and Kubernetes API (6443) in the
   Hetzner firewall  - both are reachable only over Tailscale
 - Lets the `hcloud-talos` module render the Talos machineconfig with
   the Tailscale extension wired in, apply it to the node, and bootstrap
   etcd
 - At first boot, `tailscaled` reads the auth key and joins the tailnet
-  as `frodo`
-- Writes a local kubeconfig (kubectl reaches the API only over the
-  tailnet because 6443 is firewalled)
-- Outputs: `tunnel_token`, `frodo_public_ipv4`, `kubeconfig`,
-  `talosconfig`
+  as `shire-control-plane-1`
+- Outputs: `tunnel_token`, `public_ipv4`, `kubeconfig`, `talosconfig`
+  (the kubeconfig and talosconfig are sensitive  - extract with
+  `mise run tofu-output kubeconfig > kubeconfig`; kubectl reaches the
+  API only over Tailscale because 6443 is firewalled)
 
 ### 4. `mise run tofu-secrets-sync`
 
 Pipes the freshly-generated Cloudflare tunnel token through SOPS into
-`clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml`.
+`clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml`.
 On every rebuild Cloudflare issues a fresh token, so the ciphertext
 changes each rebuild  - review the diff, then commit and push:
 
 ```
-git add clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml
+git add clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
 git commit -m "chore: tunnel token for fresh tunnel"
 git push
 ```
@@ -199,23 +184,15 @@ idempotent.
 ### 5. `mise run flux-bootstrap`
 
 Runs `flux bootstrap github` against this repo, pointing at
-`clusters/frodo`. Flux installs itself into the new cluster, creates
-its own GitHub deploy key, and commits `clusters/frodo/flux-system/`.
+`clusters/shire`. Flux installs itself into the new cluster, creates
+its own GitHub deploy key, and commits `clusters/shire/flux-system/`.
 
-### 6. Install the `sops-age` secret
+### 6. `mise run cluster-seed-sops-age`
 
-This is the only piece of cluster state that can't be reconciled from
-git directly  - it's the key Flux *needs* in order to reconcile
-encrypted manifests:
-
-```
-sops --decrypt bootstrap/cluster-age.key.sops \
-  | kubectl create secret generic sops-age \
-      -n flux-system \
-      --from-file=age.agekey=/dev/stdin
-```
-
-YubiKey touch. This is the bootstrap's only chicken-and-egg.
+Unwraps `bootstrap/cluster-age-key.sops.txt` (YubiKey touch) and
+installs it as the `sops-age` Secret in `flux-system`. This is the
+bootstrap's only chicken-and-egg  - every other piece of cluster state
+is reconciled from git.
 
 ### 7. Flux reconciles `infrastructure/`
 
@@ -230,7 +207,7 @@ flux get kustomizations --watch
 
 ### 8. Verify
 
-- `tailscale status`  - `frodo` shows online in your tailnet
+- `tailscale status`  - `shire-control-plane-1` shows online in your tailnet
 - `kubectl get nodes`  - resolves through Magic DNS over the tailnet
 - `kubectl -n traefik get pods`  - Traefik pod is `Running`
 - `curl -sI https://raveh.dev`  - returns `404 Not Found` served by
@@ -246,5 +223,5 @@ YubiKey present. No interactive clicks in cloud UIs beyond the one-time
 bucket/project creation. No manual secret entry  - every secret that
 tofu doesn't generate itself is already committed as ciphertext. The
 only cluster state that isn't in git is the `sops-age` Secret in
-step 6, and that's unwrapped from `bootstrap/cluster-age.key.sops`
+step 6, and that's unwrapped from `bootstrap/cluster-age-key.sops.txt`
 which *is* in git.

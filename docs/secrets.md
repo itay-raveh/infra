@@ -2,20 +2,6 @@
 
 How secrets are stored, encrypted, decrypted, and rotated in this repo.
 
-## TL;DR
-
-- Every secret in git is SOPS-encrypted to **three age recipients**:
-  primary YubiKey, backup YubiKey, and the in-cluster software age key.
-  A few high-sensitivity files use only the two YubiKeys (Flux never
-  needs to read them).
-- The repo is treated as if it were public. Encrypted files are
-  AES-256-GCM with public-key recipients  - safe to publish at any commit.
-- The two YubiKeys are the hardware roots. Lose both and there is no
-  recovery path.
-- The cluster software age key (`bootstrap/cluster-age.key.sops`) is
-  what Flux uses to decrypt manifests in-cluster, because a hardware
-  YubiKey can't be present inside a pod.
-
 ## Threat model
 
 **In scope:**
@@ -47,13 +33,24 @@ How secrets are stored, encrypted, decrypted, and rotated in this repo.
 
 ## Trust roots
 
-**Hardware:** two YubiKey 5s (primary + backup). Private keys live only
-in PIV slot 1 on the device and cannot be extracted. Touch-cached
-policy means one touch authorizes multiple decryptions within ~15s.
-PIN-once policy means one PIN entry per boot.
+**Hardware:** two YubiKey 5s (primary + backup). Each holds two
+on-device keys in independent applets:
+
+- **PIV slot 1**  - age P-256 key for SOPS. Touch-cached (one touch
+  authorizes decryptions within ~15s), PIN-once (one PIN entry per
+  boot).
+- **FIDO2 resident**  - ed25519 SSH key for Hetzner rescue-mode
+  break-glass and git commit signing. Touch required on every use.
+
+All private keys are hardware-generated and unextractable. The two
+YubiKeys hold independently-generated keys, not copies of each other;
+both age pubkeys are listed as recipients in `.sops.yaml` so either
+YubiKey alone can decrypt. Both SSH pubkeys are registered as GitHub
+signing keys; only the primary's is registered in Hetzner, so rotating
+to the backup requires a `tofu-apply` to swap rescue-mode keys.
 
 **In-cluster helper:** one software age key, stored as
-`bootstrap/cluster-age.key.sops` (encrypted to both YubiKeys).
+`bootstrap/cluster-age-key.sops.txt` (encrypted to both YubiKeys).
 Flux's kustomize-controller uses this key to decrypt `*.sops.yaml`
 files during reconciliation. It's installed once per rebuild as a
 Kubernetes Secret named `sops-age` in the `flux-system` namespace.
@@ -65,17 +62,17 @@ Kubernetes Secret named `sops-age` in the `flux-system` namespace.
 - The software key lets Flux decrypt files in-cluster.
 - All three can decrypt everything, so losing any single one is
   recoverable.
-- `bootstrap/cluster-age.key.sops` is the one exception: only the 2
+- `bootstrap/cluster-age-key.sops.txt` is the one exception: only the 2
   YubiKeys are recipients (the cluster key cannot decrypt itself).
 
 ## Where secrets live
 
 | Secret | Path | Recipients | Notes |
 |---|---|---|---|
-| Cluster software age key | `bootstrap/cluster-age.key.sops` | YubiKeys only | Unwrapped into the `sops-age` Secret on every rebuild |
+| Cluster software age key | `bootstrap/cluster-age-key.sops.txt` | YubiKeys only | Unwrapped into the `sops-age` Secret on every rebuild |
 | Tofu state passphrase | `tofu/encryption-passphrase.sops.txt` | YubiKeys only | Flux never runs tofu, so it doesn't need to read this |
-| Tailscale auth key | `talos/tailscale-authkey.sops.txt` | YubiKeys only | Decrypted at apply time, exported as `TF_VAR_tailscale_auth_key` |
-| Cloudflare tunnel token | `clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml` | All three (Flux must read it) | Output of tofu, piped through SOPS by `mise run tofu-secrets-sync` |
+| Tailscale auth key | `talos/tailscale-authkey.sops.txt` | YubiKeys only | Read by the `sops` Terraform provider via `data.sops_file` at plan/apply time |
+| Cloudflare tunnel token | `clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml` | All three (Flux must read it) | Output of tofu, piped through SOPS by `mise run tofu-secrets-sync` |
 | Talos PKI + bootstrap token + etcd encryption key | Inside tofu state | Protected by state encryption | Generated once by the `hcloud-talos` module on first apply |
 
 `.env` itself is **never** committed. It contains the Hetzner API
@@ -89,7 +86,7 @@ no secret values.
 ### Edit an existing encrypted file
 
 ```
-sops clusters/frodo/infrastructure/controllers/<app>/admin.sops.yaml
+sops clusters/shire/infrastructure/controllers/<app>.sops.yaml
 ```
 
 YubiKey prompts for a touch, the file opens decrypted in `$EDITOR`,
@@ -104,13 +101,13 @@ plaintext-looking content, abort and investigate.
 $EDITOR /tmp/secret.yaml
 
 # 2. Encrypt in place into the right path
-sops --encrypt /tmp/secret.yaml > clusters/frodo/.../secret.sops.yaml
+sops --encrypt /tmp/secret.yaml > clusters/shire/.../secret.sops.yaml
 
 # 3. Wipe the plaintext copy
 shred -u /tmp/secret.yaml
 
 # 4. Commit
-git add clusters/frodo/.../secret.sops.yaml
+git add clusters/shire/.../secret.sops.yaml
 ```
 
 The `.sops.yaml` `creation_rules:` section picks the recipient set
@@ -119,7 +116,7 @@ based on the file's path, so step 2 doesn't need a `--age` flag.
 ### Verify a file is actually encrypted
 
 ```
-grep -q 'ENC\[' clusters/frodo/.../secret.sops.yaml && echo ok
+grep -q 'ENC\[' clusters/shire/.../secret.sops.yaml && echo ok
 ```
 
 The pre-commit `sops-verify` hook runs the same check on every commit
@@ -127,32 +124,54 @@ that touches a `.sops.*` file.
 
 ## YubiKey rotation
 
-### Replacing a lost backup YubiKey
+### Replacing a lost YubiKey
+
+Same procedure for primary and backup  - only the last step differs.
 
 1. Buy a new YubiKey.
-2. `age-plugin-yubikey --generate --slot 1 --touch-policy cached --pin-policy once`
-   on the new device. Record the public key.
-3. Edit `.sops.yaml`: replace the lost YubiKey's public key with the
-   new one. Leave the surviving YubiKey and (where applicable) the
+2. Generate both on-device keys. Reuse the filename of the YubiKey you're
+   replacing so `.env` and `user.signingkey` keep working unchanged:
+
+   ```
+   age-plugin-yubikey --generate --slot 1 --touch-policy cached --pin-policy once
+   # primary:
+   ssh-keygen -t ed25519-sk -O resident -f ~/.ssh/id_ed25519_sk        -C "yubikey-primary"
+   # backup:
+   ssh-keygen -t ed25519-sk -O resident -f ~/.ssh/id_ed25519_sk_backup -C "yubikey-backup"
+   ```
+
+   Record the new age public key.
+3. Edit `.sops.yaml`: replace the lost YubiKey's age public key with
+   the new one. Leave the surviving YubiKey and (where applicable) the
    cluster age key in place.
 4. For every committed encrypted file, re-wrap to the new recipient
    set:
 
    ```
-   sops updatekeys clusters/frodo/.../secret.sops.yaml
+   sops updatekeys clusters/shire/.../secret.sops.yaml
    sops updatekeys tofu/encryption-passphrase.sops.txt
    sops updatekeys talos/tailscale-authkey.sops.txt
-   sops updatekeys bootstrap/cluster-age.key.sops
+   sops updatekeys bootstrap/cluster-age-key.sops.txt
    # ...etc for every .sops.* file
    ```
 
    `updatekeys` re-wraps the data key without re-encrypting the
    payload, so the diff is small and reviewable.
-5. Commit the updated `.sops.yaml` and the re-wrapped files in one PR.
+5. Register the new SSH pubkey with GitHub as a signing key and remove
+   the old entry if you still have access:
+
+   ```
+   gh ssh-key add ~/.ssh/<newfile>.pub --type signing --title "yubikey-<role>"
+   ```
+
+6. Commit the updated `.sops.yaml` and re-wrapped files in one PR.
    CI's gitleaks + sops-sanity jobs catch a botched `updatekeys` or a
    stray plaintext slip before merge.
-6. Store the new YubiKey wherever the lost one was (offsite if it was
-   the backup, on the keyring if it was the primary).
+7. If you replaced the **primary**, run `mise run tofu-apply` so tofu
+   pushes the new FIDO2-sk pubkey to Hetzner as the rescue-mode SSH
+   key. No change to `.env` is needed since the filename was reused.
+8. Store the new YubiKey wherever the lost one was (offsite if backup,
+   on the keyring if primary).
 
 ### Rotating the cluster software age key
 
@@ -160,8 +179,10 @@ This is a full one-time-setup replay because every encrypted file is
 re-wrapped:
 
 1. Generate a new key: `age-keygen -o /tmp/cluster.key`.
-2. Encrypt it to YubiKeys only:
-   `sops --encrypt --age <yubi1>,<yubi2> /tmp/cluster.key > bootstrap/cluster-age.key.sops`.
+2. Encrypt it (the `.sops.yaml` creation rule for
+   `bootstrap/cluster-age-key.sops.txt` pins YubiKey-only recipients,
+   so no `--age` flag is needed):
+   `sops --encrypt --input-type binary /tmp/cluster.key > bootstrap/cluster-age-key.sops.txt`.
 3. `shred -u /tmp/cluster.key`.
 4. Update `.sops.yaml` with the new public key in place of the old one.
 5. `sops updatekeys` every `clusters/**/*.sops.yaml` so Flux's new

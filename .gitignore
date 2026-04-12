@@ -14,9 +14,7 @@
 
 # Cluster credentials
 kubeconfig
-*kubeconfig*
 talosconfig
-*talosconfig*
 
 # Editor / OS
 .DS_Store

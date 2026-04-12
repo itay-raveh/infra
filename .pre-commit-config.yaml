@@ -1,24 +1,55 @@
+---
 repos:
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
-      - id: gitleaks
+      - id: gitleaks-system
+        # Upstream forgot this on `gitleaks-system` (the `gitleaks` and
+        # `gitleaks-docker` variants have it). Without it pre-commit
+        # pipes changed-file paths as positional args and gitleaks
+        # rejects >1.
+        pass_filenames: false
 
   - repo: local
     hooks:
       - id: sops-verify
-        name: Verify SOPS-named files are encrypted
+        name: sops-verify
         language: system
-        entry: bash -c 'for f in "$@"; do grep -q "ENC\[" "$f" || { echo "not SOPS-encrypted: $f" >&2; exit 1; }; done' --
-        files: '\.sops\.(yaml|json)$|bootstrap/cluster-age\.key\.sops$|tofu/encryption-passphrase\.sops\.txt$|talos/tailscale-authkey\.sops\.txt$'
+        entry: |
+          bash -c 'for f in "$@"; do grep -q "ENC\[" "$f" || { echo "not SOPS-encrypted $f" >&2; exit 1; }; done' --
+        files: '\.sops\.'
+        exclude: '^\.sops\.yaml$'
+
+      - id: no-plaintext-secrets
+        name: no-plaintext-secrets
+        language: system
+        entry: |
+          bash -c '
+            for f in "$@"; do
+              # Catch any doc in a multi-doc stream whose kind is Secret,
+              # regardless of leading whitespace or YAML doc position.
+              if grep -qE "^[[:space:]]*kind:[[:space:]]*Secret[[:space:]]*$" "$f"; then
+                echo "plaintext Secret (rename to .sops.yaml and encrypt): $f" >&2
+                exit 1
+              fi
+            done
+          ' --
+        files: '^clusters/.*\.ya?ml$'
+        exclude: '\.sops\.'
+
+      - id: yamllint
+        name: yamllint
+        language: system
+        entry: yamllint
+        types: [yaml]
+        exclude: '\.sops\.(yaml|yml)$'
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
 
   - repo: https://github.com/tofuutils/pre-commit-opentofu
     rev: v2.2.2
     hooks:
       - id: tofu_fmt
-
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.38.0
-    hooks:
-      - id: yamllint
-        exclude: '(\.sops\.(yaml|yml)$|^docs/design\.md$)'

@@ -1,10 +1,14 @@
 min_version = "2026.4.8"
 
-# infra toolchain
+[env]
+_.file = ".env"
+
 [tools]
 age = "1.3.1"
-"github:str4d/age-plugin-yubikey" = "0.5.1"
-"aqua:tailscale/tailscale" = "1.96.5"
+# 0.5.0 is the last upstream release with a Linux binary; 0.5.1 shipped
+# only darwin/windows assets.
+"aqua:str4d/age-plugin-yubikey" = "0.5.0"
+"aqua:tailscale/tailscale" = "1.96.4"
 flux2 = "2.8.5"
 gh = "2.89.0"
 gitleaks = "8.30.1"
@@ -12,51 +16,61 @@ jq = "1.8.1"
 kubectl = "1.35.3"
 opentofu = "1.11.6"
 "pipx:pre-commit" = "4.5.1"
+"pipx:yamllint" = "1.38.0"
+"pipx:yubikey-manager" = "5.9.0"
+shellcheck = "0.11.0"
 sops = "3.12.2"
 talosctl = "1.12.6"
-"pipx:yamllint" = "1.38.0"
 yq = "4.52.5"
 
-# Tasks below assume the operator's YubiKey is plugged in. Each sops
-# decryption triggers one touch (cached for ~15s). Decrypted material
-# stays in process env vars and never lands on disk.
-
 [tasks.tofu-plan]
-description = "tofu plan with state passphrase + tailscale key unwrapped from SOPS"
+description = "tofu plan with state passphrase unwrapped from SOPS"
 dir = "{{config_root}}"
 run = """
-export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
-export TF_VAR_tailscale_auth_key="$(sops --decrypt talos/tailscale-authkey.sops.txt)"
+set -euo pipefail
+passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
+export TF_VAR_encryption_passphrase="$passphrase"
 tofu -chdir=tofu plan "$@"
 """
 
 [tasks.tofu-apply]
-description = "tofu apply with state passphrase + tailscale key unwrapped from SOPS"
+description = "tofu apply with state passphrase unwrapped from SOPS"
 dir = "{{config_root}}"
 run = """
-export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
-export TF_VAR_tailscale_auth_key="$(sops --decrypt talos/tailscale-authkey.sops.txt)"
+set -euo pipefail
+passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
+export TF_VAR_encryption_passphrase="$passphrase"
 tofu -chdir=tofu apply "$@"
 """
 
 [tasks.tofu-secrets-sync]
-description = "Pipe runtime tofu outputs through SOPS into the cluster tree"
+description = "Render runtime tofu outputs as cluster Secrets, encrypted in place by SOPS"
 dir = "{{config_root}}"
 run = """
-export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
-mkdir -p clusters/frodo/infrastructure/controllers/cloudflared
-tofu -chdir=tofu output -raw tunnel_token \\
-  | sops --encrypt --input-type binary --output-type yaml /dev/stdin \\
-  > clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml
-echo "wrote clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml"
-echo "review with: git diff -- clusters/frodo/infrastructure/controllers/cloudflared/tunnel-token.sops.yaml"
+set -euo pipefail
+passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
+export TF_VAR_encryption_passphrase="$passphrase"
+target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
+# Capture separately; command substitution failures inside kubectl's
+# argument list don't trip set -e. Pipe via stdin so the token never
+# lands in /proc/<pid>/cmdline.
+token=$(tofu -chdir=tofu output -raw tunnel_token)
+printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \\
+  --namespace=cloudflared \\
+  --from-file=cf-tunnel-token=/dev/stdin \\
+  --dry-run=client -o yaml > "$target"
+sops --encrypt --in-place "$target"
+echo "wrote $target"
+echo "review with: git diff -- $target"
 """
 
 [tasks.tofu-output]
-description = "Decrypt state and dump a tofu output to stdout (e.g. mise run tofu-output kubeconfig)"
+description = "Decrypt state and dump a tofu output to stdout"
 dir = "{{config_root}}"
 run = """
-export TF_VAR_encryption_passphrase="$(sops --decrypt tofu/encryption-passphrase.sops.txt)"
+set -euo pipefail
+passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
+export TF_VAR_encryption_passphrase="$passphrase"
 tofu -chdir=tofu output -raw "$@"
 """
 
@@ -64,18 +78,31 @@ tofu -chdir=tofu output -raw "$@"
 description = "Bootstrap Flux into the freshly-built cluster against this repo"
 dir = "{{config_root}}"
 run = """
+set -euo pipefail
 flux bootstrap github \\
   --owner=itay-raveh \\
   --repository=infra \\
-  --path=clusters/frodo \\
+  --path=clusters/shire \\
   --personal \\
   --branch=main
+"""
+
+[tasks.cluster-seed-sops-age]
+description = "Install the cluster age key as the sops-age Secret in flux-system"
+dir = "{{config_root}}"
+run = """
+set -euo pipefail
+sops --decrypt bootstrap/cluster-age-key.sops.txt \\
+  | kubectl create secret generic sops-age \\
+      -n flux-system \\
+      --from-file=age.agekey=/dev/stdin
 """
 
 [tasks.branch-protect]
 description = "Apply main-branch protection rules via gh api"
 dir = "{{config_root}}"
 run = """
+set -euo pipefail
 gh api \\
   --method PUT \\
   -H "Accept: application/vnd.github+json" \\

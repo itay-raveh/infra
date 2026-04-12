@@ -3,7 +3,7 @@
 The full-rebuild path is `setup.md` → "Every-rebuild path." DR is not
 a separate procedure  - the every-rebuild path is written to double as
 the DR path, because the only way to verify DR still works is to
-exercise it regularly. Every time you rebuild frodo for any reason,
+exercise it regularly. Every time you rebuild shire for any reason,
 you're drilling DR.
 
 At v1 there is no stateful user data to restore. Every component -
@@ -83,13 +83,18 @@ hardware failure from total loss  - initialize a replacement immediately.
 There is no recovery path. The repo's encrypted material becomes
 permanent ciphertext. Treat this as "start over":
 
-1. Generate new YubiKeys, repeat one-time setup steps 3 onward.
-2. Generate a fresh cluster software age key (one-time setup step 4).
-3. Generate a fresh state passphrase, fresh Tailscale auth key, fresh
-   tunnel token. Replace every `.sops.*` artifact in git.
-4. Destroy and recreate the tofu state (you cannot decrypt the old
+1. Buy new YubiKeys and re-run `scripts/bootstrap.sh` from a clean
+   working tree (delete the old `.sops.yaml`,
+   `bootstrap/cluster-age-key.sops.txt`,
+   `tofu/encryption-passphrase.sops.txt`, and
+   `talos/tailscale-authkey.sops.txt` first so the preflight guard
+   doesn't bail). The script regenerates the cluster software age
+   key, state passphrase, and Tailscale auth key in one ceremony.
+2. Generate a fresh Cloudflare tunnel token (destroy and recreate
+   the tunnel via `tofu-apply`).
+3. Destroy and recreate the tofu state (you cannot decrypt the old
    state without the old passphrase).
-5. Run the every-rebuild path against the new cryptographic roots.
+4. Run the every-rebuild path against the new cryptographic roots.
 
 The cluster comes back. Any future stateful data that depended on the
 old SOPS keys is unrecoverable.
@@ -104,8 +109,8 @@ old SOPS keys is unrecoverable.
 
 If you have no mirror snapshot, the repo is gone for good  - every
 encrypted artifact lived in git, and the cluster software age key,
-state passphrase, tailscale key, and bootstrap key are unrecoverable.
-This is the same outcome as losing both YubiKeys.
+state passphrase, and Tailscale auth key are unrecoverable. This is
+the same outcome as losing both YubiKeys.
 
 ---
 

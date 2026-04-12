@@ -28,11 +28,6 @@ variable "cloudflare_account_id" {
 
 variable "ssh_public_key_path" {
   type        = string
-  description = "Filesystem path to the SSH public key used only for Hetzner rescue-mode break-glass (Talos itself does not use SSH)."
+  description = "Filesystem path to the primary YubiKey FIDO2-sk pubkey (e.g. ~/.ssh/id_ed25519_sk.pub). Used only for Hetzner rescue-mode break-glass; Talos itself does not use SSH."
 }
 
-variable "tailscale_auth_key" {
-  type        = string
-  sensitive   = true
-  description = "Reusable Tailscale pre-auth key tagged with tag:frodo. Injected as TF_VAR_tailscale_auth_key by the mise tofu-apply task, which sops-decrypts talos/tailscale-authkey.sops.txt."
-}

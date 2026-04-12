@@ -1,26 +1,23 @@
-# Age public keys are generated during one-time setup (see docs/setup.md)
-# and substituted in here. PLACEHOLDERS BELOW  - not real keys.
+x-yubis-only: &yubis_only >-
+  age1yubikey1qvpg35e0zwywyj7w6dv53yewum6mpr0mzkekpcr02mvzrrtml3zmumwhqae,
+  age1yubikey1qvcujpaxamuraf4neev9xcxgj40e5x54n5a8kz0xvg3fpcnl6p48xsgkyg4
+
 creation_rules:
+  # Cluster-tree Secrets: encrypt only data/stringData so Kubernetes can
+  # still read apiVersion/kind/metadata.
   - path_regex: clusters/.*\.sops\.(yaml|json)$
+    encrypted_regex: '^(data|stringData)$'
     age: >-
-      age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
-      age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5,
-      age1clusterPLACEHOLDERREPLACEINSETUPA6
+      age1yubikey1qvpg35e0zwywyj7w6dv53yewum6mpr0mzkekpcr02mvzrrtml3zmumwhqae,
+      age1yubikey1qvcujpaxamuraf4neev9xcxgj40e5x54n5a8kz0xvg3fpcnl6p48xsgkyg4,
+      age1dhztnm2nhdpcwsuv8uz6ss05tdx4jyfhm22dltu9l4u4fu8v3a4qs5asa7
 
-  # Tailscale auth key: consumed by tofu apply, Flux never reads it, so YubiKeys only.
   - path_regex: talos/tailscale-authkey\.sops\.txt$
-    age: >-
-      age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
-      age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5
+    age: *yubis_only
 
-  # Tofu state passphrase: YubiKeys only  - Flux never runs tofu.
   - path_regex: tofu/encryption-passphrase\.sops\.txt$
-    age: >-
-      age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
-      age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5
+    age: *yubis_only
 
-  # cluster-age.key.sops is the cluster software key itself  - it cannot decrypt itself.
-  - path_regex: bootstrap/cluster-age\.key\.sops$
-    age: >-
-      age1yubikey1primaryPLACEHOLDERREPLACEINSETUPA5,
-      age1yubikey1backupPLACEHOLDERREPLACEINSETUPA5
+  # The cluster software key cannot decrypt itself.
+  - path_regex: bootstrap/cluster-age-key\.sops\.txt$
+    age: *yubis_only
