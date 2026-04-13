@@ -13,8 +13,3 @@ spec:
       services:
         - name: wanderbound-frontend
           port: 8080
-    - match: Host(`wanderbound-api.raveh.dev`)
-      kind: Rule
-      services:
-        - name: wanderbound-backend
-          port: 8000
