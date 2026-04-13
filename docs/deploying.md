@@ -109,10 +109,10 @@ for Postgres, tarballs for app data, etcd snapshots for cluster state).
    creates a new one, and applies the same machineconfig.
 3. Cluster downtime: ~5 minutes. Single-node, no HA  - accept it or
    schedule it.
-4. If the rebuild produces a fresh Cloudflare tunnel token, run
-   `mise run tofu-secrets-sync` and commit the new ciphertext.
+4. If the server is fully replaced, use `mise run rebuild` which
+   handles the tunnel token, Flux bootstrap, and SOPS key seeding.
 5. The cluster's PKI lives in tofu state, so the new server boots into
-   the same Kubernetes cluster identity. No `flux bootstrap` needed.
+   the same Kubernetes cluster identity.
 6. Restore stateful data from S3 if needed (see `disaster-recovery.md`).
 
 ---
@@ -180,9 +180,9 @@ and never touch a runner.
 - **Editing a `.sops.yaml` file with a regular editor.** Don't -
   `sops <file>` opens it decrypted in `$EDITOR`. Saving with vim/code
   directly will produce encrypted-looking gibberish that won't decrypt.
-- **Forgetting to commit a fresh tunnel token after rebuild.** Step 4
-  of the every-rebuild path is the one bespoke step  - Flux can't
-  reconcile cloudflared until it lands.
+- **Tunnel token after rebuild.** `mise run rebuild` handles the
+  commit+push automatically. If you're doing a partial rebuild, the
+  tunnel token must land in git before Flux can reconcile cloudflared.
 - **Touching `clusters/shire/flux-system/`.** Flux owns that directory.
   If `flux bootstrap` regenerates it, hand-edits get clobbered.
 - **YubiKey touch timeouts.** Touch policy is `cached` (~15s window),
