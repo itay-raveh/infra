@@ -72,14 +72,12 @@ Kubernetes Secret named `sops-age` in the `flux-system` namespace.
 | Cluster software age key | `bootstrap/cluster-age-key.sops.txt` | YubiKeys only | Unwrapped into the `sops-age` Secret on every rebuild |
 | Tofu state passphrase | `tofu/encryption-passphrase.sops.txt` | YubiKeys only | Flux never runs tofu, so it doesn't need to read this |
 | Tailscale auth key | `talos/tailscale-authkey.sops.txt` | YubiKeys only | Read by the `sops` Terraform provider via `data.sops_file` at plan/apply time |
-| Cloudflare tunnel token | `clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml` | All three (Flux must read it) | Output of tofu, piped through SOPS by `mise run tofu-secrets-sync` |
+| Cloudflare tunnel token | `clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml` | All three (Flux must read it) | Output of tofu, piped through SOPS by `mise run rebuild` |
 | Talos PKI + bootstrap token + etcd encryption key | Inside tofu state | Protected by state encryption | Generated once by the `hcloud-talos` module on first apply |
 
-`.env` itself is **never** committed. It contains the Hetzner API
-token, the Object Storage credential, and the Cloudflare API token -
-the bootstrap inputs the operator types in once per laptop. `.env` is
-in `.gitignore`; the template `.env.example` is committed and contains
-no secret values.
+All external API tokens (Hetzner, Cloudflare, Object Storage) live in
+`tofu/secrets.sops.yaml`, encrypted to both YubiKeys. The mise tofu
+tasks decrypt this file on every run.
 
 ## Operator workflow
 
@@ -112,15 +110,6 @@ git add clusters/shire/.../secret.sops.yaml
 
 The `.sops.yaml` `creation_rules:` section picks the recipient set
 based on the file's path, so step 2 doesn't need a `--age` flag.
-
-### Verify a file is actually encrypted
-
-```
-grep -q 'ENC\[' clusters/shire/.../secret.sops.yaml && echo ok
-```
-
-The pre-commit `sops-verify` hook runs the same check on every commit
-that touches a `.sops.*` file.
 
 ## YubiKey rotation
 
@@ -190,7 +179,7 @@ re-wrapped:
 6. Commit, push.
 7. On the running cluster, replace the `sops-age` Secret in
    `flux-system` with the unwrapped new key (same command as
-   `setup.md` rebuild step 6).
+   `mise run rebuild` step 4).
 8. `flux reconcile kustomization infrastructure` to confirm Flux can
    still decrypt everything.
 
@@ -215,15 +204,3 @@ of the cluster age key  - only the YubiKeys were).
 This is the only rotation that touches tofu state directly, so it's
 worth doing during a maintenance window.
 
-## CI enforcement
-
-Every push and PR runs:
-
-- `gitleaks`  - catches accidental plaintext credentials in the diff
-- `sops-sanity`  - every `*.sops.*` file actually contains `ENC[`
-  markers, and no plaintext `kind: Secret` lives under `clusters/`
-- `flux-build`  - `flux build kustomization` dry-run, which would fail
-  if a referenced Secret is missing or malformed
-- `tofu-validate`  - `tofu fmt -check` + `tofu validate`
-
-All four are required green for a merge to `main`.

@@ -21,64 +21,16 @@ The Flux loop is: edit → commit → push → wait. Flux polls this repo
 every minute and reconciles `clusters/shire/infrastructure/` against
 the live cluster.
 
-### Bumping a Helm chart version
+All HelmReleases and SOPS-encrypted Secrets follow the existing
+patterns in `clusters/shire/infrastructure/controllers/`. Add new
+resources to the directory's `kustomization.yaml`.
 
-1. Edit `clusters/shire/infrastructure/controllers/<chart>.yaml` and
-   change `spec.chart.spec.version` on the HelmRelease.
-2. Read the chart's release notes if it's a major bump. Adjust
-   `spec.values` if anything became non-default.
-3. Commit, push, wait. Watch with `flux get hr -A --watch`.
-4. If the upgrade fails, Flux's `upgrade.remediation.retries: 3` rolls
-   back automatically. The HelmRelease shows `False` and a reason in
-   `kubectl describe hr -n <ns> <name>`.
+SOPS files must use the `.sops.yaml` suffix. The pre-commit hook
+refuses to commit without `ENC[` markers. Edit existing ones with
+`sops <file>` (decrypts in `$EDITOR`, re-encrypts on save).
 
-### Adding a new HelmRelease
-
-1. Create `clusters/shire/infrastructure/controllers/<name>.yaml`
-   containing a `HelmRepository` and a `HelmRelease` (and a `Namespace`
-   if the chart needs one) as a single YAML stream separated by `---`.
-2. Add the filename to
-   `clusters/shire/infrastructure/controllers/kustomization.yaml`.
-3. Commit, push, wait.
-
-### Adding a SOPS-encrypted Secret
-
-The cluster can decrypt anything encrypted to the cluster software age
-key. To add one:
-
-1. Create the plaintext Secret manifest in your editor.
-2. Save it under `clusters/shire/...` with a `.sops.yaml` suffix
-   (e.g. `my-app.sops.yaml`). The pre-commit hook refuses to commit
-   the file without `ENC[` markers, so you cannot accidentally push
-   plaintext.
-3. `sops --encrypt --in-place clusters/shire/.../my-app.sops.yaml`.
-   YubiKey touch.
-4. Commit, push.
-
-To edit an existing one: `sops clusters/shire/.../my-app.sops.yaml`
-opens it decrypted in `$EDITOR`; saving re-encrypts to all configured
-recipients automatically.
-
-### Forcing a reconcile
-
-Flux normally polls every minute. To kick it now:
-
-```
-flux reconcile source git flux-system
-flux reconcile kustomization infrastructure
-```
-
-### Rolling back
-
-Flux is git-driven, so the rollback is `git revert <bad-commit> &&
-git push`. Wait for Flux to pull. If you need to halt reconciliation
-while you debug, suspend the affected resource:
-
-```
-flux suspend kustomization infrastructure
-# fix things
-flux resume kustomization infrastructure
-```
+Rollback: `git revert <bad-commit> && git push`. To pause Flux while
+debugging: `flux suspend kustomization infrastructure`.
 
 ---
 
@@ -144,34 +96,10 @@ To upgrade:
 
 ## Pre-commit and CI
 
-The local pre-commit hooks run on every commit:
-
-- `gitleaks`  - scans the diff for secret patterns
-- `sops-verify`  - refuses to commit any `*.sops.*` file that isn't
-  actually encrypted
-- `no-plaintext-secrets`  - refuses to commit any `kind: Secret` under
-  `clusters/` that isn't `.sops.`-named
-- `shellcheck`  - lints shell scripts
-- `tofu_fmt`  - formats `tofu/` in place
-- `yamllint`  - lints YAML
-
-CI on GitHub runs the same gitleaks scan plus three additional jobs
-on every PR and push to `main`:
-
-- `sops-sanity`  - repeats the encryption check across the whole tree
-  and refuses any plaintext `kind: Secret` manifest under `clusters/`
-- `flux-build`  - `flux build kustomization infrastructure --dry-run`
-  catches malformed HelmRelease values, broken `dependsOn`, missing
-  substitutions before they reach the cluster
-- `tofu-validate`  - `tofu fmt -check -recursive` + `tofu validate`
-
-All four are required green for a merge to `main`. Repository rulesets
-block force-push and deletion; the repo admin is a bypass actor for
-cases like history rewrites.
-
-`tofu plan` does **not** run in CI  - it needs the state encryption
-passphrase and live cloud credentials, both of which are operator-local
-and never touch a runner.
+See `.pre-commit-config.yaml` and `.github/workflows/` for the full
+hook and CI job list. Key non-obvious detail: `tofu plan` does **not**
+run in CI - it needs the state encryption passphrase and live cloud
+credentials, both of which are operator-local and never touch a runner.
 
 ---
 
