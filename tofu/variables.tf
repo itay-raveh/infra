@@ -27,3 +27,15 @@ variable "tailscale_auth_key" {
   description = "Tailscale pre-auth key for the shire tag (from tofu/secrets.sops.yaml)."
 }
 
+variable "s3_access_key_id" {
+  type        = string
+  sensitive   = true
+  description = "Hetzner Object Storage access key (from tofu/secrets.sops.yaml)."
+}
+
+variable "s3_secret_access_key" {
+  type        = string
+  sensitive   = true
+  description = "Hetzner Object Storage secret key (from tofu/secrets.sops.yaml)."
+}
+

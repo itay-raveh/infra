@@ -22,6 +22,27 @@ provider "registry.opentofu.org/alekc/kubectl" {
   ]
 }
 
+provider "registry.opentofu.org/aminueza/minio" {
+  version     = "3.30.0"
+  constraints = "3.30.0"
+  hashes = [
+    "h1:WyviVEb9sQ2NStduQRrRb7EAQZ6cs9fSwl894Jvsn6o=",
+    "zh:1beeb287a1a905086bb5f0841b2cc1973e47194415247d435deedc47a4b138f8",
+    "zh:1e0eaf473d39320906c808d5069654c6bdfa4acf80aeb1386a072b172e20dbcd",
+    "zh:4dd7ec256ee343bdb29fe9429120cc7d31ba9b182be675c2f7ccc03c8b06646c",
+    "zh:5c2d0987f5a77fb88a2c2f565cddfbbf0d3bd936740df938c6b7d7fdf0b06ba8",
+    "zh:72e945cfa6adb696bb7b08b7d26286dadbcad64f62d9045fcdf360606c87399d",
+    "zh:7880e0ebb3c9c77b31c52392e3195c62cb46656cb55876396913408a1dbb8ea0",
+    "zh:7f66ac357187b13a378ff17e5b47a939e70fe816ce510968bf3bedf541e0d323",
+    "zh:811b01e6eaeac94732eb6fd70da0dd41b964f36d7636c2e7be066c785ee1f1f1",
+    "zh:899ddb687cd2bb1942de8f38dc7c2f3eb54dafb1d57b5c044db6a3dfb3606567",
+    "zh:9a43747f1925d54cae606435cc0fe16a8c2e9ae6f9a2531f645d7b8126c71182",
+    "zh:c153a0150b8b0bc3fd3f245ddf3c778f788f5aa0094e1467e0743f9db5277d01",
+    "zh:df7df0a19fc558ff761170d38f469937f39f59ee3f892299dd90c6fdb82745ca",
+    "zh:e347daf1fe513f29ec7462843a17e6f3064c37e2a6402c7c76455930e0e25118",
+  ]
+}
+
 provider "registry.opentofu.org/cloudflare/cloudflare" {
   version     = "4.52.7"
   constraints = "4.52.7"

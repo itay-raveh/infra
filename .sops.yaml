@@ -15,6 +15,6 @@ creation_rules:
   - path_regex: tofu/secrets\.sops\.yaml$
     age: *yubis_only
 
-  # The cluster software key cannot decrypt itself.
-  - path_regex: bootstrap/cluster-age-key\.sops\.txt$
+  # Bootstrap keys cannot decrypt themselves.
+  - path_regex: bootstrap/.*\.sops\.txt$
     age: *yubis_only

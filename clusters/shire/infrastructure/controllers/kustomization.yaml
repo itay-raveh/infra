@@ -6,4 +6,6 @@ resources:
   - cloudflared.yaml
   - cnpg.yaml
   - local-path-provisioner.yaml
+  - s3-backup-creds.sops.yaml
+  - talos-backup.yaml
   - traefik.yaml
