@@ -1,0 +1,20 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: wanderbound
+  namespace: wanderbound
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`wanderbound.raveh.dev`)
+      kind: Rule
+      services:
+        - name: wanderbound-frontend
+          port: 8080
+    - match: Host(`wanderbound-api.raveh.dev`)
+      kind: Rule
+      services:
+        - name: wanderbound-backend
+          port: 8000

@@ -6,3 +6,10 @@ resources:
   - cnpg-s3-creds.sops.yaml
   - wanderbound-db.yaml
   - wanderbound-db-scheduled-backup.yaml
+  - wanderbound-secrets.sops.yaml
+  - app-data-pvc.yaml
+  - backend-deployment.yaml
+  - backend-service.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - ingressroute.yaml
