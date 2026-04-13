@@ -36,6 +36,7 @@ spec:
     remediation:
       retries: 3
   values:
+    fullnameOverride: traefik
     # Cloudflare tunnel reaches Traefik in-cluster  - no LoadBalancer needed.
     service:
       type: ClusterIP
