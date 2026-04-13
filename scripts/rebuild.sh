@@ -34,7 +34,8 @@ kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f
 sops --decrypt bootstrap/cluster-age-key.sops.txt \
   | kubectl create secret generic sops-age \
       -n flux-system \
-      --from-file=age.agekey=/dev/stdin
+      --from-file=age.agekey=/dev/stdin \
+      --dry-run=client -o yaml | kubectl apply -f -
 
 echo "==> 5/5: bootstrapping Flux"
 GITHUB_TOKEN="$(gh auth token)"
