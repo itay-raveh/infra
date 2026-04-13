@@ -52,6 +52,8 @@ spec:
                   name: wanderbound-secrets
                   key: SECRET_KEY
           securityContext:
+            runAsUser: 999
+            runAsGroup: 999
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
@@ -151,6 +153,8 @@ spec:
               port: 8000
             periodSeconds: 5
           securityContext:
+            runAsUser: 999
+            runAsGroup: 999
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:

@@ -39,6 +39,8 @@ spec:
               port: 8080
             periodSeconds: 5
           securityContext:
+            runAsUser: 101
+            runAsGroup: 101
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
