@@ -26,10 +26,5 @@ terraform {
       source  = "hashicorp/random"
       version = "= 3.8.1"
     }
-
-    sops = {
-      source  = "carlpett/sops"
-      version = "= 1.4.1"
-    }
   }
 }
