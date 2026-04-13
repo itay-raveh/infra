@@ -14,7 +14,7 @@ snapshots). Full recovery: rebuild from git + restore from S3.
 
 | SPOF | Mitigation | If you lose it |
 |---|---|---|
-| **Tofu state bucket** (`raveh-infra-tfstate`) | Object Storage versioning. Quarterly `aws s3 sync` to a sibling bucket. | `tofu import` against live cloud resources. Painful afternoon. |
+| **Tofu state bucket** (`shire-tfstate`) | Object Storage versioning. Quarterly `aws s3 sync` to a sibling bucket. | `tofu import` against live cloud resources. Painful afternoon. |
 | **S3 backup bucket** (`shire-backups`) | Object Storage versioning + lifecycle rules. | Lose backup history. Running data unaffected. Re-create bucket and backups resume. |
 | **Both YubiKeys** | Primary on keyring, backup offsite. Never travel with both. | **Permanent cryptographic loss.** Every `.sops.*` file becomes unrecoverable ciphertext. No recovery path - start over with new roots via `bootstrap/bootstrap.sh`. |
 | **GitHub repo** | Monthly `git clone --mirror` to offline drive. | Source of truth gone. Same outcome as losing both YubiKeys if no mirror exists. |

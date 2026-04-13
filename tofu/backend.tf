@@ -1,14 +1,14 @@
 terraform {
   # S3 backend on Hetzner Object Storage (Ceph-compatible, path-style)
   backend "s3" {
-    bucket = "raveh-infra-tfstate"
+    bucket = "shire-tfstate"
     key    = "shire/terraform.tfstate"
 
     endpoints = {
-      s3 = "https://hel1.your-objectstorage.com"
+      s3 = "https://fsn1.your-objectstorage.com"
     }
 
-    region = "hel1"
+    region = "fsn1"
 
     skip_credentials_validation = true
     skip_metadata_api_check     = true

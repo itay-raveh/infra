@@ -149,7 +149,7 @@ What it does:
   baked in: `siderolabs/hcloud`, `qemu-guest-agent`, `tailscale`)
 - Uploads the resulting `hcloud-amd64.raw.xz` into Hetzner as a
   snapshot via the `imager` provider
-- Creates a CX33 x86 server from that snapshot in `fsn1`
+- Creates a CX33 x86 server from that snapshot in `hel1`
 - Opens the Talos API (50000) and Kubernetes API (6443) in the
   Hetzner firewall to all sources (both are mTLS-protected, so this
   is safe). Day-2 access goes through Tailscale
