@@ -10,9 +10,9 @@ module "talos" {
   kubernetes_version = local.kubernetes_version
   ssh_public_key     = file(var.ssh_public_key_path)
 
-  # ARM-only (CAX21); skip downloading the x86 schematic.
-  talos_image_id_arm = imager_image.shire.id
-  disable_x86        = true
+  # x86-only (CX33); skip downloading the ARM schematic.
+  talos_image_id_x86 = imager_image.shire.id
+  disable_arm        = true
 
   control_plane_nodes = [
     { id = 1, type = local.hcloud_server_type },
@@ -36,60 +36,25 @@ module "talos" {
     auth_key = var.tailscale_auth_key
   }
 
-  talos_control_plane_extra_config_patches = []
-}
-
-locals {
-  # Talos kubelet runs in its own container, so the host bind-mount at
-  # /var/mnt/data is invisible to pods unless extraMounts re-binds it with
-  # rshared propagation.
-  patch_data_volume_mount = yamlencode({
-    machine = {
-      disks = [{
-        device = "/dev/disk/by-id/scsi-0HC_Volume_${hcloud_volume.data.id}"
-        partitions = [{
-          mountpoint = "/var/mnt/data"
-        }]
-      }]
-      kubelet = {
-        extraMounts = [{
-          destination = "/var/mnt/data"
-          type        = "bind"
-          source      = "/var/mnt/data"
-          options     = ["bind", "rshared", "rw"]
-        }]
+  talos_control_plane_extra_config_patches = [
+    yamlencode({
+      machine = {
+        kubelet = {
+          extraMounts = [{
+            destination = "/var/local-path-provisioner"
+            type        = "bind"
+            source      = "/var/local-path-provisioner"
+            options     = ["bind", "rshared", "rw"]
+          }]
+        }
+        features = {
+          kubernetesTalosAPIAccess = {
+            enabled                     = true
+            allowedRoles                = ["os:etcd:backup"]
+            allowedKubernetesNamespaces = ["kube-system"]
+          }
+        }
       }
-    }
-  })
-}
-
-resource "hcloud_volume" "data" {
-  name     = "${local.cluster_name}-data"
-  size     = 40
-  location = local.hcloud_location
-}
-
-data "hcloud_server" "cp1" {
-  name       = "${local.cluster_name}-control-plane-1"
-  depends_on = [module.talos]
-}
-
-resource "hcloud_volume_attachment" "data" {
-  volume_id = hcloud_volume.data.id
-  server_id = data.hcloud_server.cp1.id
-  automount = false
-}
-
-# The disk config patch can't be in the initial machine config because the
-# volume isn't attached until after bootstrap completes (module.talos creates
-# the server + bootstraps as one unit, and the attachment depends on the
-# module finishing). Apply the disk config separately once the volume is
-# attached so Talos can actually find the device.
-resource "talos_machine_configuration_apply" "data_volume" {
-  client_configuration        = module.talos.talos_client_configuration.client_configuration
-  machine_configuration_input = module.talos.talos_machine_configurations_control_plane["shire-control-plane-1"].machine_configuration
-  node                        = module.talos.public_ipv4_list[0]
-  config_patches              = [local.patch_data_volume_mount]
-
-  depends_on = [hcloud_volume_attachment.data]
+    }),
+  ]
 }

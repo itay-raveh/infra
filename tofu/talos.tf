@@ -16,8 +16,8 @@ resource "talos_image_factory_schematic" "shire" {
 }
 
 resource "imager_image" "shire" {
-  architecture = "arm"
-  image_url    = "https://factory.talos.dev/image/${talos_image_factory_schematic.shire.id}/${local.talos_version}/hcloud-arm64.raw.xz"
+  architecture = "x86"
+  image_url    = "https://factory.talos.dev/image/${talos_image_factory_schematic.shire.id}/${local.talos_version}/hcloud-amd64.raw.xz"
   location     = local.hcloud_location
   description  = "Talos ${local.talos_version} (shire schematic)"
 }

@@ -134,24 +134,21 @@ Only needed once per clone, or after backend/provider changes.
 
 ### 4. `mise run tofu-deploy`
 
-Decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch), then runs a
-two-pass apply.
-The first pass creates the Talos image (the upstream `hcloud-talos`
-module requires the image to exist before it can plan the server), the
-second pass converges everything else including bootstrap. Expect
-~10 minutes total.
+Decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch), then runs
+`tofu apply`. The `imager_image` resource creates the Talos image
+first (natural dependency), then the module creates the server and
+bootstraps. Expect ~10 minutes total.
 
 For subsequent changes after the cluster exists, use `mise run tofu-apply`
-instead (single pass, since the image already exists).
+instead.
 
 What it does:
 
 - Builds the custom Talos schematic at the Image Factory (extensions
   baked in: `siderolabs/hcloud`, `qemu-guest-agent`, `tailscale`)
-- Uploads the resulting `hcloud-arm64.raw.xz` into Hetzner as a snapshot
-  via the `imager` provider
-- Creates a CAX21 ARM server from that snapshot in `hel1`
-- Creates the persistent `shire-data` Hetzner Volume and attaches it
+- Uploads the resulting `hcloud-amd64.raw.xz` into Hetzner as a
+  snapshot via the `imager` provider
+- Creates a CX33 x86 server from that snapshot in `hel1`
 - Opens the Talos API (50000) and Kubernetes API (6443) in the
   Hetzner firewall to all sources (both are mTLS-protected, so this
   is safe). Day-2 access goes through Tailscale

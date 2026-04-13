@@ -5,8 +5,8 @@ classes of change, each with its own loop:
 
 1. **Cluster state changes** (Helm releases, Kubernetes manifests,
    secrets)  - Flux pulls them on its own.
-2. **Infrastructure changes** (server type, DNS, tunnel config, volume
-   size)  - `mise run tofu-apply` from your laptop.
+2. **Infrastructure changes** (server type, DNS, tunnel config)  -
+   `mise run tofu-apply` from your laptop.
 3. **Talos / Kubernetes upgrades**  - bump the locals in `tofu/locals.tf`,
    then `tofu-apply`.
 
@@ -86,7 +86,7 @@ flux resume kustomization infrastructure
 
 Anything in `tofu/` is operator-driven, not Flux-driven.
 
-### Changing server, volume, DNS, tunnel config
+### Changing server, DNS, tunnel config
 
 1. Edit the relevant `.tf` file.
 2. `mise run tofu-plan`  - review the diff. The task unwraps the state
@@ -95,39 +95,25 @@ Anything in `tofu/` is operator-driven, not Flux-driven.
 3. `mise run tofu-apply`  - same dance, then apply. Targeted changes
    (firewall rules, DNS records, Cloudflare tunnel config) are
    non-disruptive. Server-replacement changes (server type bump,
-   disk size, image swap) destroy and recreate the node  - see
-   "Replacing the server" below.
+   image swap) destroy and recreate the node  - see "Replacing the
+   server" below.
 4. Commit and push the `.tf` change.
 
-### Replacing the server (CAX21 → bigger, image bump, etc.)
+### Replacing the server (server type bump, image swap, etc.)
 
-The node is cattle. The Hetzner Volume is the pet (`prevent_destroy`
-in tofu protects it).
+The node is cattle. All persistent data lives in S3 backups (CNPG PITR
+for Postgres, tarballs for app data, etcd snapshots for cluster state).
 
 1. Edit `tofu/locals.tf` (or wherever the change lives).
 2. `tofu-apply`. The hcloud-talos module destroys the old server,
-   creates a new one, applies the same machineconfig, and re-attaches
-   the volume. PVC data on the volume survives untouched.
+   creates a new one, and applies the same machineconfig.
 3. Cluster downtime: ~5 minutes. Single-node, no HA  - accept it or
    schedule it.
 4. If the rebuild produces a fresh Cloudflare tunnel token, run
    `mise run tofu-secrets-sync` and commit the new ciphertext.
 5. The cluster's PKI lives in tofu state, so the new server boots into
    the same Kubernetes cluster identity. No `flux bootstrap` needed.
-
-### Resizing the data volume
-
-```
-# 1. Edit tofu/main.tf, change hcloud_volume.data.size
-# 2. mise run tofu-apply
-# 3. The volume grows online. Resize the filesystem inside Talos:
-talosctl --talosconfig=./talosconfig -n shire-control-plane-1 \
-  volumes mount filesystem-resize /var/mnt/data
-```
-
-(Verify the exact talosctl subcommand against your installed version
-before running  - Talos volume management commands have changed across
-minor versions.)
+6. Restore stateful data from S3 if needed (see `disaster-recovery.md`).
 
 ---
 

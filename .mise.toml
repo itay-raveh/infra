@@ -67,16 +67,13 @@ tofu -chdir=tofu apply "$@"
 """
 
 [tasks.tofu-deploy]
-description = "Full first-ever deploy: two-pass apply to handle image creation + bootstrap"
+description = "Full first-ever deploy (image + server + bootstrap in one pass)"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
 set -a
 eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
 set +a
-echo "==> pass 1: create image (excluding hcloud_image lookup)"
-tofu -chdir=tofu apply -auto-approve -exclude=module.talos.data.hcloud_image.arm
-echo "==> pass 2: converge everything"
 tofu -chdir=tofu apply "$@"
 """
 
