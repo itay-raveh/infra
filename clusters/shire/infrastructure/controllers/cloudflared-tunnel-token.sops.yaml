@@ -1,0 +1,42 @@
+apiVersion: v1
+data:
+    cf-tunnel-token: ENC[AES256_GCM,data:n4KT8M2ZI4tKgenSl+SmzmjPrQPXuSwDwPyR+g0Ws26J77U1w6q4EV/KLyO+wSzl0Y/fx3izaTbXOf5/8ZVP+3qTuDNPzsnnUYR+hLymV39nUMjmaNvhXBytEmrBo1/8xQP7uH+Gu4MTCZUCINgME1CRDDRNL//M4y2YO/9mipSllsVGEOoxnYff6+Zhz2Qp6e8QxFJvw3Z8ijpEJTYCWXh0kurus9zEdTxFQqKeelRycXq0zbQ45ppWjRs5TW2DtFhVZrECGLIHnL9gtc7tmoqqREBAgHhGHDyrJEXf78QWpB6TV9HcDRHKHtPZJ65N,iv:/1nxH5HjI0NevEJrHFk4I71+XJE/4RK2srwb5yXqGe8=,tag:fGNAZo0VNPfz9UcyUILT9g==,type:str]
+kind: Secret
+metadata:
+    name: cloudflared-tunnel-token
+    namespace: cloudflared
+sops:
+    age:
+        - recipient: age1yubikey1qvpg35e0zwywyj7w6dv53yewum6mpr0mzkekpcr02mvzrrtml3zmumwhqae
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHBpdi1wMjU2IGdDSWltdyBBc2xLL3VJ
+            Y3J5Wi9zUDdtc2RUaklmTm5DMjBZQ2J1VUhFUUNHNDREZkRBcApTUnRsZzVQSi93
+            eEJybmlOSHJuTUZ4NHZ5SDhqZ0JkeDRRbHhnZmxZT3hrCi0tLSBUWElzZ0lJZWw4
+            TFlLRnRiVklsQXd0WXdNQVBKSVVKZUVjMHh0ZCtOUlFVCiG4oEinuoJLaAl2cOYX
+            0Aj20XV8qUH1k1mXAbkJr8dgWb8WDRzZF5A4RpihFqNQV9G4VZE0ZHV9G+sSnOq+
+            jxI=
+            -----END AGE ENCRYPTED FILE-----
+        - recipient: age1yubikey1qvcujpaxamuraf4neev9xcxgj40e5x54n5a8kz0xvg3fpcnl6p48xsgkyg4
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHBpdi1wMjU2IDUyTHkxZyBBcHoxQzIy
+            QnVJakhlZ3JvYlZ5bmNjaldEUDJ6VGlEbThocjkvcnRSZjlLbwpGWnVkWkt3S2FK
+            d1dkL3FyaUM1c1NQWkFLNVFYN0JucWVNYlpLUXhXV0ZZCi0tLSBCZFpoa2s2NE9S
+            THR3ZzdjNTZ4SEQ3YU0wSDRhYmo4SUFCcVBPTUk1WUNBCjhs5oGqAV3+QyMkPhap
+            FZxAF5oZOOQRwjOM4xyPOwF0qEXm6ncSVQJajzoKR5QJSVbGimJkD2IrdT2SbgaO
+            law=
+            -----END AGE ENCRYPTED FILE-----
+        - recipient: age1dhztnm2nhdpcwsuv8uz6ss05tdx4jyfhm22dltu9l4u4fu8v3a4qs5asa7
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB3SVF4R1J4NjFzZWNWTlly
+            V25WbExWNWd3ZERmOXFac3U1c1N1NW5PQWw0Ck5FMjA0UkdaU2hRaEw2eXcraDFy
+            WDlvcm1LeXBEd2FxVEoxM1ZTdEJCVkUKLS0tIEx5VWhwS1BmY1VzVVpkcDlyRTVv
+            RStvcUNFRUU4ZmFWR2JmdDZ2UFNXQjQKYsJZrpN72/w7rqwiTj0UOO03ObJDX+bT
+            A7ujtJuKLVxDJ470UbAdlsqPLVerXALlILOnUMwoeyK1lPRrrWFcWw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-04-13T13:17:52Z"
+    mac: ENC[AES256_GCM,data:4XHoHvlBwDkU+EQHgSl1+IukJhsgnxBXH7Kl2k3n3lOCfD7Mtpz9iGUvBGnzkZIs8mJaDjcAbW6F8JMo7MKXToF+ukeRz8ZoVE02VszHAT1D1dcMwSiYnniorbnq2dHZQyFF1/cktV9TMsKeavu3uncA6vmi2cc8zETktFIHqGs=,iv:1Aolt6MI48BjF5nMwgrmDvRcUwp7ltGjHAj9aF6htpc=,tag:ZrmkIb0jOXboTf6EOsaTBw==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.2
