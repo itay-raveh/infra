@@ -132,66 +132,27 @@ Initialises the S3 backend and downloads providers. Like every tofu
 task, this decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch).
 Only needed once per clone, or after backend/provider changes.
 
-### 4. `mise run tofu-deploy`
+### 4. `mise run rebuild`
 
-Decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch), then runs a
-two-pass `tofu apply`. Pass 1 targets just the image resources
-(`talos_image_factory_schematic` + `imager_image`) so the Hetzner
-snapshot exists before the module tries to look it up. Pass 2
-converges everything else. Expect ~10 minutes total.
+Runs the full rebuild in one command. Decrypts
+`tofu/secrets.sops.yaml` (YubiKey PIN + touch), then:
 
-For subsequent changes after the cluster exists, use `mise run tofu-apply`
-instead.
+1. Creates the Talos image (two-pass apply for the `data.hcloud_image`
+   count dependency - uses `-target` on the image resources first)
+2. Applies all infrastructure (server, firewall, DNS, tunnel)
+3. Syncs the Cloudflare tunnel token into a SOPS-encrypted Secret,
+   commits and pushes it automatically
+4. Bootstraps Flux (`flux bootstrap github`) - installs Flux into the
+   cluster and creates its deploy key
+5. Seeds the `sops-age` Secret in `flux-system` so Flux can decrypt
+   SOPS-encrypted manifests
 
-What it does:
+Expect ~15 minutes total. Requires YubiKey + `gh auth login`.
 
-- Builds the custom Talos schematic at the Image Factory (extensions
-  baked in: `siderolabs/hcloud`, `qemu-guest-agent`, `tailscale`)
-- Uploads the resulting `hcloud-amd64.raw.xz` into Hetzner as a
-  snapshot via the `imager` provider
-- Creates a CX33 x86 server from that snapshot in `hel1`
-- Opens the Talos API (50000) and Kubernetes API (6443) in the
-  Hetzner firewall to all sources (both are mTLS-protected, so this
-  is safe). Day-2 access goes through Tailscale
-- Lets the `hcloud-talos` module render the Talos machineconfig with
-  the Tailscale extension wired in, apply it to the node, and bootstrap
-  etcd
-- At first boot, `tailscaled` reads the auth key and joins the tailnet
-  as `shire-control-plane-1`
-- Outputs: `tunnel_token`, `public_ipv4`, `kubeconfig`, `talosconfig`
-  (the kubeconfig and talosconfig are sensitive  - extract with
-  `mise run tofu-output kubeconfig > kubeconfig`)
+For subsequent changes after the cluster exists, use
+`mise run tofu-apply` (infrastructure) or commit+push (cluster state).
 
-### 5. `mise run tofu-secrets-sync`
-
-Pipes the freshly-generated Cloudflare tunnel token through SOPS into
-`clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml`.
-On every rebuild Cloudflare issues a fresh token, so the ciphertext
-changes each rebuild  - review the diff, then commit and push:
-
-```
-git add clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
-git commit -m "chore: tunnel token for fresh tunnel"
-git push
-```
-
-This is the one bespoke step of the rebuild  - everything else is
-idempotent.
-
-### 6. `mise run flux-bootstrap`
-
-Runs `flux bootstrap github` against this repo, pointing at
-`clusters/shire`. Flux installs itself into the new cluster, creates
-its own GitHub deploy key, and commits `clusters/shire/flux-system/`.
-
-### 7. `mise run cluster-seed-sops-age`
-
-Unwraps `bootstrap/cluster-age-key.sops.txt` (YubiKey PIN + touch) and
-installs it as the `sops-age` Secret in `flux-system`. This is the
-bootstrap's only chicken-and-egg  - every other piece of cluster state
-is reconciled from git.
-
-### 8. Flux reconciles `infrastructure/`
+### 5. Flux reconciles `infrastructure/`
 
 cloudflared, traefik, and local-path-provisioner come up as soon as
 Flux can decrypt the tunnel-token Secret. Watch with:
@@ -202,7 +163,7 @@ flux get kustomizations --watch
 
 ~3 minutes from zero to ready.
 
-### 9. Verify
+### 6. Verify
 
 - `tailscale status`  - `shire-control-plane-1` shows online in your tailnet
 - `kubectl get nodes`  - resolves through Magic DNS over the tailnet
@@ -220,5 +181,5 @@ YubiKey present. No interactive clicks in cloud UIs beyond the one-time
 bucket/project creation. No `.env` file to fill in  - every secret is
 committed as sops-encrypted ciphertext and decrypted on-the-fly by the
 mise tasks. The only cluster state that isn't in git is the `sops-age`
-Secret in step 6, and that's unwrapped from
+Secret, and that's unwrapped from
 `bootstrap/cluster-age-key.sops.txt` which *is* in git.

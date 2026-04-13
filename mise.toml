@@ -24,11 +24,10 @@ sops = "3.12.2"
 talosctl = "1.12.6"
 yq = "4.52.5"
 
-# --- tofu tasks ---
-# All tofu secrets live in a single sops-encrypted YAML file
-# (tofu/secrets.sops.yaml) and are injected as env vars via
-# `sops decrypt --output-type dotenv`. With YubiKey touch-policy
-# "cached" (15s), one touch covers the decrypt for the whole session.
+# --- tasks ---
+# All secrets live in tofu/secrets.sops.yaml and are injected as env
+# vars via `sops decrypt --output-type dotenv`. YubiKey touch-policy
+# "cached" (15s) means one touch covers the decrypt.
 #
 # When rops gains age-plugin support (gibbz00/rops#17), replace the
 # eval preamble in each task with a single line in [env]:
@@ -67,22 +66,6 @@ set +a
 tofu -chdir=tofu apply "$@"
 """
 
-[tasks.tofu-deploy]
-description = "Two-pass apply for first deploy or image recreation (ARM/x86 swap, Talos upgrade)"
-dir = "{{config_root}}"
-run = """
-set -euo pipefail
-set -a
-eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
-set +a
-echo "==> pass 1: create image"
-tofu -chdir=tofu apply -auto-approve \
-  -target=talos_image_factory_schematic.shire \
-  -target=imager_image.shire
-echo "==> pass 2: converge everything"
-tofu -chdir=tofu apply "$@"
-"""
-
 [tasks.tofu-destroy]
 description = "Destroy all tofu-managed resources"
 dir = "{{config_root}}"
@@ -92,25 +75,6 @@ set -a
 eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
 set +a
 tofu -chdir=tofu destroy "$@"
-"""
-
-[tasks.tofu-secrets-sync]
-description = "Render runtime tofu outputs as cluster Secrets, encrypted in place by SOPS"
-dir = "{{config_root}}"
-run = """
-set -euo pipefail
-set -a
-eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
-set +a
-target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
-token=$(tofu -chdir=tofu output -raw tunnel_token)
-printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
-  --namespace=cloudflared \
-  --from-file=cf-tunnel-token=/dev/stdin \
-  --dry-run=client -o yaml > "$target"
-sops --encrypt --in-place "$target"
-echo "wrote $target"
-echo "review with: git diff -- $target"
 """
 
 [tasks.tofu-output]
@@ -124,26 +88,52 @@ set +a
 tofu -chdir=tofu output -raw "$@"
 """
 
-[tasks.flux-bootstrap]
-description = "Bootstrap Flux into the freshly-built cluster against this repo"
+[tasks.rebuild]
+description = "Full rebuild: image + infra + tunnel token + Flux + SOPS age key"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
+export KUBECONFIG="$(mktemp)"
+trap 'rm -f "$KUBECONFIG"' EXIT
+
+echo "==> 1/5: creating Talos image"
+tofu -chdir=tofu apply -auto-approve \
+  -target=talos_image_factory_schematic.shire \
+  -target=imager_image.shire
+
+echo "==> 2/5: applying infrastructure"
+tofu -chdir=tofu apply -auto-approve
+
+echo "==> 3/5: syncing tunnel token"
+tofu -chdir=tofu output -raw kubeconfig > "$KUBECONFIG"
+target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
+token=$(tofu -chdir=tofu output -raw tunnel_token)
+printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
+  --namespace=cloudflared \
+  --from-file=cf-tunnel-token=/dev/stdin \
+  --dry-run=client -o yaml > "$target"
+sops --encrypt --in-place "$target"
+git add "$target"
+git commit -m "chore: tunnel token for fresh rebuild"
+git push
+
+echo "==> 4/5: bootstrapping Flux"
+export GITHUB_TOKEN="$(gh auth token)"
 flux bootstrap github \
   --owner=itay-raveh \
   --repository=infra \
   --path=clusters/shire \
   --personal \
   --branch=main
-"""
 
-[tasks.cluster-seed-sops-age]
-description = "Install the cluster age key as the sops-age Secret in flux-system"
-dir = "{{config_root}}"
-run = """
-set -euo pipefail
+echo "==> 5/5: seeding SOPS age key"
 sops --decrypt bootstrap/cluster-age-key.sops.txt \
   | kubectl create secret generic sops-age \
       -n flux-system \
       --from-file=age.agekey=/dev/stdin
+
+echo "==> rebuild complete. watch with: flux get kustomizations --watch"
 """
