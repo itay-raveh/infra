@@ -134,10 +134,11 @@ Only needed once per clone, or after backend/provider changes.
 
 ### 4. `mise run tofu-deploy`
 
-Decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch), then runs
-`tofu apply`. The `imager_image` resource creates the Talos image
-first (natural dependency), then the module creates the server and
-bootstraps. Expect ~10 minutes total.
+Decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch), then runs a
+two-pass `tofu apply`. Pass 1 targets just the image resources
+(`talos_image_factory_schematic` + `imager_image`) so the Hetzner
+snapshot exists before the module tries to look it up. Pass 2
+converges everything else. Expect ~10 minutes total.
 
 For subsequent changes after the cluster exists, use `mise run tofu-apply`
 instead.

@@ -67,13 +67,18 @@ tofu -chdir=tofu apply "$@"
 """
 
 [tasks.tofu-deploy]
-description = "Full first-ever deploy (image + server + bootstrap in one pass)"
+description = "Two-pass apply for first deploy or image recreation (ARM/x86 swap, Talos upgrade)"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
 set -a
 eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
 set +a
+echo "==> pass 1: create image"
+tofu -chdir=tofu apply -auto-approve \
+  -target=talos_image_factory_schematic.shire \
+  -target=imager_image.shire
+echo "==> pass 2: converge everything"
 tofu -chdir=tofu apply "$@"
 """
 
