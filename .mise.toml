@@ -1,7 +1,7 @@
 min_version = "2026.4.8"
 
 [env]
-_.file = ".env"
+TF_VAR_ssh_public_key_path = "~/.ssh/id_ed25519_sk.pub"
 
 [tools]
 age = "1.3.1"
@@ -23,24 +23,72 @@ sops = "3.12.2"
 talosctl = "1.12.6"
 yq = "4.52.5"
 
-[tasks.tofu-plan]
-description = "tofu plan with state passphrase unwrapped from SOPS"
+# --- tofu tasks ---
+# All tofu secrets live in a single sops-encrypted YAML file
+# (tofu/secrets.sops.yaml) and are injected as env vars via
+# `sops decrypt --output-type dotenv`. With YubiKey touch-policy
+# "cached" (15s), one touch covers the decrypt for the whole session.
+#
+# When rops gains age-plugin support (gibbz00/rops#17), replace the
+# eval preamble in each task with a single line in [env]:
+#   _.file = "tofu/secrets.sops.yaml"
+
+[tasks.tofu-init]
+description = "tofu init with secrets unwrapped from SOPS"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
-passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
-export TF_VAR_encryption_passphrase="$passphrase"
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
+tofu -chdir=tofu init "$@"
+"""
+
+[tasks.tofu-plan]
+description = "tofu plan with secrets unwrapped from SOPS"
+dir = "{{config_root}}"
+run = """
+set -euo pipefail
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
 tofu -chdir=tofu plan "$@"
 """
 
 [tasks.tofu-apply]
-description = "tofu apply with state passphrase unwrapped from SOPS"
+description = "tofu apply with secrets unwrapped from SOPS"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
-passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
-export TF_VAR_encryption_passphrase="$passphrase"
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
 tofu -chdir=tofu apply "$@"
+"""
+
+[tasks.tofu-deploy]
+description = "Full first-ever deploy: two-pass apply to handle image creation + bootstrap"
+dir = "{{config_root}}"
+run = """
+set -euo pipefail
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
+echo "==> pass 1: create image (excluding hcloud_image lookup)"
+tofu -chdir=tofu apply -auto-approve -exclude=module.talos.data.hcloud_image.arm
+echo "==> pass 2: converge everything"
+tofu -chdir=tofu apply "$@"
+"""
+
+[tasks.tofu-destroy]
+description = "Destroy all tofu-managed resources"
+dir = "{{config_root}}"
+run = """
+set -euo pipefail
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
+tofu -chdir=tofu destroy "$@"
 """
 
 [tasks.tofu-secrets-sync]
@@ -48,16 +96,14 @@ description = "Render runtime tofu outputs as cluster Secrets, encrypted in plac
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
-passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
-export TF_VAR_encryption_passphrase="$passphrase"
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
 target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
-# Capture separately; command substitution failures inside kubectl's
-# argument list don't trip set -e. Pipe via stdin so the token never
-# lands in /proc/<pid>/cmdline.
 token=$(tofu -chdir=tofu output -raw tunnel_token)
-printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \\
-  --namespace=cloudflared \\
-  --from-file=cf-tunnel-token=/dev/stdin \\
+printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
+  --namespace=cloudflared \
+  --from-file=cf-tunnel-token=/dev/stdin \
   --dry-run=client -o yaml > "$target"
 sops --encrypt --in-place "$target"
 echo "wrote $target"
@@ -69,8 +115,9 @@ description = "Decrypt state and dump a tofu output to stdout"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
-passphrase=$(sops --decrypt tofu/encryption-passphrase.sops.txt)
-export TF_VAR_encryption_passphrase="$passphrase"
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
 tofu -chdir=tofu output -raw "$@"
 """
 
@@ -79,11 +126,11 @@ description = "Bootstrap Flux into the freshly-built cluster against this repo"
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
-flux bootstrap github \\
-  --owner=itay-raveh \\
-  --repository=infra \\
-  --path=clusters/shire \\
-  --personal \\
+flux bootstrap github \
+  --owner=itay-raveh \
+  --repository=infra \
+  --path=clusters/shire \
+  --personal \
   --branch=main
 """
 
@@ -92,8 +139,8 @@ description = "Install the cluster age key as the sops-age Secret in flux-system
 dir = "{{config_root}}"
 run = """
 set -euo pipefail
-sops --decrypt bootstrap/cluster-age-key.sops.txt \\
-  | kubectl create secret generic sops-age \\
-      -n flux-system \\
+sops --decrypt bootstrap/cluster-age-key.sops.txt \
+  | kubectl create secret generic sops-age \
+      -n flux-system \
       --from-file=age.agekey=/dev/stdin
 """

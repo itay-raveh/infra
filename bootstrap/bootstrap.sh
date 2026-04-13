@@ -4,10 +4,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 cluster_key=bootstrap/cluster-age-key.sops.txt
-state_passphrase=tofu/encryption-passphrase.sops.txt
-tailscale_authkey=talos/tailscale-authkey.sops.txt
+secrets_file=tofu/secrets.sops.yaml
 
-for f in .sops.yaml "$cluster_key" "$state_passphrase" "$tailscale_authkey"; do
+for f in .sops.yaml "$cluster_key" "$secrets_file"; do
     if [[ -e "$f" ]]; then
         echo "error: $f already exists  - rotate via docs/secrets.md" >&2
         exit 1
@@ -60,6 +59,11 @@ gen_yubikey() {
 PRIMARY_AGE=$(gen_yubikey primary)
 BACKUP_AGE=$(gen_yubikey backup)
 
+step "moving age-plugin-yubikey identities to sops default location"
+mkdir -p "$HOME/.config/sops/age"
+mv "$HOME/.config/age-plugin-yubikey/identities.txt" "$HOME/.config/sops/age/keys.txt"
+rmdir "$HOME/.config/age-plugin-yubikey" 2>/dev/null || true
+
 step "generating cluster software age key (in memory)"
 CLUSTER_IDENTITY=$(age-keygen 2>/dev/null)
 CLUSTER_AGE=$(printf '%s\n' "$CLUSTER_IDENTITY" | awk '/^# public key:/ {print $NF}')
@@ -92,10 +96,7 @@ creation_rules:
       $BACKUP_AGE,
       $CLUSTER_AGE
 
-  - path_regex: talos/tailscale-authkey\.sops\.txt\$
-    age: *yubis_only
-
-  - path_regex: tofu/encryption-passphrase\.sops\.txt\$
+  - path_regex: tofu/secrets\.sops\.yaml\$
     age: *yubis_only
 
   # The cluster software key cannot decrypt itself.
@@ -108,19 +109,23 @@ step "encrypting cluster key to $cluster_key"
 printf '%s\n' "$CLUSTER_IDENTITY" | sops_encrypt_to "$cluster_key"
 unset CLUSTER_IDENTITY
 
-step "generating tofu state passphrase -> $state_passphrase"
-openssl rand -base64 48 | sops_encrypt_to "$state_passphrase"
+step "collecting secrets for $secrets_file"
 
-step "tailscale auth key"
+# --- state encryption passphrase (generated) ---
+STATE_PASSPHRASE=$(openssl rand -base64 48)
+printf '    generated state passphrase\n' >&2
+
+# --- tailscale auth key (interactive) ---
 cat >&2 <<'INSTRUCTIONS'
 
+    Tailscale auth key:
     1. Open https://login.tailscale.com/admin/settings/keys
     2. Click "Generate auth key"
     3. Settings:
        - Reusable:   ON  (survives cluster rebuilds)
-       - Ephemeral:  OFF
+       - Ephemeral:  ON  (auto-deregisters after destroy)
        - Tags:       ON, select tag:shire
-       - Expiration: 90 days max (fine  - the key lives in SOPS)
+       - Expiration: 90 days max (fine - the key lives in SOPS)
        - If your tailnet has Device Approval enabled, also turn
          Pre-approved ON; otherwise the toggle won't appear.
     4. Click Generate, copy the tskey-auth-... value
@@ -136,9 +141,36 @@ if [[ ! "$TS_KEY" =~ ^tskey-auth- ]]; then
     exit 1
 fi
 
-printf '%s' "$TS_KEY" | sops_encrypt_to "$tailscale_authkey"
-unset TS_KEY
-printf '    encrypted to %s\n' "$tailscale_authkey" >&2
+# --- external API tokens (interactive) ---
+cat >&2 <<'INSTRUCTIONS'
+
+    Paste each token when prompted (nothing echoes). Values come from:
+    - Hetzner Cloud console  - project API token (Read & Write)
+    - Hetzner Object Storage - S3 credential for the tfstate bucket
+    - Cloudflare dashboard   - API token (Zone:DNS edit + Zero Trust edit)
+
+INSTRUCTIONS
+
+read -rs -p "    Hetzner Cloud API token: " HCLOUD_TOKEN; printf '\n' >&2
+read -rs -p "    S3 access key ID: " S3_AK; printf '\n' >&2
+read -rs -p "    S3 secret access key: " S3_SK; printf '\n' >&2
+read -rs -p "    Cloudflare API token: " CF_TOKEN; printf '\n' >&2
+
+step "encrypting secrets to $secrets_file"
+
+# Build plaintext YAML, encrypt in one shot, then scrub variables.
+cat > "$secrets_file.tmp" <<EOF
+TF_VAR_encryption_passphrase: $STATE_PASSPHRASE
+AWS_ACCESS_KEY_ID: $S3_AK
+AWS_SECRET_ACCESS_KEY: $S3_SK
+TF_VAR_hcloud_token: $HCLOUD_TOKEN
+TF_VAR_cloudflare_api_token: $CF_TOKEN
+TF_VAR_tailscale_auth_key: $TS_KEY
+EOF
+sops --encrypt --in-place "$secrets_file.tmp"
+mv "$secrets_file.tmp" "$secrets_file"
+
+unset STATE_PASSPHRASE TS_KEY HCLOUD_TOKEN S3_AK S3_SK CF_TOKEN
 
 step "applying repository rulesets"
 repo=itay-raveh/infra

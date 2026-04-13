@@ -1,33 +1,29 @@
 variable "encryption_passphrase" {
   type        = string
   sensitive   = true
-  description = "Passphrase for client-side state encryption. Injected as TF_VAR_encryption_passphrase by the mise tofu-apply task, which sops-decrypts tofu/encryption-passphrase.sops.txt."
+  description = "Passphrase for client-side state encryption (from tofu/secrets.sops.yaml)."
 }
 
 variable "hcloud_token" {
   type        = string
   sensitive   = true
-  description = "Hetzner Cloud API token (Read & Write)."
+  description = "Hetzner Cloud API token - Read & Write (from tofu/secrets.sops.yaml)."
 }
 
 variable "cloudflare_api_token" {
   type        = string
   sensitive   = true
-  description = "Cloudflare API token scoped to Zone:DNS edit + Zero Trust edit on raveh.dev."
-}
-
-variable "cloudflare_zone_id" {
-  type        = string
-  description = "Cloudflare zone ID for raveh.dev."
-}
-
-variable "cloudflare_account_id" {
-  type        = string
-  description = "Cloudflare account ID that owns the raveh.dev zone and the Zero Trust tunnel."
+  description = "Cloudflare API token - Zone:DNS edit + Zero Trust edit on raveh.dev (from tofu/secrets.sops.yaml)."
 }
 
 variable "ssh_public_key_path" {
   type        = string
-  description = "Filesystem path to the primary YubiKey FIDO2-sk pubkey (e.g. ~/.ssh/id_ed25519_sk.pub). Used only for Hetzner rescue-mode break-glass; Talos itself does not use SSH."
+  description = "Filesystem path to the primary YubiKey FIDO2-sk pubkey (from .mise.toml [env]). Used only for Hetzner rescue-mode break-glass; Talos itself does not use SSH."
+}
+
+variable "tailscale_auth_key" {
+  type        = string
+  sensitive   = true
+  description = "Tailscale pre-auth key for the shire tag (from tofu/secrets.sops.yaml)."
 }
 

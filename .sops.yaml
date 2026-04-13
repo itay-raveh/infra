@@ -12,10 +12,7 @@ creation_rules:
       age1yubikey1qvcujpaxamuraf4neev9xcxgj40e5x54n5a8kz0xvg3fpcnl6p48xsgkyg4,
       age1dhztnm2nhdpcwsuv8uz6ss05tdx4jyfhm22dltu9l4u4fu8v3a4qs5asa7
 
-  - path_regex: talos/tailscale-authkey\.sops\.txt$
-    age: *yubis_only
-
-  - path_regex: tofu/encryption-passphrase\.sops\.txt$
+  - path_regex: tofu/secrets\.sops\.yaml$
     age: *yubis_only
 
   # The cluster software key cannot decrypt itself.

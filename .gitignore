@@ -1,8 +1,3 @@
-# Environment
-.env
-.env.*
-!.env.example
-
 # OpenTofu / Terraform
 .terraform/
 *.tfstate
