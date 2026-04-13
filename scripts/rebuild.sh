@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+git pull --rebase
 set -a
 eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
 set +a
@@ -16,7 +17,6 @@ echo "==> 2/5: applying infrastructure"
 tofu -chdir=tofu apply -auto-approve
 
 echo "==> 3/5: syncing tunnel token"
-git pull --rebase
 tofu -chdir=tofu output -raw kubeconfig > "$KUBECONFIG"
 target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
 token=$(tofu -chdir=tofu output -raw tunnel_token)
