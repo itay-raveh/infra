@@ -21,6 +21,9 @@ spec:
           image: ghcr.io/itay-raveh/wanderbound/frontend:latest
           ports:
             - containerPort: 8080
+          env:
+            - name: BACKEND_HOST
+              value: "wanderbound-backend"
           resources:
             requests:
               memory: "64Mi"

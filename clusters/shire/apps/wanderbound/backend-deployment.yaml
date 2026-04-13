@@ -46,11 +46,6 @@ spec:
                 secretKeyRef:
                   name: wanderbound-db-app
                   key: dbname
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-secrets
-                  key: SECRET_KEY
           securityContext:
             runAsUser: 999
             runAsGroup: 999
