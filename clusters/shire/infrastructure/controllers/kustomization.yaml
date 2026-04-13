@@ -4,5 +4,6 @@ kind: Kustomization
 resources:
   - cloudflared-tunnel-token.sops.yaml
   - cloudflared.yaml
+  - cnpg.yaml
   - local-path-provisioner.yaml
   - traefik.yaml
