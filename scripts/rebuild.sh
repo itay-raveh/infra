@@ -16,6 +16,7 @@ echo "==> 2/5: applying infrastructure"
 tofu -chdir=tofu apply -auto-approve
 
 echo "==> 3/5: syncing tunnel token"
+git pull --rebase
 tofu -chdir=tofu output -raw kubeconfig > "$KUBECONFIG"
 target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
 token=$(tofu -chdir=tofu output -raw tunnel_token)
@@ -25,7 +26,6 @@ printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
   --dry-run=client -o yaml > "$target"
 sops --encrypt --in-place "$target"
 git add "$target"
-git pull --rebase
 git commit -m "chore: tunnel token for fresh rebuild"
 git push
 
