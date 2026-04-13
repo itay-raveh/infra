@@ -23,7 +23,7 @@ to git.
 These live outside any tool we run; create them manually first.
 
 - **Hetzner Cloud project** with an API token scoped `Read & Write`.
-- **Hetzner Object Storage bucket** named `raveh-infra-tfstate` (in `fsn1`),
+- **Hetzner Object Storage bucket** named `shire-tfstate` (in `fsn1`),
   plus an S3 credential pair for it. This holds the encrypted tofu state.
 - **Cloudflare account** with `raveh.dev` on it. Create an API token
   scoped to `Zone:DNS edit` + `Zero Trust edit` on that one zone.
@@ -35,7 +35,7 @@ These live outside any tool we run; create them manually first.
 ### 2. Laptop prerequisites
 
 ```
-mise install        # reads .mise.toml and pulls every tool
+mise install        # reads mise.toml and pulls every tool
 pre-commit install  # activates the local hooks
 ```
 
@@ -49,7 +49,7 @@ sudo apt-get install -y pcscd libpcsclite-dev build-essential swig python3-dev
 sudo systemctl enable --now pcscd.socket
 ```
 
-`ykman` itself is pinned in `.mise.toml` (`pipx:yubikey-manager`), so
+`ykman` itself is pinned in `mise.toml` (`pipx:yubikey-manager`), so
 `mise install` pulls it in once the build deps above are present. It's used by the pre-ceremony sanity
 checks (`ykman piv info`, `ykman fido credentials list`) and for
 rotation and troubleshooting, but the bootstrap script itself doesn't
@@ -149,7 +149,7 @@ What it does:
   baked in: `siderolabs/hcloud`, `qemu-guest-agent`, `tailscale`)
 - Uploads the resulting `hcloud-amd64.raw.xz` into Hetzner as a
   snapshot via the `imager` provider
-- Creates a CX33 x86 server from that snapshot in `hel1`
+- Creates a CX33 x86 server from that snapshot in `fsn1`
 - Opens the Talos API (50000) and Kubernetes API (6443) in the
   Hetzner firewall to all sources (both are mTLS-protected, so this
   is safe). Day-2 access goes through Tailscale

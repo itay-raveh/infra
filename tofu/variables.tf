@@ -18,7 +18,7 @@ variable "cloudflare_api_token" {
 
 variable "ssh_public_key_path" {
   type        = string
-  description = "Filesystem path to the primary YubiKey FIDO2-sk pubkey (from .mise.toml [env]). Used only for Hetzner rescue-mode break-glass; Talos itself does not use SSH."
+  description = "Filesystem path to the primary YubiKey FIDO2-sk pubkey (from mise.toml [env]). Used only for Hetzner rescue-mode break-glass; Talos itself does not use SSH."
 }
 
 variable "tailscale_auth_key" {
