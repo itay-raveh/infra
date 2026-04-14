@@ -46,6 +46,11 @@ spec:
                 secretKeyRef:
                   name: wanderbound-db-app
                   key: dbname
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wanderbound-secrets
+                  key: SECRET_KEY
           securityContext:
             runAsUser: 999
             runAsGroup: 999
@@ -120,8 +125,6 @@ spec:
               value: "production"
             - name: VITE_FRONTEND_URL
               value: "https://wanderbound.raveh.dev"
-            - name: MAX_STORAGE_BYTES
-              value: "42949672960"
             - name: DATA_FOLDER
               value: "/data"
           resources:
