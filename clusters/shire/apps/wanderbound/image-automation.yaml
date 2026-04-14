@@ -5,7 +5,7 @@ metadata:
   name: wanderbound-frontend
   namespace: flux-system
 spec:
-  image: ghcr.io/itay-raveh/wanderbound/frontend
+  image: ghcr.io/itay-raveh/wanderbound-frontend
   interval: 5m
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
@@ -14,7 +14,7 @@ metadata:
   name: wanderbound-backend
   namespace: flux-system
 spec:
-  image: ghcr.io/itay-raveh/wanderbound/backend
+  image: ghcr.io/itay-raveh/wanderbound-backend
   interval: 5m
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
