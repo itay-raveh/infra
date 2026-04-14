@@ -13,4 +13,5 @@ resources:
   - frontend-deployment.yaml
   - frontend-service.yaml
   - ingressroute.yaml
+  - data-backup.yaml
   - image-automation.yaml

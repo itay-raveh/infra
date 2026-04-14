@@ -14,17 +14,6 @@ resource "minio_ilm_policy" "backups" {
   bucket = minio_s3_bucket.backups.bucket
 
   rule {
-    id     = "app-data-expire"
-    filter = "app-data/"
-
-    expiration = "30d"
-
-    noncurrent_expiration {
-      days = "60d"
-    }
-  }
-
-  rule {
     id     = "cnpg-expire"
     filter = "cnpg/"
 
