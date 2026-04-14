@@ -17,7 +17,7 @@ spec:
     spec:
       initContainers:
         - name: migrations
-          image: ghcr.io/itay-raveh/wanderbound/backend:latest@sha256:a8e65713f66f3d84547fae32253353fef306217209929439b2674a6a01d8e0f9 # {"$imagepolicy": "flux-system:wanderbound-backend"}
+          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:f6b3545eddc0109721e73c981e4090f8a98b26f2a3a6e154e056d3491117a0b0 # {"$imagepolicy": "flux-system:wanderbound-backend"}
           command: ["alembic", "upgrade", "head"]
           env:
             - name: POSTGRES_SERVER
@@ -65,7 +65,7 @@ spec:
               mountPath: /tmp
       containers:
         - name: backend
-          image: ghcr.io/itay-raveh/wanderbound/backend:latest@sha256:a8e65713f66f3d84547fae32253353fef306217209929439b2674a6a01d8e0f9 # {"$imagepolicy": "flux-system:wanderbound-backend"}
+          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:f6b3545eddc0109721e73c981e4090f8a98b26f2a3a6e154e056d3491117a0b0 # {"$imagepolicy": "flux-system:wanderbound-backend"}
           command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
           ports:
             - containerPort: 8000
