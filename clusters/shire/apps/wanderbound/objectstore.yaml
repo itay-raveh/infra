@@ -1,0 +1,22 @@
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: wanderbound-backup
+  namespace: wanderbound
+spec:
+  configuration:
+    destinationPath: "s3://shire-backups/cnpg/wanderbound/"
+    endpointURL: "https://fsn1.your-objectstorage.com"
+    s3Credentials:
+      accessKeyId:
+        name: cnpg-s3-creds
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: cnpg-s3-creds
+        key: ACCESS_SECRET_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  retentionPolicy: "30d"

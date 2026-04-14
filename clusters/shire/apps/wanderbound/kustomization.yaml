@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - cnpg-s3-creds.sops.yaml
+  - objectstore.yaml
   - wanderbound-db.yaml
   - wanderbound-db-scheduled-backup.yaml
   - wanderbound-secrets.sops.yaml

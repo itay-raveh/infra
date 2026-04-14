@@ -77,22 +77,15 @@ spec:
       source: wanderbound-backup
       # recoveryTarget:
       #   targetTime: "2026-04-14T12:00:00Z"  # optional PITR
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
   externalClusters:
     - name: wanderbound-backup
-      barmanObjectStore:
-        destinationPath: "s3://shire-backups/cnpg/wanderbound/"
-        endpointURL: "https://fsn1.your-objectstorage.com"
-        s3Credentials:
-          accessKeyId:
-            name: cnpg-s3-creds
-            key: ACCESS_KEY_ID
-          secretAccessKey:
-            name: cnpg-s3-creds
-            key: ACCESS_SECRET_KEY
-        wal:
-          compression: gzip
-        data:
-          compression: gzip
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: wanderbound-backup
+          serverName: wanderbound-db
 ```
 
 Apply and watch the restore:
