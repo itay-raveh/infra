@@ -31,6 +31,12 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "250m"
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8080
+            failureThreshold: 10
+            periodSeconds: 2
           livenessProbe:
             httpGet:
               path: /
