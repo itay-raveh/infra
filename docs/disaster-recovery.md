@@ -24,16 +24,140 @@ Both YubiKeys = start from scratch.
 
 ---
 
-## S3 restore paths
+## Restore procedures
 
-When rebuilding after data loss, restore in this order:
+When rebuilding after data loss, restore in this order: etcd first
+(cluster state), then Postgres (application data), then app-data files
+(uploads). Each section is self-contained.
 
-1. **etcd**: `talosctl bootstrap --recover-from=./db.snapshot` using
-   latest snapshot from `s3://shire-backups/etcd/`
-2. **Postgres**: CNPG point-in-time restore (create new Cluster CR
-   bootstrapped from Barman backup)
-3. **App data**: download latest tarball from
-   `s3://shire-backups/app-data/wanderbound/`, extract into PVC
+### 1. etcd restore
+
+Download the latest snapshot from S3 and bootstrap from it:
+
+```
+mc alias set hetzner https://fsn1.your-objectstorage.com ACCESS_KEY SECRET_KEY
+mc ls hetzner/shire-backups/etcd/
+mc cp hetzner/shire-backups/etcd/<latest>.snapshot ./db.snapshot
+```
+
+Snapshots are age-encrypted (public key in `talos-backup.yaml`).
+Decrypt before restoring:
+
+```
+age --decrypt -i <(sops --decrypt bootstrap/cluster-age-key.sops.txt) \
+  -o db.snapshot.dec db.snapshot
+```
+
+Then bootstrap the new node from the snapshot:
+
+```
+talosctl bootstrap --recover-from=./db.snapshot.dec
+```
+
+If the snapshot was copied raw from a crashed node rather than taken
+via `talos-backup`, add `--recover-skip-hash-check`.
+
+### 2. Postgres (CNPG PITR)
+
+CNPG recovery always creates a **new** cluster. Apply a recovery
+Cluster CR that references the Barman backup in S3:
+
+```yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: wanderbound-db-restore
+  namespace: wanderbound
+spec:
+  instances: 1
+  storage:
+    size: 5Gi
+  bootstrap:
+    recovery:
+      source: wanderbound-backup
+      # recoveryTarget:
+      #   targetTime: "2026-04-14T12:00:00Z"  # optional PITR
+  externalClusters:
+    - name: wanderbound-backup
+      barmanObjectStore:
+        destinationPath: "s3://shire-backups/cnpg/wanderbound/"
+        endpointURL: "https://fsn1.your-objectstorage.com"
+        s3Credentials:
+          accessKeyId:
+            name: cnpg-s3-creds
+            key: ACCESS_KEY_ID
+          secretAccessKey:
+            name: cnpg-s3-creds
+            key: ACCESS_SECRET_KEY
+        wal:
+          compression: gzip
+        data:
+          compression: gzip
+```
+
+Apply and watch the restore:
+
+```
+kubectl apply -f wanderbound-db-restore.yaml
+kubectl -n wanderbound get cluster wanderbound-db-restore --watch
+kubectl cnpg status -n wanderbound wanderbound-db-restore
+```
+
+After the restore cluster reports healthy, update `wanderbound-db.yaml`
+to point at the restored data (rename the cluster or update secret
+references), commit, and push.
+
+### 3. App-data files
+
+Download the latest tarball and pipe it into a temporary pod that
+mounts the PVC:
+
+```
+mc cp hetzner/shire-backups/app-data/wanderbound/<latest>.tar.gz /tmp/
+
+kubectl -n wanderbound run restore --rm -i \
+  --image=alpine --restart=Never \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "restore",
+        "image": "alpine",
+        "command": ["sh", "-c", "tar xzf - -C /data"],
+        "stdin": true,
+        "volumeMounts": [{
+          "name": "data",
+          "mountPath": "/data"
+        }]
+      }],
+      "volumes": [{
+        "name": "data",
+        "persistentVolumeClaim": {
+          "claimName": "wanderbound-app-data"
+        }
+      }]
+    }
+  }' < /tmp/<latest>.tar.gz
+```
+
+### 4. App rollback
+
+If a bad image was auto-deployed by Flux image automation:
+
+```
+# 1. Stop image automation from pushing more updates
+flux suspend image update-automation wanderbound -n flux-system
+
+# 2. Find the previous working digest
+flux get image policy wanderbound-backend -n flux-system
+kubectl -n wanderbound get deploy wanderbound-backend -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+# 3. Pin the deployment to the known-good digest
+#    Edit the image tag in the deployment YAML, commit, push.
+#    Flux will reconcile the pinned version.
+
+# 4. After fixing the root cause, resume automation
+flux resume image update-automation wanderbound -n flux-system
+```
 
 ---
 

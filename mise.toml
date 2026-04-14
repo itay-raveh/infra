@@ -73,6 +73,10 @@ run = "flux reconcile helmrelease \"$@\""
 description = "Sync a single Kustomization"
 run = "flux reconcile kustomization \"$@\""
 
+[tasks."flux:unhealthy"]
+description = "Show Flux resources not ready"
+run = "flux get all -A --status-selector ready=false"
+
 # -- Cluster inspection -------------------------------------------
 
 [tasks.nodes]
@@ -103,6 +107,24 @@ raw = true
 description = "Open a debug shell on a node (usage: mise run kshell -- <node-name>)"
 run = "kubectl debug -it --image=alpine \"node/$1\" -- sh"
 raw = true
+
+# -- Tunnel -------------------------------------------------------
+
+[tasks."tunnel:refresh"]
+description = "Regenerate tunnel token from tofu, encrypt, commit, and push"
+dir = "{{config_root}}"
+run = """
+target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
+token=$(bash scripts/tofu-wrapper.sh output -raw tunnel_token)
+printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
+  --namespace=cloudflared \
+  --from-file=cf-tunnel-token=/dev/stdin \
+  --dry-run=client -o yaml > "$target"
+sops --encrypt --in-place "$target"
+git add "$target"
+git commit -m "chore: refresh tunnel token"
+git push
+"""
 
 # -- Rebuild ------------------------------------------------------
 
