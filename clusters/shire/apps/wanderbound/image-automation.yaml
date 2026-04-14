@@ -1,0 +1,73 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: wanderbound-frontend
+  namespace: flux-system
+spec:
+  image: ghcr.io/itay-raveh/wanderbound/frontend
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: wanderbound-backend
+  namespace: flux-system
+spec:
+  image: ghcr.io/itay-raveh/wanderbound/backend
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: wanderbound-frontend
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: wanderbound-frontend
+  filterTags:
+    pattern: '^latest$'
+  policy:
+    alphabetical: {}
+  digestReflectionPolicy: Always
+  interval: 10m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: wanderbound-backend
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: wanderbound-backend
+  filterTags:
+    pattern: '^latest$'
+  policy:
+    alphabetical: {}
+  digestReflectionPolicy: Always
+  interval: 10m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: wanderbound
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: flux@raveh.dev
+        name: flux
+      messageTemplate: 'deploy: update wanderbound container images'
+    push:
+      branch: main
+  update:
+    path: ./clusters/shire/apps/wanderbound
+    strategy: Setters
