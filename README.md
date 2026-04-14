@@ -54,6 +54,11 @@ Three top-level planes, each with one owner:
 - `talos/` - SOPS-encrypted Tailscale auth key
 - `clusters/shire/` - Flux manifests: in-cluster state (HelmReleases, SOPS-encrypted secrets)
 
+## Development
+
+[mise](https://mise.jdx.dev/) manages tool versions and all project
+commands. Run `mise tasks` to see available commands.
+
 ## Docs
 
 | Guide | What it covers |

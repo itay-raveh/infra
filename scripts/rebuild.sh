@@ -4,9 +4,7 @@ git pull --rebase
 set -a
 eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
 set +a
-KUBECONFIG="$(mktemp)"
-export KUBECONFIG
-trap 'rm -f "$KUBECONFIG"' EXIT
+mkdir -p ~/.kube ~/.talos
 
 echo "==> 1/5: creating Talos image"
 tofu -chdir=tofu apply -auto-approve \
@@ -16,8 +14,11 @@ tofu -chdir=tofu apply -auto-approve \
 echo "==> 2/5: applying infrastructure"
 tofu -chdir=tofu apply -auto-approve
 
-echo "==> 3/5: syncing tunnel token"
-tofu -chdir=tofu output -raw kubeconfig > "$KUBECONFIG"
+echo "==> 3/5: syncing tunnel token + writing local configs"
+tofu -chdir=tofu output -raw kubeconfig > ~/.kube/config
+chmod 600 ~/.kube/config
+tofu -chdir=tofu output -raw talosconfig > ~/.talos/config
+chmod 600 ~/.talos/config
 target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
 token=$(tofu -chdir=tofu output -raw tunnel_token)
 printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
@@ -45,6 +46,8 @@ flux bootstrap github \
   --repository=infra \
   --path=clusters/shire \
   --personal \
-  --branch=main
+  --branch=main \
+  --components-extra=image-reflector-controller,image-automation-controller \
+  --read-write-key
 
 echo "==> rebuild complete. watch with: flux get kustomizations --watch"

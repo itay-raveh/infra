@@ -126,7 +126,7 @@ on every run (YubiKey PIN + touch, one touch covers all via 15s cache).
 Authenticate with GitHub so `flux bootstrap github` (step 5) can read
 `GITHUB_TOKEN` via `gh auth token`.
 
-### 3. `mise run tofu-init`
+### 3. `mise run tofu:init`
 
 Initialises the S3 backend and downloads providers. Like every tofu
 task, this decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch).
@@ -150,7 +150,7 @@ Runs the full rebuild in one command. Decrypts
 Expect ~15 minutes total. Requires YubiKey + `gh auth login`.
 
 For subsequent changes after the cluster exists, use
-`mise run tofu-apply` (infrastructure) or commit+push (cluster state).
+`mise run tofu:apply` (infrastructure) or commit+push (cluster state).
 
 ### 5. Flux reconciles `infrastructure/`
 
@@ -164,6 +164,9 @@ flux get kustomizations --watch
 ~3 minutes from zero to ready.
 
 ### 6. Verify
+
+The rebuild writes `~/.kube/config` and `~/.talos/config` so `kubectl`
+and `talosctl` work immediately after.
 
 - `tailscale status`  - `shire-control-plane-1` shows online in your tailnet
 - `kubectl get nodes`  - resolves through Magic DNS over the tailnet

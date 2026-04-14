@@ -6,9 +6,9 @@ classes of change, each with its own loop:
 1. **Cluster state changes** (Helm releases, Kubernetes manifests,
    secrets)  - Flux pulls them on its own.
 2. **Infrastructure changes** (server type, DNS, tunnel config)  -
-   `mise run tofu-apply` from your laptop.
+   `mise run tofu:apply` from your laptop.
 3. **Talos / Kubernetes upgrades**  - bump the locals in `tofu/locals.tf`,
-   then `tofu-apply`.
+   then `tofu:apply`.
 
 Everything below assumes you've completed the one-time setup in
 `setup.md` and have a YubiKey plugged in.
@@ -41,10 +41,10 @@ Anything in `tofu/` is operator-driven, not Flux-driven.
 ### Changing server, DNS, tunnel config
 
 1. Edit the relevant `.tf` file.
-2. `mise run tofu-plan`  - review the diff. The task unwraps the state
+2. `mise run tofu:plan`  - review the diff. The task unwraps the state
    passphrase from SOPS (one YubiKey touch); the `sops` Terraform
    provider reads the Tailscale auth key during plan (second touch).
-3. `mise run tofu-apply`  - same dance, then apply. Targeted changes
+3. `mise run tofu:apply`  - same dance, then apply. Targeted changes
    (firewall rules, DNS records, Cloudflare tunnel config) are
    non-disruptive. Server-replacement changes (server type bump,
    image swap) destroy and recreate the node  - see "Replacing the
@@ -57,7 +57,7 @@ The node is cattle. All persistent data lives in S3 backups (CNPG PITR
 for Postgres, tarballs for app data, etcd snapshots for cluster state).
 
 1. Edit `tofu/locals.tf` (or wherever the change lives).
-2. `tofu-apply`. The hcloud-talos module destroys the old server,
+2. `tofu:apply`. The hcloud-talos module destroys the old server,
    creates a new one, and applies the same machineconfig.
 3. Cluster downtime: ~5 minutes. Single-node, no HA  - accept it or
    schedule it.
@@ -83,13 +83,13 @@ To upgrade:
 1. Pick a target version. Read the Talos release notes and the matching
    Kubernetes upgrade notes.
 2. Bump the local. For Talos minor bumps, also re-render the schematic -
-   `tofu-apply` re-fetches the Image Factory schematic for the new
+   `tofu:apply` re-fetches the Image Factory schematic for the new
    version automatically because `data.talos_image_factory_extensions_versions.this`
    is keyed off `local.talos_version`.
-3. `mise run tofu-plan`. Review what gets replaced. Talos minor upgrades
+3. `mise run tofu:plan`. Review what gets replaced. Talos minor upgrades
    typically replace the snapshot and reboot the node (~5 minutes
    downtime). Patch upgrades do an in-place reconfigure with no reboot.
-4. `mise run tofu-apply`.
+4. `mise run tofu:apply`.
 5. Verify with `kubectl get nodes` and `talosctl version`.
 
 ---

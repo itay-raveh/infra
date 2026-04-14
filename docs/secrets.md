@@ -47,7 +47,7 @@ YubiKeys hold independently-generated keys, not copies of each other;
 both age pubkeys are listed as recipients in `.sops.yaml` so either
 YubiKey alone can decrypt. Both SSH pubkeys are registered as GitHub
 signing keys; only the primary's is registered in Hetzner, so rotating
-to the backup requires a `tofu-apply` to swap rescue-mode keys.
+to the backup requires a `tofu:apply` to swap rescue-mode keys.
 
 **In-cluster helper:** one software age key, stored as
 `bootstrap/cluster-age-key.sops.txt` (encrypted to both YubiKeys).
@@ -156,7 +156,7 @@ Same procedure for primary and backup  - only the last step differs.
 6. Commit the updated `.sops.yaml` and re-wrapped files in one PR.
    CI's gitleaks + sops-sanity jobs catch a botched `updatekeys` or a
    stray plaintext slip before merge.
-7. If you replaced the **primary**, run `mise run tofu-apply` so tofu
+7. If you replaced the **primary**, run `mise run tofu:apply` so tofu
    pushes the new FIDO2-sk pubkey to Hetzner as the rescue-mode SSH
    key. No change to `.env` is needed since the filename was reused.
 8. Store the new YubiKey wherever the lost one was (offsite if backup,
