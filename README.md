@@ -1,4 +1,7 @@
-# shire  - personal infrastructure
+# shire - personal infrastructure
+
+[![validate](https://github.com/itay-raveh/infra/actions/workflows/validate.yaml/badge.svg)](https://github.com/itay-raveh/infra/actions/workflows/validate.yaml)
+[![License](https://img.shields.io/github/license/itay-raveh/infra)](https://github.com/itay-raveh/infra/blob/main/LICENSE)
 
 GitOps-managed personal infrastructure for `raveh.dev`. Everything sensitive is SOPS-encrypted to YubiKey recipients; the repo is safe to make public at any commit.
 
