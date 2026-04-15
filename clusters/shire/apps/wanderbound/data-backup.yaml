@@ -1,3 +1,4 @@
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -14,7 +15,7 @@ spec:
         spec:
           containers:
             - name: backup
-              image: restic/restic:0.18.1
+              image: restic/restic:0.18.1@sha256:b43f00a24d9b2d9affb332a29d57042563eeb61219ae1a36dfccbdc34fbaa6b3
               command:
                 - /bin/sh
                 - -c
