@@ -8,19 +8,19 @@ GitOps-managed personal infrastructure for `raveh.dev`. All secrets are SOPS-enc
 ## Architecture
 
 ```mermaid
-graph LR
-    Internet -->|HTTPS| CF[Cloudflare] ---|tunnel| cloudflared
+graph TD
+    Internet -->|HTTPS| CF[Cloudflare]
+    CF -->|tunnel| cloudflared
+    OpenTofu -.->|provisions| CF & Server
 
-    subgraph Server["Hetzner CX33"]
-        subgraph Talos["Talos Linux"]
-            cloudflared --> Traefik --> Apps
-            Apps --> CNPG[(PostgreSQL)]
-            Flux -->|reconciles| Apps
-        end
+    subgraph Server["Hetzner CX33 - Talos Linux"]
+        cloudflared --> Traefik
+        Traefik --> Apps
+        Apps --> CNPG[(PostgreSQL)]
+        Flux -->|reconciles| Apps
     end
 
     Flux -.->|watches| Git[GitHub repo]
-    OpenTofu -.->|provisions| Server & CF
 ```
 
 ## Stack
