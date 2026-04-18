@@ -363,13 +363,6 @@ url = "https://github.com/opentofu/opentofu/releases/download/v1.11.6/tofu_1.11.
 checksum = "sha256:27323f70c875b8251bfd7e61a4cffc3ebff4e56ed1e611b955016f0c7077367e"
 url = "https://github.com/opentofu/opentofu/releases/download/v1.11.6/tofu_1.11.6_windows_amd64.tar.gz"
 
-<<<<<<< HEAD
-[[tools."pipx:pre-commit"]]
-version = "4.5.1"
-backend = "pipx:pre-commit"
-
-=======
->>>>>>> 548a921 (chore: improve mise config)
 [[tools."pipx:yamllint"]]
 version = "1.38.0"
 backend = "pipx:yamllint"
@@ -378,8 +371,6 @@ backend = "pipx:yamllint"
 version = "5.9.1"
 backend = "pipx:yubikey-manager"
 
-<<<<<<< HEAD
-=======
 [[tools.prek]]
 version = "0.3.9"
 backend = "aqua:j178/prek"
@@ -397,6 +388,7 @@ provenance = "github-attestations"
 [tools.prek."platforms.linux-x64"]
 checksum = "sha256:254b48c4b0d8c7da07d0f23144f55f8b56d3a83c416d17a25dbaaee2f721f231"
 url = "https://github.com/j178/prek/releases/download/v0.3.9/prek-x86_64-unknown-linux-musl.tar.gz"
+provenance = "github-attestations"
 
 [tools.prek."platforms.linux-x64-musl"]
 checksum = "sha256:254b48c4b0d8c7da07d0f23144f55f8b56d3a83c416d17a25dbaaee2f721f231"
@@ -418,7 +410,6 @@ checksum = "sha256:a260094190979a6b2aa6e0bef02121a21e8c2715c2d91603f2763123bfc7f
 url = "https://github.com/j178/prek/releases/download/v0.3.9/prek-x86_64-pc-windows-msvc.zip"
 provenance = "github-attestations"
 
->>>>>>> 548a921 (chore: improve mise config)
 [[tools.shellcheck]]
 version = "0.11.0"
 backend = "aqua:koalaman/shellcheck"
