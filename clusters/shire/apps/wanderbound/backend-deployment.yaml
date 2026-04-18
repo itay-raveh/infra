@@ -15,6 +15,8 @@ spec:
       labels:
         app: wanderbound-backend
     spec:
+      securityContext:
+        fsGroup: 999
       initContainers:
         - name: migrations
           image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:e7944acc2831e539bb82603289b9513706a3e6ecc0ab2312552b5e2462b3fe27 # {"$imagepolicy": "flux-system:wanderbound-backend"}
