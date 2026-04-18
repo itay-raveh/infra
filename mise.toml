@@ -58,6 +58,18 @@ description = "Decrypt state and dump a tofu output to stdout"
 dir = "{{config_root}}"
 run = "bash scripts/tofu-wrapper.sh output -raw \"$@\""
 
+[tasks."configs:refresh"]
+description = "Refresh ~/.kube/config and ~/.talos/config from tofu state"
+dir = "{{config_root}}"
+run = """
+mkdir -p ~/.kube ~/.talos
+bash scripts/tofu-wrapper.sh output -raw kubeconfig > ~/.kube/config
+chmod 600 ~/.kube/config
+bash scripts/tofu-wrapper.sh output -raw talosconfig > ~/.talos/config
+chmod 600 ~/.talos/config
+talosctl config node "$(bash scripts/tofu-wrapper.sh output -raw public_ipv4)"
+"""
+
 # -- Flux ---------------------------------------------------------
 
 [tasks.reconcile]

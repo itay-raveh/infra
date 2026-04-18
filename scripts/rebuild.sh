@@ -4,7 +4,6 @@ git pull --rebase
 set -a
 eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
 set +a
-mkdir -p ~/.kube ~/.talos
 
 echo "==> 1/5: creating Talos image"
 tofu -chdir=tofu apply -auto-approve \
@@ -15,10 +14,7 @@ echo "==> 2/5: applying infrastructure"
 tofu -chdir=tofu apply -auto-approve
 
 echo "==> 3/5: syncing tunnel token + writing local configs"
-tofu -chdir=tofu output -raw kubeconfig > ~/.kube/config
-chmod 600 ~/.kube/config
-tofu -chdir=tofu output -raw talosconfig > ~/.talos/config
-chmod 600 ~/.talos/config
+mise run configs:refresh
 target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
 tofu -chdir=tofu output -raw tunnel_token \
   | bash scripts/refresh-sops-secret.sh "$target" cloudflared cloudflared-tunnel-token cf-tunnel-token

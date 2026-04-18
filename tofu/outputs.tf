@@ -16,3 +16,7 @@ output "talosconfig" {
   value     = module.talos.talosconfig
   sensitive = true
 }
+
+output "talos_installer_image" {
+  value = "factory.talos.dev/installer/${talos_image_factory_schematic.shire.id}:${local.talos_version}"
+}

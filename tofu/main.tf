@@ -39,6 +39,14 @@ module "talos" {
   talos_control_plane_extra_config_patches = [
     yamlencode({
       machine = {
+        install = {
+          # Platform-specific installer pins the hcloud UKI; the generic
+          # installer/ variant picks the currently running platform, which
+          # once metal is active traps us in metal forever.
+          image             = "factory.talos.dev/hcloud-installer/${talos_image_factory_schematic.shire.id}:${local.talos_version}"
+          extraKernelArgs   = ["talos.platform=hcloud"]
+          grubUseUKICmdline = false
+        }
         kubelet = {
           extraMounts = [{
             destination = "/var/local-path-provisioner"
@@ -55,6 +63,14 @@ module "talos" {
           }
         }
       }
+    }),
+    # Hetzner platform metadata hostname doesn't survive talosctl upgrade
+    # on UKI installs (siderolabs/talos#11145), so pin it here.
+    yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "HostnameConfig"
+      auto       = "off"
+      hostname   = "shire-control-plane-1"
     }),
   ]
 }
