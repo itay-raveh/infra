@@ -40,10 +40,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
-      - run: |
-          pre-commit run --all-files sops-verify
-          pre-commit run --all-files no-plaintext-secrets
+      - run: ./scripts/sops-sanity.sh
 
   flux-build:
     runs-on: ubuntu-24.04

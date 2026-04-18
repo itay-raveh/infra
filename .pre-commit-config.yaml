@@ -12,30 +12,12 @@ repos:
 
   - repo: local
     hooks:
-      - id: sops-verify
-        name: sops-verify
+      - id: sops-sanity
+        name: sops-sanity
         language: system
-        entry: |
-          bash -c 'for f in "$@"; do grep -q "ENC\[" "$f" || { echo "not SOPS-encrypted $f" >&2; exit 1; }; done' --
-        files: '\.sops\.'
-        exclude: '^\.sops\.yaml$'
-
-      - id: no-plaintext-secrets
-        name: no-plaintext-secrets
-        language: system
-        entry: |
-          bash -c '
-            for f in "$@"; do
-              # Catch any doc in a multi-doc stream whose kind is Secret,
-              # regardless of leading whitespace or YAML doc position.
-              if grep -qE "^[[:space:]]*kind:[[:space:]]*Secret[[:space:]]*$" "$f"; then
-                echo "plaintext Secret (rename to .sops.yaml and encrypt): $f" >&2
-                exit 1
-              fi
-            done
-          ' --
-        files: '^clusters/.*\.ya?ml$'
-        exclude: '\.sops\.'
+        entry: scripts/sops-sanity.sh
+        pass_filenames: false
+        always_run: true
 
       - id: yamllint
         name: yamllint
