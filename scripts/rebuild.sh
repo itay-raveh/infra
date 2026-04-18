@@ -20,12 +20,8 @@ chmod 600 ~/.kube/config
 tofu -chdir=tofu output -raw talosconfig > ~/.talos/config
 chmod 600 ~/.talos/config
 target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
-token=$(tofu -chdir=tofu output -raw tunnel_token)
-printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
-  --namespace=cloudflared \
-  --from-file=cf-tunnel-token=/dev/stdin \
-  --dry-run=client -o yaml > "$target"
-sops --encrypt --in-place "$target"
+tofu -chdir=tofu output -raw tunnel_token \
+  | bash scripts/refresh-sops-secret.sh "$target" cloudflared cloudflared-tunnel-token cf-tunnel-token
 git add "$target"
 git commit -m "chore: tunnel token for fresh rebuild"
 git push

@@ -107,22 +107,31 @@ description = "Open a debug shell on a node (usage: mise run kshell -- <node-nam
 run = "kubectl debug -it --image=alpine \"node/$1\" -- sh"
 raw = true
 
-# -- Tunnel -------------------------------------------------------
+# -- SOPS-encrypted Secrets sourced from tofu ---------------------
+# Each task: pull a token, pipe to scripts/refresh-sops-secret.sh which
+# renders + encrypts the target file in place. Commit yourself.
 
 [tasks."tunnel:refresh"]
-description = "Regenerate tunnel token from tofu, encrypt, commit, and push"
+description = "Regenerate cloudflared tunnel-token Secret from tofu output"
 dir = "{{config_root}}"
 run = """
-target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
-token=$(bash scripts/tofu-wrapper.sh output -raw tunnel_token)
-printf '%s' "$token" | kubectl create secret generic cloudflared-tunnel-token \
-  --namespace=cloudflared \
-  --from-file=cf-tunnel-token=/dev/stdin \
-  --dry-run=client -o yaml > "$target"
-sops --encrypt --in-place "$target"
-git add "$target"
-git commit -m "chore: refresh tunnel token"
-git push
+bash scripts/tofu-wrapper.sh output -raw tunnel_token \
+  | bash scripts/refresh-sops-secret.sh \
+      clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml \
+      cloudflared cloudflared-tunnel-token cf-tunnel-token
+"""
+
+[tasks."hcloud-csi:refresh-token"]
+description = "Regenerate hcloud-csi Secret from tofu secrets.sops.yaml"
+dir = "{{config_root}}"
+run = """
+set -a
+eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
+set +a
+printf '%s' "$TF_VAR_hcloud_token" \
+  | bash scripts/refresh-sops-secret.sh \
+      clusters/shire/infrastructure/controllers/hcloud-csi-token.sops.yaml \
+      kube-system hcloud token
 """
 
 # -- Rebuild ------------------------------------------------------

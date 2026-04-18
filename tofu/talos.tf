@@ -1,7 +1,7 @@
 data "talos_image_factory_extensions_versions" "this" {
   talos_version = local.talos_version
   filters = {
-    names = ["hcloud", "qemu-guest-agent", "tailscale"]
+    names = ["hcloud", "iscsi-tools", "qemu-guest-agent", "tailscale", "util-linux-tools"]
   }
 }
 

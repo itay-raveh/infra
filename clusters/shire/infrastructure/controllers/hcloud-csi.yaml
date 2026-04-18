@@ -1,0 +1,43 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: hcloud
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://charts.hetzner.cloud
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: hcloud-csi
+  namespace: flux-system
+spec:
+  interval: 1h
+  targetNamespace: kube-system
+  chart:
+    spec:
+      chart: hcloud-csi
+      version: 2.20.2
+      sourceRef:
+        kind: HelmRepository
+        name: hcloud
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    # Single-node cluster: one controller replica is enough.
+    controller:
+      replicaCount: 1
+    storageClasses:
+      - name: hcloud-volumes
+        # local-path is the default; hcloud-volumes is opt-in per PVC.
+        defaultStorageClass: false
+        # Retain so an accidental PVC delete doesn't take the Hetzner
+        # Volume with it  - operator must clean up by hand.
+        reclaimPolicy: Retain

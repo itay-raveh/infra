@@ -7,6 +7,8 @@ resources:
   - cloudflared-tunnel-token.sops.yaml
   - cloudflared.yaml
   - cnpg.yaml
+  - hcloud-csi-token.sops.yaml
+  - hcloud-csi.yaml
   - local-path-provisioner.yaml
   - s3-backup-creds.sops.yaml
   - talos-backup.yaml
