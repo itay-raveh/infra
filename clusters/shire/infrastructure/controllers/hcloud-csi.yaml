@@ -41,3 +41,6 @@ spec:
         # Retain so an accidental PVC delete doesn't take the Hetzner
         # Volume with it  - operator must clean up by hand.
         reclaimPolicy: Retain
+        # xfs can grow online without a pod restart; ext4 needs one.
+        extraParameters:
+          csi.storage.k8s.io/fstype: xfs
