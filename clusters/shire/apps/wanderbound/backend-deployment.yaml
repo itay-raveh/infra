@@ -23,31 +23,11 @@ spec:
           image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:b69ac04885331fb01157e3ca28338f4d27d09500ab2e0264d3f0448287e3cc77 # {"$imagepolicy": "flux-system:wanderbound-backend"}
           command: ["alembic", "upgrade", "head"]
           env:
-            - name: POSTGRES_SERVER
+            - name: SQLALCHEMY_DATABASE_URI
               valueFrom:
                 secretKeyRef:
                   name: wanderbound-db-app
-                  key: host
-            - name: POSTGRES_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: port
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: password
-            - name: POSTGRES_DB
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: dbname
+                  key: uri
           securityContext:
             runAsUser: 999
             runAsGroup: 999
@@ -71,31 +51,11 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: POSTGRES_SERVER
+            - name: SQLALCHEMY_DATABASE_URI
               valueFrom:
                 secretKeyRef:
                   name: wanderbound-db-app
-                  key: host
-            - name: POSTGRES_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: port
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: password
-            - name: POSTGRES_DB
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-db-app
-                  key: dbname
+                  key: uri
             - name: ENVIRONMENT
               value: "production"
             - name: VITE_FRONTEND_URL
