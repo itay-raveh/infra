@@ -15,6 +15,7 @@ spec:
       labels:
         app: wanderbound-backend
     spec:
+      automountServiceAccountToken: false
       securityContext:
         fsGroup: 999
       initContainers:
