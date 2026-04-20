@@ -8,6 +8,7 @@ resources:
   - wanderbound-db.yaml
   - wanderbound-db-scheduled-backup.yaml
   - wanderbound-secrets.sops.yaml
+  - wanderbound-backup-secrets.sops.yaml
   - app-data-pvc.yaml
   - backend-deployment.yaml
   - backend-service.yaml
