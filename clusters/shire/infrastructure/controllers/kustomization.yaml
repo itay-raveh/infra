@@ -14,5 +14,6 @@ resources:
   - local-path-provisioner.yaml
   - s3-backup-creds.sops.yaml
   - talos-backup.yaml
+  - tailscale-operator-oauth.sops.yaml
   - tailscale-operator.yaml
   - traefik.yaml
