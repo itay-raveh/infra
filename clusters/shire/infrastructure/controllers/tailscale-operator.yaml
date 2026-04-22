@@ -51,16 +51,3 @@ spec:
     apiServerProxyConfig:
       mode: "false"  # no kube-apiserver over Tailnet
     installCRDs: true
----
-# Proxy pods need /dev/net/tun, surfaced by the generic-device-plugin.
-apiVersion: tailscale.com/v1alpha1
-kind: ProxyClass
-metadata:
-  name: ts-talos-tun
-spec:
-  statefulSet:
-    pod:
-      tailscaleContainer:
-        resources:
-          limits:
-            squat.ai/tun: "1"
