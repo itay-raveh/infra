@@ -27,5 +27,7 @@ provider "tailscale" {
     "oauth_keys",       # tailscale_oauth_client
     "feature_settings", # tailscale_tailnet_settings
     "dns",              # tailscale_dns_preferences
+    "devices:core",     # granted to the operator oauth client we create
+    "auth_keys",        # granted to the operator oauth client we create
   ]
 }
