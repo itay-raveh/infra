@@ -5,9 +5,7 @@ resource "tailscale_dns_preferences" "this" {
 }
 
 resource "tailscale_tailnet_settings" "this" {
-  # LE certs on <host>.<tailnet>.ts.net, required for ingressClassName: tailscale.
-  https_enabled = true
-
+  # https_enabled is tailnet-owner-only, not grantable via OAuth scope.
   acls_externally_managed_on = true
 }
 
@@ -37,7 +35,7 @@ resource "tailscale_acl" "this" {
 }
 
 resource "tailscale_oauth_client" "k8s_operator" {
-  description = "k8s operator (flux-managed)"
+  description = "flux managed k8s operator"
   scopes      = ["devices:core", "auth_keys"]
   tags        = ["tag:k8s-operator"]
 }
