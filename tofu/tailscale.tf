@@ -7,6 +7,8 @@ resource "tailscale_dns_preferences" "this" {
 resource "tailscale_tailnet_settings" "this" {
   # LE certs on <host>.<tailnet>.ts.net, required for ingressClassName: tailscale.
   https_enabled = true
+
+  acls_externally_managed_on = true
 }
 
 resource "tailscale_acl" "this" {
