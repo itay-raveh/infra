@@ -147,6 +147,24 @@ printf '%s' "$TF_VAR_hcloud_token" \
       kube-system hcloud token
 """
 
+# Two-keyed Secret; re-run after any `tofu apply -replace` on the oauth_client
+# resource, which rotates the client_secret.
+[tasks."tailscale-operator:refresh-oauth"]
+description = "Regenerate tailscale-operator OAuth Secret from tofu output"
+dir = "{{config_root}}"
+run = """
+target=clusters/shire/infrastructure/controllers/tailscale-operator-oauth.sops.yaml
+client_id=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_id)
+client_secret=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_secret)
+kubectl create secret generic operator-oauth \
+  --namespace=tailscale \
+  --from-literal=client_id="$client_id" \
+  --from-literal=client_secret="$client_secret" \
+  --dry-run=client -o yaml > "$target"
+sops --encrypt --in-place "$target"
+echo "wrote $target - review, commit, and push when ready" >&2
+"""
+
 # -- Rebuild ------------------------------------------------------
 
 [tasks.rebuild]
