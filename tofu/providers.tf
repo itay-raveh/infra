@@ -22,5 +22,10 @@ provider "minio" {
 # Auth via TAILSCALE_OAUTH_CLIENT_ID/SECRET env vars (tofu/secrets.sops.yaml, unwrapped by tofu-wrapper.sh).
 provider "tailscale" {
   tailnet = "-"
-  scopes  = ["all"]
+  scopes = [
+    "policy_file",      # tailscale_acl
+    "oauth_keys",       # tailscale_oauth_client
+    "feature_settings", # tailscale_tailnet_settings
+    "dns",              # tailscale_dns_preferences
+  ]
 }
