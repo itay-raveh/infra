@@ -5,7 +5,6 @@ resource "tailscale_dns_preferences" "this" {
 }
 
 resource "tailscale_tailnet_settings" "this" {
-  # https_enabled is tailnet-owner-only, not grantable via OAuth scope.
   acls_externally_managed_on = true
 }
 
