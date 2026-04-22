@@ -1,0 +1,66 @@
+# https://tailscale.com/kb/1236/kubernetes-operator
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tailscale
+  labels:
+    # Proxy pods need NET_ADMIN + NET_RAW for userspace WireGuard.
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: tailscale
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://pkgs.tailscale.com/helmcharts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tailscale-operator
+  namespace: flux-system
+spec:
+  interval: 1h
+  targetNamespace: tailscale
+  chart:
+    spec:
+      chart: tailscale-operator
+      version: 1.96.x
+      sourceRef:
+        kind: HelmRepository
+        name: tailscale
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    # Chart reads Secret `operator-oauth` when oauth and oauthSecretVolume are unset.
+    operatorConfig:
+      defaultTags:
+        - tag:k8s-operator
+      hostname: tailscale-operator
+    proxyConfig:
+      defaultTags: tag:k8s  # string (comma-separated), unlike operator defaultTags above.
+      defaultProxyClass: ts-talos-tun
+    apiServerProxyConfig:
+      mode: "false"  # no kube-apiserver over Tailnet
+    installCRDs: true
+---
+# Proxy pods need /dev/net/tun, surfaced by the generic-device-plugin.
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: ts-talos-tun
+spec:
+  statefulSet:
+    pod:
+      tailscaleContainer:
+        resources:
+          limits:
+            squat.ai/tun: "1"

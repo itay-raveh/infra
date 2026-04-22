@@ -18,3 +18,16 @@ provider "minio" {
   minio_region   = "fsn1"
   s3_compat_mode = true
 }
+
+# Auth via TAILSCALE_OAUTH_CLIENT_ID/SECRET env vars (tofu/secrets.sops.yaml, unwrapped by tofu-wrapper.sh).
+provider "tailscale" {
+  tailnet = "-"
+  scopes = [
+    "policy_file",      # tailscale_acl
+    "oauth_keys",       # tailscale_oauth_client
+    "feature_settings", # tailscale_tailnet_settings
+    "dns",              # tailscale_dns_preferences
+    "devices:core",     # granted to the operator oauth client we create
+    "auth_keys",        # granted to the operator oauth client we create
+  ]
+}

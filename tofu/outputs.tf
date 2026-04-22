@@ -20,3 +20,13 @@ output "talosconfig" {
 output "talos_installer_image" {
   value = "factory.talos.dev/installer/${talos_image_factory_schematic.shire.id}:${local.talos_version}"
 }
+
+output "tailscale_operator_oauth_client_id" {
+  value     = tailscale_oauth_client.k8s_operator.id
+  sensitive = true
+}
+
+output "tailscale_operator_oauth_client_secret" {
+  value     = tailscale_oauth_client.k8s_operator.key
+  sensitive = true
+}

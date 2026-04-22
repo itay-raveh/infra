@@ -13,6 +13,7 @@ gh = "2"
 gitleaks = "8"
 hcloud = "1"
 jq = "1"
+k9s = "0.50"
 kubectl = "1.35"
 mc = "RELEASE.2025-08-13T08-35-41Z"
 opentofu = "1.11"
@@ -144,6 +145,22 @@ printf '%s' "$TF_VAR_hcloud_token" \
   | bash scripts/refresh-sops-secret.sh \
       clusters/shire/infrastructure/controllers/hcloud-csi-token.sops.yaml \
       kube-system hcloud token
+"""
+
+[tasks."tailscale-operator:refresh-oauth"]
+description = "Regenerate tailscale-operator OAuth Secret from tofu output (re-run after -replace on the oauth_client)"
+dir = "{{config_root}}"
+run = """
+target=clusters/shire/infrastructure/controllers/tailscale-operator-oauth.sops.yaml
+client_id=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_id)
+client_secret=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_secret)
+kubectl create secret generic operator-oauth \
+  --namespace=tailscale \
+  --from-literal=client_id="$client_id" \
+  --from-literal=client_secret="$client_secret" \
+  --dry-run=client -o yaml > "$target"
+sops --encrypt --in-place "$target"
+echo "wrote $target - review, commit, and push when ready" >&2
 """
 
 # -- Rebuild ------------------------------------------------------

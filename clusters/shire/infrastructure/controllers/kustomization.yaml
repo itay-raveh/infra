@@ -7,9 +7,13 @@ resources:
   - cloudflared-tunnel-token.sops.yaml
   - cloudflared.yaml
   - cnpg.yaml
+  - generic-device-plugin.yaml
+  - headlamp.yaml
   - hcloud-csi-token.sops.yaml
   - hcloud-csi.yaml
   - local-path-provisioner.yaml
   - s3-backup-creds.sops.yaml
   - talos-backup.yaml
+  - tailscale-operator-oauth.sops.yaml
+  - tailscale-operator.yaml
   - traefik.yaml
