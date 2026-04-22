@@ -31,5 +31,10 @@ terraform {
       source  = "aminueza/minio"
       version = "= 3.30.0"
     }
+
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "= 0.28.0"
+    }
   }
 }

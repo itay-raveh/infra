@@ -18,3 +18,11 @@ provider "minio" {
   minio_region   = "fsn1"
   s3_compat_mode = true
 }
+
+# Auth reads TAILSCALE_OAUTH_CLIENT_ID / TAILSCALE_OAUTH_CLIENT_SECRET from
+# the env; those live in tofu/secrets.sops.yaml and are unwrapped by the
+# tofu-wrapper script.
+provider "tailscale" {
+  tailnet = "-"
+  scopes  = ["all"]
+}
