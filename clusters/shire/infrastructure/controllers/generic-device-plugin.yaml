@@ -1,5 +1,4 @@
-# Exposes /dev/net/tun as squat.ai/tun for TUN-using workloads.
-# Required on Talos v1.8+, which dropped the default device rule.
+# Exposes /dev/net/tun as squat.ai/tun. Required on Talos v1.8+, which dropped the default device rule.
 # https://github.com/tailscale/tailscale/issues/14149
 ---
 apiVersion: apps/v1
@@ -30,8 +29,7 @@ spec:
         - name: generic-device-plugin
           image: ghcr.io/squat/generic-device-plugin:0.2.0@sha256:66c8d5c270eb2b721f1064c549b9b7898152a6d2f0163380a5d37dc7636c20ff
           args:
-            # v0.2.0 changed the default domain to `devic.es`; pin `squat.ai`
-            # since Talos and Tailscale docs still reference squat.ai/tun.
+            # v0.2.0 changed the default domain to devic.es, but Talos and Tailscale docs still reference squat.ai/tun.
             - --domain=squat.ai
             - --device
             - |

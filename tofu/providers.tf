@@ -19,9 +19,7 @@ provider "minio" {
   s3_compat_mode = true
 }
 
-# Auth reads TAILSCALE_OAUTH_CLIENT_ID / TAILSCALE_OAUTH_CLIENT_SECRET from
-# the env; those live in tofu/secrets.sops.yaml and are unwrapped by the
-# tofu-wrapper script.
+# Auth via TAILSCALE_OAUTH_CLIENT_ID/SECRET env vars (tofu/secrets.sops.yaml, unwrapped by tofu-wrapper.sh).
 provider "tailscale" {
   tailnet = "-"
   scopes  = ["all"]

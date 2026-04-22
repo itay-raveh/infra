@@ -40,8 +40,7 @@ spec:
     remediation:
       retries: 3
   values:
-    # OAuth: chart reads Secret `operator-oauth` in targetNamespace when
-    # both oauth and oauthSecretVolume values are unset.
+    # Chart reads Secret `operator-oauth` when oauth and oauthSecretVolume are unset.
     operatorConfig:
       defaultTags:
         - tag:k8s-operator
@@ -50,7 +49,7 @@ spec:
       defaultTags: tag:k8s  # string (comma-separated), unlike operator defaultTags above.
       defaultProxyClass: ts-talos-tun
     apiServerProxyConfig:
-      mode: "false"  # Service exposure only; no kube-apiserver over Tailnet.
+      mode: "false"  # no kube-apiserver over Tailnet
     installCRDs: true
 ---
 # Proxy pods need /dev/net/tun, surfaced by the generic-device-plugin.
