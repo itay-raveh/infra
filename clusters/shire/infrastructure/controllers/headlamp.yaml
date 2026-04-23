@@ -44,7 +44,7 @@ spec:
     config:
       inClusterContextName: shire
       pluginsDir: /build/plugins
-      sessionTTL: 604800
+      sessionTTL: 86400
     initContainers:
       - name: headlamp-plugins
         image: ghcr.io/headlamp-k8s/headlamp-plugin-flux:v0.6.0
