@@ -67,7 +67,7 @@ spec:
         name: flux
       messageTemplate: 'deploy: update wanderbound container images'
     push:
-      branch: main
+      branch: flux-image-automation
   update:
     path: ./clusters/shire/apps/wanderbound
     strategy: Setters

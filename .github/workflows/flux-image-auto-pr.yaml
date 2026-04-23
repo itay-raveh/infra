@@ -1,0 +1,40 @@
+---
+name: flux-image-auto-pr
+on:
+  push:
+    branches: [flux-image-automation]
+
+permissions: {}
+
+jobs:
+  pr:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Mint infra-flux installation token
+        id: token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          app-id: ${{ secrets.FLUX_APP_ID }}
+          private-key: ${{ secrets.FLUX_APP_PRIVATE_KEY }}
+
+      - name: Ensure PR with auto-merge
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          pr=$(gh pr list \
+            --head flux-image-automation \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            pr=$(gh pr create \
+              --head flux-image-automation \
+              --base main \
+              --title "flux: image automation updates" \
+              --body "Automated image bumps from the Flux image-automation-controller." \
+              | grep -oE '[0-9]+$')
+          fi
+          gh pr merge "$pr" --auto --squash
