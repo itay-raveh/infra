@@ -1,8 +1,7 @@
 [extend]
 useDefault = true
 
-# Singular [allowlist] (not [[allowlists]]): gitleaks-action@v2 pins an
-# older binary that predates the array-of-tables form (added in 8.25).
+# gitleaks-action@v2 pins gitleaks <8.25, which needs the singular [allowlist] form.
 [allowlist]
 description = "SOPS ciphertext + vendored upstream manifests"
 paths = [

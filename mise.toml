@@ -62,13 +62,19 @@ run = "bash scripts/tofu-wrapper.sh output -raw \"$@\""
 [tasks."configs:refresh"]
 description = "Refresh ~/.kube/config and ~/.talos/config from tofu state"
 dir = "{{config_root}}"
+# Use the node's Tailnet IP. Public kube/Talos API are firewalled to CGNAT.
 run = """
 mkdir -p ~/.kube ~/.talos
-bash scripts/tofu-wrapper.sh output -raw kubeconfig > ~/.kube/config
+public_ipv4=$(bash scripts/tofu-wrapper.sh output -raw public_ipv4)
+tailnet_ipv4=$(tailscale ip -4 shire-control-plane-1 2>/dev/null | head -1 || true)
+: "${tailnet_ipv4:=$public_ipv4}"
+bash scripts/tofu-wrapper.sh output -raw kubeconfig \
+  | sed "s|${public_ipv4}|${tailnet_ipv4}|g" > ~/.kube/config
 chmod 600 ~/.kube/config
-bash scripts/tofu-wrapper.sh output -raw talosconfig > ~/.talos/config
+bash scripts/tofu-wrapper.sh output -raw talosconfig \
+  | sed "s|${public_ipv4}|${tailnet_ipv4}|g" > ~/.talos/config
 chmod 600 ~/.talos/config
-talosctl config node "$(bash scripts/tofu-wrapper.sh output -raw public_ipv4)"
+talosctl config node "$tailnet_ipv4"
 """
 
 # -- Flux ---------------------------------------------------------

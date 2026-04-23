@@ -154,6 +154,22 @@ flux resume image update-automation wanderbound -n flux-system
 
 ---
 
+## Tailnet is unreachable
+
+Day-2 access (kubectl, talosctl) is restricted to the Tailnet CGNAT
+range (`100.64.0.0/10`) via the Hetzner Cloud Firewall; see
+`firewall_*_source` in `tofu/main.tf`. If Tailscale itself is down
+or your device can't reach the control plane:
+
+1. **Hetzner Cloud Console** → Firewall → edit the rules for 6443
+   and 50000, temporarily add your current public IP. Fastest path;
+   drift with tofu until you revert.
+2. **Re-apply tofu** with the firewall sources widened. Requires
+   YubiKey and a working tofu state backend.
+
+Once Tailnet is back, revert the firewall. Kubeconfig and talosconfig
+reference the node's tailnet IP so no further config change is needed.
+
 ## One YubiKey lost
 
 You are one hardware failure from total loss. Replace immediately:

@@ -22,14 +22,10 @@ module "talos" {
   # Single-node cluster: workloads run on the control plane.
   control_plane_allow_schedule = true
 
-  # Open 50000 (Talos API) and 6443 (k8s API) to all sources. Both
-  # ports are mTLS-protected so this is safe. firewall_use_current_ip
-  # doesn't work reliably here because the ISP may NAT traffic to
-  # Hetzner through a different egress IP than what icanhazip reports.
-  # Day-2 access goes through Tailscale anyway.
+  # Restricted to Tailnet CGNAT. Break-glass: docs/disaster-recovery.md.
   firewall_use_current_ip   = false
-  firewall_talos_api_source = ["0.0.0.0/0"]
-  firewall_kube_api_source  = ["0.0.0.0/0"]
+  firewall_talos_api_source = ["100.64.0.0/10"]
+  firewall_kube_api_source  = ["100.64.0.0/10"]
 
   tailscale = {
     enabled  = true

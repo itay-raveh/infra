@@ -31,10 +31,7 @@ spec:
     remediation:
       retries: 3
   values:
-    # --kubelet-insecure-tls: metrics-server -> kubelet cross the local
-    # CNI only; Talos kubelet serving certs are not rotated by a CSR
-    # approver here. Upgrade path: enable rotate-server-certificates on
-    # the kubelet + deploy a serving-cert approver, then drop this flag.
+    # Talos kubelets use self-signed serving certs (no CSR approver).
     args:
       - --kubelet-insecure-tls
       - --kubelet-preferred-address-types=InternalIP

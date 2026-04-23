@@ -40,11 +40,6 @@ spec:
   values:
     fullnameOverride: headlamp
     replicaCount: 1
-    # cluster-admin until P1-2c (Tailscale operator apiserver-proxy auth)
-    # lands and rethinks access. view works for namespaced reads but
-    # upstream view omits cluster-scoped resources by design; a
-    # hand-rolled cluster-reader role isn't an established pattern in
-    # public repos.
     clusterRoleBinding:
       create: true
       clusterRoleName: cluster-admin

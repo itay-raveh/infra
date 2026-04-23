@@ -24,8 +24,7 @@ repos:
         language: system
         entry: yamllint
         types: [yaml]
-        # Second pattern: vendored upstream manifest, upstream indentation
-        # style differs from ours; lint upstream's problem, not ours.
+        # Second pattern: vendored upstream manifest, not our indentation to lint.
         exclude: '\.sops\.(yaml|yml)$|^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$'
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
