@@ -6,3 +6,12 @@ description = "SOPS ciphertext"
 paths = [
   '''\.sops\.(yaml|json|txt)$''',
 ]
+
+# Vendored cnpg plugin-barman-cloud release manifest. Ships a kind:Secret
+# holding only a base64'd public image ref, which gitleaks reads as
+# high-entropy. Re-verify on each plugin version bump.
+[[allowlists]]
+description = "plugin-barman-cloud vendored manifest"
+paths = [
+  '''^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$''',
+]
