@@ -30,16 +30,11 @@ sops --decrypt bootstrap/cluster-age-key.sops.txt \
       --from-file=age.agekey=/dev/stdin \
       --dry-run=client -o yaml | kubectl apply -f -
 
-echo "==> 5/5: bootstrapping Flux"
-GITHUB_TOKEN="$(gh auth token)"
-export GITHUB_TOKEN
-flux bootstrap github \
-  --owner=itay-raveh \
-  --repository=infra \
-  --path=clusters/shire \
-  --personal \
-  --branch=main \
-  --components-extra=image-reflector-controller,image-automation-controller \
-  --read-write-key
+echo "==> 5/5: installing Flux and wiring to git via GitHub App"
+flux install \
+  --components-extra=image-reflector-controller,image-automation-controller
+sops --decrypt clusters/shire/flux-system/flux-github-app.sops.yaml \
+  | kubectl apply -f -
+kubectl apply -f clusters/shire/flux-system/gotk-sync.yaml
 
 echo "==> rebuild complete. watch with: flux get kustomizations --watch"

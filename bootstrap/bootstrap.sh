@@ -178,7 +178,8 @@ gh api --method DELETE "repos/$repo/branches/main/protection" >/dev/null 2>&1 ||
 for id in $(gh api "repos/$repo/rulesets" --jq '.[].id'); do
   gh api --method DELETE "repos/$repo/rulesets/$id" >/dev/null
 done
-gh api --method POST "repos/$repo/rulesets" --input .github/rulesets/main-branch.json >/dev/null
-gh api --method POST "repos/$repo/rulesets" --input .github/rulesets/tags.json >/dev/null
+for f in .github/rulesets/*.json; do
+  gh api --method POST "repos/$repo/rulesets" --input "$f" >/dev/null
+done
 
 step "done. next: commit and push."
