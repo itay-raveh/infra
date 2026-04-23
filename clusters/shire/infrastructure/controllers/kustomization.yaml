@@ -12,6 +12,7 @@ resources:
   - hcloud-csi-token.sops.yaml
   - hcloud-csi.yaml
   - local-path-provisioner.yaml
+  - metrics-server.yaml
   - s3-backup-creds.sops.yaml
   - talos-backup.yaml
   - tailscale-operator-oauth.sops.yaml
