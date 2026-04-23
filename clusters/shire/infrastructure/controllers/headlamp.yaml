@@ -40,7 +40,7 @@ spec:
     replicaCount: 1
     clusterRoleBinding:
       create: true
-      clusterRoleName: cluster-admin
+      clusterRoleName: view
     config:
       inClusterContextName: shire
       pluginsDir: /build/plugins
