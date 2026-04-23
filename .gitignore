@@ -16,6 +16,9 @@ talosconfig
 .env.*
 !.env.example
 
+# Local scratch
+.todo
+
 # Editor / OS
 .DS_Store
 Thumbs.db
