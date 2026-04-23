@@ -11,15 +11,18 @@ GitOps-managed personal infrastructure for `raveh.dev`.
 graph TD
     Internet -->|HTTPS| CF[Cloudflare]
     CF -->|tunnel| cloudflared
-    OpenTofu -.->|provisions| CF & Server
+    Tailnet[Tailnet devices] -->|WireGuard| TSProxy[Tailscale operator proxy]
+    OpenTofu -.->|provisions| CF & Tailnet & Server
 
     subgraph Server["Hetzner CX33 - Talos Linux"]
-        cloudflared --> Traefik
-        Traefik --> Apps
+        cloudflared --> Traefik --> Apps
+        TSProxy --> Headlamp
         Apps --> CNPG[(PostgreSQL)]
-        Flux -->|reconciles| Apps
+        Flux -->|reconciles| Apps & Headlamp
     end
 
+    CNPG -.->|WAL archive| S3[(Hetzner S3)]
+    Apps -.->|daily backup| S3
     Flux -.->|watches| Git[GitHub repo]
 ```
 
@@ -30,9 +33,12 @@ graph TD
 | [Talos Linux](https://talos.dev) | Immutable Kubernetes OS |
 | [Flux CD](https://fluxcd.io) | GitOps reconciliation |
 | [OpenTofu](https://opentofu.org) | Infrastructure provisioning |
-| [Traefik](https://traefik.io) | Ingress + reverse proxy |
-| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Zero-trust ingress |
+| [Traefik](https://traefik.io) | Ingress + reverse proxy (public apps) |
+| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public ingress path, no open ports on the node |
+| [Tailscale](https://tailscale.com) | Node management transport + admin-only ingress for Headlamp |
+| [Headlamp](https://headlamp.dev) | Flux-aware admin dashboard (Tailnet-only) |
 | [CNPG](https://cloudnative-pg.io) | PostgreSQL operator |
+| [hcloud-csi](https://github.com/hetznercloud/csi-driver) | Hetzner Volumes CSI for app-data PVCs |
 | [SOPS](https://github.com/getsops/sops) | Secret encryption (age + YubiKey) |
 
 ## Hardware
