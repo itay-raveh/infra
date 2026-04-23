@@ -3,6 +3,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: cloudflared
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
