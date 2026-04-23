@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":timezone(UTC)"
+  ],
+  "schedule": ["every weekend"],
+  "labels": ["dependencies"],
+  "minimumReleaseAge": "3 days",
+  "commitMessagePrefix": "build(deps):",
+  "flux": { "managerFilePatterns": ["/\\.yaml$/"] },
+  "kubernetes": { "managerFilePatterns": ["/\\.yaml$/"] },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["clusters/shire/infrastructure/controllers/barman-cloud-plugin/kustomization\\.yaml"],
+      "matchStrings": ["releases/download/v(?<currentValue>[0-9.]+)/manifest\\.yaml"],
+      "depNameTemplate": "cloudnative-pg/plugin-barman-cloud",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
+}
