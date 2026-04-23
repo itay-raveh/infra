@@ -42,6 +42,7 @@ spec:
       create: true
       clusterRoleName: cluster-admin
     config:
+      inClusterContextName: shire
       pluginsDir: /build/plugins
       sessionTTL: 604800
     initContainers:
