@@ -20,7 +20,7 @@ spec:
         fsGroup: 999
       initContainers:
         - name: migrations
-          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:a161df8df2cefa3cc476ab02b5c8beb37e2b489fe6bb1af53655ed49e8975cc6 # {"$imagepolicy": "flux-system:wanderbound-backend"}
+          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:640f28643a14c9c0f315b8946ced4b53d5beeaf9b5714028416a77ae6d332530 # {"$imagepolicy": "flux-system:wanderbound-backend"}
           command: ["alembic", "upgrade", "head"]
           env:
             - name: SQLALCHEMY_DATABASE_URI
@@ -46,7 +46,7 @@ spec:
               mountPath: /tmp
       containers:
         - name: backend
-          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:a161df8df2cefa3cc476ab02b5c8beb37e2b489fe6bb1af53655ed49e8975cc6 # {"$imagepolicy": "flux-system:wanderbound-backend"}
+          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:640f28643a14c9c0f315b8946ced4b53d5beeaf9b5714028416a77ae6d332530 # {"$imagepolicy": "flux-system:wanderbound-backend"}
           command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
           ports:
             - containerPort: 8000
