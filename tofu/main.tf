@@ -1,6 +1,6 @@
 module "talos" {
   source  = "hcloud-talos/talos/hcloud"
-  version = "3.2.4"
+  version = "3.4.2"
 
   cluster_name       = local.cluster_name
   cluster_prefix     = true
