@@ -14,7 +14,7 @@ terraform {
 
     talos = {
       source  = "siderolabs/talos"
-      version = "= 0.10.1"
+      version = "0.11.0"
     }
 
     imager = {
@@ -29,7 +29,7 @@ terraform {
 
     minio = {
       source  = "aminueza/minio"
-      version = "= 3.30.0"
+      version = "3.38.0"
     }
 
     tailscale = {
