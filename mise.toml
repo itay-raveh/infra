@@ -8,7 +8,7 @@ age = "1"
 # 0.5.0 is the last upstream release with a Linux binary
 "aqua:str4d/age-plugin-yubikey" = "0.5.0"
 "aqua:tailscale/tailscale" = "1"
-flux2 = "2.8"
+flux2 = "2.8.8"
 gh = "2"
 gitleaks = "8"
 hcloud = "1"
