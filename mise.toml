@@ -23,7 +23,7 @@ prek = "0.3"
 shellcheck = "0.11"
 sops = "3"
 talosctl = "1.13.0"
-yq = "4"
+yq = "4.53.3"
 
 # -- Tofu ---------------------------------------------------------
 # All secrets live in tofu/secrets.sops.yaml and are injected as env
