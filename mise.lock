@@ -407,7 +407,7 @@ version = "1.38.0"
 backend = "pipx:yamllint"
 
 [[tools."pipx:yubikey-manager"]]
-version = "5.9.1"
+version = "5.9.2"
 backend = "pipx:yubikey-manager"
 
 [[tools.prek]]
