@@ -22,8 +22,9 @@ spec:
                 - /bin/sh
                 - -c
                 - |
-                  restic backup /data --verbose &&
+                  restic backup /data --verbose --group-by paths &&
                   restic forget \
+                    --group-by paths \
                     --keep-daily 7 \
                     --keep-weekly 4 \
                     --keep-monthly 3 \

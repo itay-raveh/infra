@@ -11,15 +11,17 @@ How secrets are stored, encrypted, decrypted, and rotated in this repo.
 - **Accidental plaintext commit.** Defense: pre-commit gitleaks (local,
   blocking) plus gitleaks in CI plus a `.sops.*` filename convention
   enforced by the sops-verify pre-commit hook.
-- **Laptop compromise.** An attacker on the laptop cannot decrypt
-  anything without a physical YubiKey touch. Plaintext lives in
-  `$EDITOR` memory for seconds, never on disk.
+- **Laptop compromise.** An attacker cannot decrypt the SOPS source of
+  truth without a physical YubiKey touch. The active WireGuard private
+  key is installed root-only at `/etc/wireguard/shire.conf`, so a root
+  compromise of the workstation can recover that one peer key.
 - **Single YubiKey loss.** The other YubiKey can still decrypt
   everything. Rotate the lost key out of `.sops.yaml` and re-wrap.
 - **Cluster compromise.** An attacker inside the cluster can read the
   `sops-age` Secret and decrypt everything. Defense: Talos immutability,
   no SSH on the node, Kubernetes API + Talos API closed to the public
-  internet (Tailscale-only).
+  internet. Both APIs are routed through native WireGuard and the
+  firewall exposes neither API port.
 
 **Out of scope:**
 
@@ -70,8 +72,11 @@ Kubernetes Secret named `sops-age` in the `flux-system` namespace.
 | Secret | Path | Recipients | Notes |
 |---|---|---|---|
 | Cluster software age key | `bootstrap/cluster-age-key.sops.txt` | YubiKeys only | Unwrapped into the `sops-age` Secret on every rebuild |
-| Tofu state passphrase | `tofu/encryption-passphrase.sops.txt` | YubiKeys only | Flux never runs tofu, so it doesn't need to read this |
-| Tailscale auth key | `talos/tailscale-authkey.sops.txt` | YubiKeys only | Read by the `sops` Terraform provider via `data.sops_file` at plan/apply time |
+| Tofu state passphrase | `tofu/secrets.sops.yaml` | YubiKeys only | Injected as `TF_VAR_encryption_passphrase` by the tofu wrapper |
+| WireGuard server private key | `tofu/secrets.sops.yaml` | YubiKeys only | Delivered to Talos in encrypted user data and protected in encrypted tofu state |
+| WireGuard workstation private key | `tofu/secrets.sops.yaml` | YubiKeys only | Installed as root-only `/etc/wireguard/shire.conf` by `mise run wireguard:configure` |
+| WireGuard workstation public key | `tofu/secrets.sops.yaml` | YubiKeys only | Included in the Talos machine configuration |
+| Tailscale provider OAuth client | `tofu/secrets.sops.yaml` | YubiKeys only | Manages the operator policy and the operator's scoped OAuth client |
 | Cloudflare tunnel token | `clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml` | All three (Flux must read it) | Output of tofu, piped through SOPS by `mise run rebuild` |
 | Talos PKI + bootstrap token + etcd encryption key | Inside tofu state | Protected by state encryption | Generated once by the `hcloud-talos` module on first apply |
 
@@ -138,8 +143,7 @@ Same procedure for primary and backup  - only the last step differs.
 
    ```
    sops updatekeys clusters/shire/.../secret.sops.yaml
-   sops updatekeys tofu/encryption-passphrase.sops.txt
-   sops updatekeys talos/tailscale-authkey.sops.txt
+   sops updatekeys tofu/secrets.sops.yaml
    sops updatekeys bootstrap/cluster-age-key.sops.txt
    # ...etc for every .sops.* file
    ```
@@ -183,9 +187,10 @@ re-wrapped:
 8. `flux reconcile kustomization infrastructure` to confirm Flux can
    still decrypt everything.
 
-The state passphrase, Tailscale auth key, and cluster age key file
-itself don't need re-wrapping in this case (they were never recipients
-of the cluster age key  - only the YubiKeys were).
+The state passphrase, WireGuard keys, Tailscale provider OAuth client,
+and cluster age key file itself do not need re-wrapping in this case.
+They were never recipients of the cluster age key. Only the YubiKeys
+can decrypt them.
 
 ### Rotating the state passphrase
 
@@ -197,10 +202,9 @@ of the cluster age key  - only the YubiKeys were).
    (OpenTofu supports a method rotation array). Apply once.
 4. Promote the new passphrase to primary, demote the old. Apply once.
 5. Drop the old method. Apply once.
-6. Encrypt the new passphrase as
-   `tofu/encryption-passphrase.sops.txt` and commit.
+6. Replace `TF_VAR_encryption_passphrase` in
+   `tofu/secrets.sops.yaml` with the new passphrase and commit.
 7. `shred -u /tmp/pass`.
 
 This is the only rotation that touches tofu state directly, so it's
 worth doing during a maintenance window.
-

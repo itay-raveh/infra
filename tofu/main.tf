@@ -1,6 +1,6 @@
 module "talos" {
   source  = "hcloud-talos/talos/hcloud"
-  version = "3.2.4"
+  version = "3.4.1"
 
   cluster_name       = local.cluster_name
   cluster_prefix     = true
@@ -22,25 +22,32 @@ module "talos" {
   # Single-node cluster: workloads run on the control plane.
   control_plane_allow_schedule = true
 
-  # Restricted to Tailnet CGNAT. Break-glass: docs/disaster-recovery.md.
-  firewall_use_current_ip   = false
-  firewall_talos_api_source = ["100.64.0.0/10"]
-  firewall_kube_api_source  = ["100.64.0.0/10"]
+  bootstrap_endpoint_mode    = "private_ip"
+  kubeconfig_endpoint_mode   = "private_ip"
+  talosconfig_endpoints_mode = "private_ip"
+  enable_alias_ip            = false
 
-  tailscale = {
-    enabled  = true
-    auth_key = var.tailscale_auth_key
-  }
+  hcloud_ccm_version = "1.30.1"
+  cilium_values      = [file("${path.module}/cilium-values.yaml")]
+
+  firewall_use_current_ip = false
+  extra_firewall_rules = [{
+    direction   = "in"
+    protocol    = "udp"
+    port        = "51820"
+    source_ips  = ["0.0.0.0/0"]
+    description = "WireGuard management tunnel"
+  }]
 
   talos_control_plane_extra_config_patches = [
     yamlencode({
       machine = {
         install = {
-          # Platform-specific installer pins the hcloud UKI; the generic
-          # installer/ variant picks the currently running platform, which
+          # The platform-specific installer pins the hcloud UKI. The generic
+          # installer variant picks the currently running platform, which
           # once metal is active traps us in metal forever.
           image             = "factory.talos.dev/hcloud-installer/${talos_image_factory_schematic.shire.id}:${local.talos_version}"
-          extraKernelArgs   = ["talos.platform=hcloud"]
+          extraKernelArgs   = ["talos.platform=hcloud", "net.ifnames=0"]
           grubUseUKICmdline = false
         }
         kubelet = {
@@ -67,6 +74,20 @@ module "talos" {
       kind       = "HostnameConfig"
       auto       = "off"
       hostname   = "shire-control-plane-1"
+    }),
+    yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "WireguardConfig"
+      name       = "wg0"
+      privateKey = var.wireguard_server_private_key
+      listenPort = 51820
+      addresses = [{
+        address = "10.200.0.1/24"
+      }]
+      peers = [{
+        publicKey  = var.wireguard_workstation_public_key
+        allowedIPs = ["10.200.0.250/32"]
+      }]
     }),
   ]
 }

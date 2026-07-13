@@ -11,7 +11,8 @@ classes of change, each with its own loop:
    then `tofu:apply`.
 
 Everything below assumes you've completed the one-time setup in
-`setup.md` and have a YubiKey plugged in.
+`setup.md`, have a YubiKey plugged in, and have the `shire` WireGuard
+interface active. Run `mise run wireguard:configure` if needed.
 
 ---
 
@@ -42,10 +43,10 @@ Anything in `tofu/` is operator-driven, not Flux-driven.
 
 1. Edit the relevant `.tf` file.
 2. `mise run tofu:plan`  - review the diff. The task unwraps the state
-   passphrase from SOPS (one YubiKey touch); the `sops` Terraform
-   provider reads the Tailscale auth key during plan (second touch).
-3. `mise run tofu:apply`  - same dance, then apply. Targeted changes
-   (firewall rules, DNS records, Cloudflare tunnel config) are
+   passphrase and provider credentials from the single SOPS file with
+   one YubiKey touch during its cached authorization window.
+3. `mise run tofu:apply`  - decrypts the same file, then applies.
+   Targeted changes (firewall rules, DNS records, Cloudflare tunnel config) are
    non-disruptive. Server-replacement changes (server type bump,
    image swap) destroy and recreate the node  - see "Replacing the
    server" below.
@@ -58,7 +59,8 @@ for Postgres, tarballs for app data, etcd snapshots for cluster state).
 
 1. Edit `tofu/locals.tf` (or wherever the change lives).
 2. `tofu:apply`. The hcloud-talos module destroys the old server,
-   creates a new one, and applies the same machineconfig.
+   creates a new one, and delivers the WireGuard machine configuration
+   in Hetzner user data before private API bootstrap begins.
 3. Cluster downtime: ~5 minutes. Single-node, no HA  - accept it or
    schedule it.
 4. If the server is fully replaced, use `mise run rebuild` which
@@ -74,7 +76,7 @@ for Postgres, tarballs for app data, etcd snapshots for cluster state).
 Both versions are pinned in `tofu/locals.tf`:
 
 ```hcl
-talos_version      = "v1.12.6"
+talos_version      = "v1.12.8"
 kubernetes_version = "v1.35.2"
 ```
 

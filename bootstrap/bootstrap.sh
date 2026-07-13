@@ -115,31 +115,11 @@ step "collecting secrets for $secrets_file"
 STATE_PASSPHRASE=$(openssl rand -base64 48)
 printf '    generated state passphrase\n' >&2
 
-# --- tailscale auth key (interactive) ---
-cat >&2 <<'INSTRUCTIONS'
-
-    Tailscale auth key:
-    1. Open https://login.tailscale.com/admin/settings/keys
-    2. Click "Generate auth key"
-    3. Settings:
-       - Reusable:   ON  (survives cluster rebuilds)
-       - Ephemeral:  ON  (auto-deregisters after destroy)
-       - Tags:       ON, select tag:shire
-       - Expiration: 90 days max (fine - the key lives in SOPS)
-       - If your tailnet has Device Approval enabled, also turn
-         Pre-approved ON; otherwise the toggle won't appear.
-    4. Click Generate, copy the tskey-auth-... value
-    5. Paste below (nothing echoes; press Enter when done)
-
-INSTRUCTIONS
-
-read -rs -p "    tailscale auth key: " TS_KEY
-printf '\n' >&2
-
-if [[ ! "$TS_KEY" =~ ^tskey-auth- ]]; then
-    echo "error: expected key to start with 'tskey-auth-'" >&2
-    exit 1
-fi
+# --- WireGuard management keys (generated) ---
+WIREGUARD_SERVER_PRIVATE_KEY=$(wg genkey)
+WIREGUARD_WORKSTATION_PRIVATE_KEY=$(wg genkey)
+WIREGUARD_WORKSTATION_PUBLIC_KEY=$(printf '%s' "$WIREGUARD_WORKSTATION_PRIVATE_KEY" | wg pubkey)
+printf '    generated WireGuard management keys\n' >&2
 
 # --- external API tokens (interactive) ---
 cat >&2 <<'INSTRUCTIONS'
@@ -148,6 +128,8 @@ cat >&2 <<'INSTRUCTIONS'
     - Hetzner Cloud console  - project API token (Read & Write)
     - Hetzner Object Storage - S3 credential for the tfstate bucket
     - Cloudflare dashboard   - API token (Zone:DNS edit + Zero Trust edit)
+    - Tailscale admin console - OAuth client with these write scopes:
+      policy_file, oauth_keys, feature_settings, dns, devices:core, auth_keys
 
 INSTRUCTIONS
 
@@ -155,6 +137,8 @@ read -rs -p "    Hetzner Cloud API token: " HCLOUD_TOKEN; printf '\n' >&2
 read -rs -p "    S3 access key ID: " S3_AK; printf '\n' >&2
 read -rs -p "    S3 secret access key: " S3_SK; printf '\n' >&2
 read -rs -p "    Cloudflare API token: " CF_TOKEN; printf '\n' >&2
+read -rs -p "    Tailscale OAuth client ID: " TS_OAUTH_ID; printf '\n' >&2
+read -rs -p "    Tailscale OAuth client secret: " TS_OAUTH_SECRET; printf '\n' >&2
 
 step "encrypting secrets to $secrets_file"
 
@@ -165,12 +149,17 @@ AWS_ACCESS_KEY_ID: $S3_AK
 AWS_SECRET_ACCESS_KEY: $S3_SK
 TF_VAR_hcloud_token: $HCLOUD_TOKEN
 TF_VAR_cloudflare_api_token: $CF_TOKEN
-TF_VAR_tailscale_auth_key: $TS_KEY
+TAILSCALE_OAUTH_CLIENT_ID: $TS_OAUTH_ID
+TAILSCALE_OAUTH_CLIENT_SECRET: $TS_OAUTH_SECRET
+TF_VAR_wireguard_server_private_key: $WIREGUARD_SERVER_PRIVATE_KEY
+TF_VAR_wireguard_workstation_public_key: $WIREGUARD_WORKSTATION_PUBLIC_KEY
+WIREGUARD_WORKSTATION_PRIVATE_KEY: $WIREGUARD_WORKSTATION_PRIVATE_KEY
 EOF
 sops --encrypt --in-place "$secrets_file.tmp"
 mv "$secrets_file.tmp" "$secrets_file"
 
-unset STATE_PASSPHRASE TS_KEY HCLOUD_TOKEN S3_AK S3_SK CF_TOKEN
+unset STATE_PASSPHRASE HCLOUD_TOKEN S3_AK S3_SK CF_TOKEN TS_OAUTH_ID TS_OAUTH_SECRET
+unset WIREGUARD_SERVER_PRIVATE_KEY WIREGUARD_WORKSTATION_PRIVATE_KEY WIREGUARD_WORKSTATION_PUBLIC_KEY
 
 step "applying repository rulesets"
 repo=itay-raveh/infra
