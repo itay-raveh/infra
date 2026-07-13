@@ -44,3 +44,15 @@ variable "s3_secret_access_key" {
   sensitive   = true
   description = "Hetzner Object Storage secret key (from tofu/secrets.sops.yaml)."
 }
+
+variable "wanderbound_upload_s3_credential_project_id" {
+  type        = string
+  sensitive   = true
+  description = "Hetzner project ID for the dedicated Wanderbound upload credential (from tofu/secrets.sops.yaml)."
+}
+
+variable "wanderbound_upload_s3_access_key_id" {
+  type        = string
+  sensitive   = true
+  description = "Hetzner Object Storage access key for the dedicated Wanderbound upload credential (from tofu/secrets.sops.yaml)."
+}

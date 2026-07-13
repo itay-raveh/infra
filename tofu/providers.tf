@@ -19,6 +19,21 @@ provider "minio" {
   s3_compat_mode = true
 }
 
+provider "aws" {
+  alias                       = "hetzner_object_storage"
+  access_key                  = var.s3_access_key_id
+  secret_key                  = var.s3_secret_access_key
+  region                      = "fsn1"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_region_validation      = true
+  skip_requesting_account_id  = true
+
+  endpoints {
+    s3 = "https://fsn1.your-objectstorage.com"
+  }
+}
+
 # Auth via TAILSCALE_OAUTH_CLIENT_ID/SECRET env vars (tofu/secrets.sops.yaml, unwrapped by tofu-wrapper.sh).
 provider "tailscale" {
   tailnet = "-"
