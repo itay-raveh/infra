@@ -5,6 +5,7 @@ TF_VAR_ssh_public_key_path = "~/.ssh/id_ed25519_sk.pub"
 
 [tools]
 age = "1"
+bats = "1.13.0"
 # 0.5.0 is the last upstream release with a Linux binary
 "aqua:str4d/age-plugin-yubikey" = "0.5.0"
 flux2 = "2.9.1"
@@ -70,6 +71,10 @@ chmod 600 ~/.talos/config
 private_ipv4=$(bash scripts/tofu-wrapper.sh output -raw private_ipv4)
 talosctl config node "$private_ipv4"
 """
+
+[tasks.test]
+description = "Run the offline repository test suite"
+run = "bats tests"
 
 [tasks."wireguard:configure"]
 description = "Install and activate the private management tunnel"
