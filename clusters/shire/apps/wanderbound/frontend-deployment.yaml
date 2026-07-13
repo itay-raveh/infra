@@ -23,6 +23,8 @@ spec:
           env:
             - name: BACKEND_HOST
               value: "wanderbound-backend"
+            - name: UPLOAD_S3_BROWSER_ORIGIN
+              value: "https://wanderbound-uploads-raveh-dev.fsn1.your-objectstorage.com"
           resources:
             requests:
               memory: "64Mi"
