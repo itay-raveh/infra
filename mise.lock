@@ -72,6 +72,28 @@ url = "https://pkgs.tailscale.com/stable/Tailscale-1.96.4-macos.pkg"
 [tools."aqua:tailscale/tailscale"."platforms.macos-x64"]
 url = "https://pkgs.tailscale.com/stable/Tailscale-1.96.4-macos.pkg"
 
+[[tools.bats]]
+version = "1.13.0"
+backend = "aqua:bats-core/bats-core"
+
+[tools.bats."platforms.linux-arm64"]
+url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz"
+
+[tools.bats."platforms.linux-arm64-musl"]
+url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz"
+
+[tools.bats."platforms.linux-x64"]
+url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz"
+
+[tools.bats."platforms.linux-x64-musl"]
+url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz"
+
+[tools.bats."platforms.macos-arm64"]
+url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz"
+
+[tools.bats."platforms.macos-x64"]
+url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz"
+
 [[tools.flux2]]
 version = "2.9.1"
 backend = "aqua:fluxcd/flux2"

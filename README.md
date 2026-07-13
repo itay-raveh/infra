@@ -53,3 +53,11 @@ No HA: All persistent data lives in S3. Full rebuild from git takes ~20 minutes.
 
 [mise](https://mise.jdx.dev/) manages tool versions and all project
 commands. Run `mise tasks` to see available commands.
+
+### Testing
+
+Run the offline repository test suite with:
+
+```bash
+mise run test
+```
