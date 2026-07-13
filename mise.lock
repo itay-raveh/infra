@@ -51,26 +51,26 @@ url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-
 url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-x86_64-windows.zip"
 
 [[tools."aqua:tailscale/tailscale"]]
-version = "1.96.4"
+version = "1.100.0"
 backend = "aqua:tailscale/tailscale"
 
 [tools."aqua:tailscale/tailscale"."platforms.linux-arm64"]
-url = "https://pkgs.tailscale.com/stable/tailscale_1.96.4_arm64.tgz"
+url = "https://pkgs.tailscale.com/stable/tailscale_1.100.0_arm64.tgz"
 
 [tools."aqua:tailscale/tailscale"."platforms.linux-arm64-musl"]
-url = "https://pkgs.tailscale.com/stable/tailscale_1.96.4_arm64.tgz"
+url = "https://pkgs.tailscale.com/stable/tailscale_1.100.0_arm64.tgz"
 
 [tools."aqua:tailscale/tailscale"."platforms.linux-x64"]
-url = "https://pkgs.tailscale.com/stable/tailscale_1.96.4_amd64.tgz"
+url = "https://pkgs.tailscale.com/stable/tailscale_1.100.0_amd64.tgz"
 
 [tools."aqua:tailscale/tailscale"."platforms.linux-x64-musl"]
-url = "https://pkgs.tailscale.com/stable/tailscale_1.96.4_amd64.tgz"
+url = "https://pkgs.tailscale.com/stable/tailscale_1.100.0_amd64.tgz"
 
 [tools."aqua:tailscale/tailscale"."platforms.macos-arm64"]
-url = "https://pkgs.tailscale.com/stable/Tailscale-1.96.4-macos.pkg"
+url = "https://pkgs.tailscale.com/stable/Tailscale-1.100.0-macos.pkg"
 
 [tools."aqua:tailscale/tailscale"."platforms.macos-x64"]
-url = "https://pkgs.tailscale.com/stable/Tailscale-1.96.4-macos.pkg"
+url = "https://pkgs.tailscale.com/stable/Tailscale-1.100.0-macos.pkg"
 
 [[tools.flux2]]
 version = "2.9.1"
