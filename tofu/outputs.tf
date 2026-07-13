@@ -7,6 +7,10 @@ output "public_ipv4" {
   value = module.talos.public_ipv4_list[0]
 }
 
+output "private_ipv4" {
+  value = cidrhost(module.talos.node_ipv4_cidr, 101)
+}
+
 output "kubeconfig" {
   value     = module.talos.kubeconfig
   sensitive = true

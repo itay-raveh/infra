@@ -154,21 +154,33 @@ flux resume image update-automation wanderbound -n flux-system
 
 ---
 
-## Tailnet is unreachable
+## WireGuard management is unavailable
 
-Day-2 access (kubectl, talosctl) is restricted to the Tailnet CGNAT
-range (`100.64.0.0/10`) via the Hetzner Cloud Firewall; see
-`firewall_*_source` in `tofu/main.tf`. If Tailscale itself is down
-or your device can't reach the control plane:
+First restore the workstation side from the encrypted source of truth:
 
-1. **Hetzner Cloud Console** → Firewall → edit the rules for 6443
-   and 50000, temporarily add your current public IP. Fastest path;
-   drift with tofu until you revert.
-2. **Re-apply tofu** with the firewall sources widened. Requires
-   YubiKey and a working tofu state backend.
+```
+mise run wireguard:configure
+sudo wg show shire
+```
 
-Once Tailnet is back, revert the firewall. Kubeconfig and talosconfig
-reference the node's tailnet IP so no further config change is needed.
+If there is still no handshake, confirm that the Hetzner firewall has
+the repository-managed UDP 51820 rule and that the server's stable
+primary IP matches `mise run tofu:output -- public_ipv4`.
+
+If the node lost its `WireguardConfig`, use this break-glass sequence:
+
+1. In the Hetzner console, temporarily allow TCP 50000 to the server.
+   Talos still requires its client certificate, so this exposes no
+   password login or anonymous administration.
+2. Run `mise run wireguard:recover`. It applies the repository's
+   `WireguardConfig` through the public endpoint in try mode, activates
+   the workstation peer, and makes the patch persistent only after the
+   private Talos endpoint responds.
+3. Remove the temporary TCP 50000 rule immediately. The steady-state
+   firewall exposes only UDP 51820 for management.
+
+Do not open TCP 6443 for this recovery. Once the Talos API is reachable
+over WireGuard, Kubernetes is reachable through the same private route.
 
 ## One YubiKey lost
 

@@ -28,9 +28,11 @@ These live outside any tool we run; create them manually first.
 - **Cloudflare account** with `raveh.dev` on it. Create an API token
   scoped to `Zone:DNS edit` + `Zero Trust edit` on that one zone.
 - **GitHub account** (`itay-raveh`) and a local `gh auth login` session.
-- **Tailscale account** with a tailnet, an ACL tag `tag:shire` defined,
-  and a reusable pre-auth key for that tag. 90-day expiry is fine because
-  the key is captured in SOPS, not re-typed.
+- **Tailscale account** with a tailnet and an OAuth client with write
+  access to `policy_file`, `oauth_keys`, `feature_settings`, `dns`,
+  `devices:core`, and `auth_keys`. OpenTofu uses it to manage the
+  Kubernetes operator policy and create the operator's scoped OAuth
+  client.
 
 ### 2. Laptop prerequisites
 
@@ -45,7 +47,7 @@ without it), plus the dev headers and toolchain that `pyscard`
 (ykman's smartcard dep) needs to build from source under pipx:
 
 ```
-sudo apt-get install -y pcscd libpcsclite-dev build-essential swig python3-dev
+sudo apt-get install -y pcscd libpcsclite-dev build-essential swig python3-dev wireguard-tools
 sudo systemctl enable --now pcscd.socket
 ```
 
@@ -83,12 +85,11 @@ memory, registers both SSH pubkeys with GitHub as signing keys, sets
 git's global SSH signing config, writes `.sops.yaml` with all three
 recipients, encrypts the cluster key to
 `bootstrap/cluster-age-key.sops.txt`, generates the tofu state
-passphrase, prompts you to paste a fresh Tailscale pre-auth key
-(generated in the Tailscale admin UI - instructions print in-terminal)
-and all external API tokens, encrypts everything into a single
-`tofu/secrets.sops.yaml`, and finally applies repository rulesets to
-`main`. From that point on `git commit` requires a touch on the
-primary YubiKey.
+passphrase and both WireGuard peer key pairs, prompts for the external
+API tokens and Tailscale provider OAuth client, encrypts everything into
+a single `tofu/secrets.sops.yaml`, and finally applies repository
+rulesets to `main`. From that point on `git commit` requires a touch on
+the primary YubiKey.
 
 **Store the backup YubiKey offsite** as soon as the script finishes.
 
@@ -137,15 +138,17 @@ Only needed once per clone, or after backend/provider changes.
 Runs the full rebuild in one command. Decrypts
 `tofu/secrets.sops.yaml` (YubiKey PIN + touch), then:
 
-1. Creates the Talos image (two-pass apply for the `data.hcloud_image`
-   count dependency - uses `-target` on the image resources first)
-2. Applies all infrastructure (server, firewall, DNS, tunnel)
-3. Syncs the Cloudflare tunnel token into a SOPS-encrypted Secret,
+1. Creates the Talos image and stable Hetzner primary IP with a targeted
+   first apply.
+2. Installs `/etc/wireguard/shire.conf` and brings up the workstation
+   tunnel.
+3. Applies the server and remaining infrastructure through its private
+   management network.
+4. Syncs the Cloudflare tunnel token into a SOPS-encrypted Secret,
    commits and pushes it automatically
-4. Bootstraps Flux (`flux bootstrap github`) - installs Flux into the
-   cluster and creates its deploy key
 5. Seeds the `sops-age` Secret in `flux-system` so Flux can decrypt
-   SOPS-encrypted manifests
+   SOPS-encrypted manifests.
+6. Installs Flux and applies its GitHub App credentials and sync object.
 
 Expect ~15 minutes total. Requires YubiKey + `gh auth login`.
 
@@ -168,8 +171,9 @@ flux get kustomizations --watch
 The rebuild writes `~/.kube/config` and `~/.talos/config` so `kubectl`
 and `talosctl` work immediately after.
 
-- `tailscale status`  - `shire-control-plane-1` shows online in your tailnet
-- `kubectl get nodes`  - resolves through Magic DNS over the tailnet
+- `sudo wg show shire`  - shows a recent handshake and transferred bytes
+- `kubectl get nodes`  - reaches the private Kubernetes API over WireGuard
+- `talosctl health`  - reaches the private Talos API over WireGuard
 - `kubectl -n traefik get pods`  - Traefik pod is `Running`
 - `curl -sI https://raveh.dev`  - returns `404 Not Found` served by
   Traefik through the tunnel. That proves DNS → Cloudflare edge →

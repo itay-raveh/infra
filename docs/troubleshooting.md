@@ -23,14 +23,31 @@ flux get kustomizations
 mise run unhealthy
 
 # 5. Check the failing layer (tunnel, traefik, or app)
-mise run klogs -- -n cloudflared deploy/cloudflared
+mise run klogs -- -n cloudflared deploy/cloudflared-cloudflared
 mise run klogs -- -n traefik deploy/traefik
 mise run klogs -- -n wanderbound deploy/wanderbound-backend
 ```
 
-If the node itself is unreachable via Tailscale, check the Hetzner
-console. If the server was deleted or replaced, follow the rebuild
-path in `setup.md`.
+If the node itself is unreachable, check the management tunnel first:
+
+```
+sudo wg show shire
+mise run wireguard:configure
+ping -c 3 10.200.0.1
+```
+
+A recent handshake with no private API response points to the node or
+Talos. No handshake points to the UDP 51820 firewall rule, server
+endpoint, or peer keys. If the server was deleted or replaced, follow
+the rebuild path in `setup.md`. If its WireGuard machine configuration
+was lost, follow the break-glass procedure in `disaster-recovery.md`.
+
+The Hetzner module configures the physical links as `eth0` and `eth1`.
+If `talosctl get links` instead shows predictable names such as
+`enp1s0`, verify that `talosctl get cmdline` contains `net.ifnames=0`.
+The repository pins that argument in `tofu/main.tf`. Apply the active
+machine configuration and perform a normal Talos upgrade to repair an
+older boot that was installed with the wrong platform defaults.
 
 ---
 
@@ -178,7 +195,7 @@ The tunnel runs as a Helm-managed pod in the `cloudflared` namespace.
 
 ```
 kubectl -n cloudflared get pods
-kubectl -n cloudflared logs deploy/cloudflared --tail=100
+kubectl -n cloudflared logs deploy/cloudflared-cloudflared --tail=100
 ```
 
 If the pod is running but the site is unreachable, check the tunnel

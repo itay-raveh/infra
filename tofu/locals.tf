@@ -2,7 +2,7 @@ locals {
   cluster_name       = "shire"
   hcloud_location    = "hel1"
   hcloud_server_type = "cx33"
-  talos_version      = "v1.12.6"
+  talos_version      = "v1.12.8"
   kubernetes_version = "v1.35.2"
 
   cloudflare_zone_id    = "4be281e220538b2ad2def80f8f5150a5"
