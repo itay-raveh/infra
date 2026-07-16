@@ -8,6 +8,7 @@ age = "1"
 bats = "1.13.0"
 # 0.5.0 is the last upstream release with a Linux binary
 "aqua:str4d/age-plugin-yubikey" = "0.5.0"
+"aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg" = "1.29.2"
 flux2 = "2.9.1"
 gh = "2.96.0"
 gitleaks = "8"
@@ -105,6 +106,11 @@ description = "Show Flux resources not ready"
 run = "flux get all -A --status-selector ready=false"
 
 # -- Cluster inspection -------------------------------------------
+
+[tasks."wanderbound:psql"]
+description = "Open a psql shell in the Wanderbound database"
+run = "kubectl cnpg psql -n wanderbound wanderbound-db -- wanderbound"
+raw = true
 
 [tasks.nodes]
 description = "List cluster nodes"
