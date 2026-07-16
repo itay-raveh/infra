@@ -34,6 +34,59 @@ checksum = "sha256:c56e8ce22f7e80cb85ad946cc82d198767b056366201d3e1a2b93d865be38
 url = "https://github.com/FiloSottile/age/releases/download/v1.3.1/age-v1.3.1-windows-amd64.zip"
 provenance = "github-attestations"
 
+[[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"]]
+version = "1.29.2"
+backend = "aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-arm64"]
+checksum = "sha256:79fdf687b807408d7a9054d04c480ec1f3d00ad5e68be57d95aaaf61387d1885"
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/kubectl-cnpg_1.29.2_linux_arm64.tar.gz"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-arm64".provenance.slsa]
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/multiple.intoto.jsonl"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-arm64-musl"]
+checksum = "sha256:79fdf687b807408d7a9054d04c480ec1f3d00ad5e68be57d95aaaf61387d1885"
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/kubectl-cnpg_1.29.2_linux_arm64.tar.gz"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-arm64-musl".provenance.slsa]
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/multiple.intoto.jsonl"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-x64"]
+checksum = "sha256:b1b38666294a68803a1eeffc3f0d60c1f3d7db7bd8a26c467d5196ff3feb1547"
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/kubectl-cnpg_1.29.2_linux_x86_64.tar.gz"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-x64".provenance.slsa]
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/multiple.intoto.jsonl"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-x64-musl"]
+checksum = "sha256:b1b38666294a68803a1eeffc3f0d60c1f3d7db7bd8a26c467d5196ff3feb1547"
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/kubectl-cnpg_1.29.2_linux_x86_64.tar.gz"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.linux-x64-musl".provenance.slsa]
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/multiple.intoto.jsonl"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.macos-arm64"]
+checksum = "sha256:20fd7e5f3c082c4baa62fcc223fa24f053ebb02b2e326b3e54973ad4e9f963a8"
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/kubectl-cnpg_1.29.2_darwin_arm64.tar.gz"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.macos-arm64".provenance.slsa]
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/multiple.intoto.jsonl"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.macos-x64"]
+checksum = "sha256:a06c8108e523bbda41b5e485f95c0172302d5b94005ff9437970ef8094818bf1"
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/kubectl-cnpg_1.29.2_darwin_x86_64.tar.gz"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.macos-x64".provenance.slsa]
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/multiple.intoto.jsonl"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.windows-x64"]
+checksum = "sha256:db89611a5e4529539fbd0687738c4111bf2c673df5956e39f64f0987436b9f85"
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/kubectl-cnpg_1.29.2_windows_x86_64.tar.gz"
+
+[tools."aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg"."platforms.windows-x64".provenance.slsa]
+url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.29.2/multiple.intoto.jsonl"
+
 [[tools."aqua:str4d/age-plugin-yubikey"]]
 version = "0.5.0"
 backend = "aqua:str4d/age-plugin-yubikey"
