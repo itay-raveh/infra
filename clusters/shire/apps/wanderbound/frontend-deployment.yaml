@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/itay-raveh/wanderbound-frontend:latest@sha256:874b3fcd61b5e1402805bffdfd60c6b7a97fc04d2bed8d33587d05fc715281bc # {"$imagepolicy": "flux-system:wanderbound-frontend"}
+          image: ghcr.io/itay-raveh/wanderbound-frontend:latest@sha256:37377d18fa638320c79955818e1efef4a3529d3a024aacd50042008c4229b044 # {"$imagepolicy": "flux-system:wanderbound-frontend"}
           ports:
             - containerPort: 8080
           env:
