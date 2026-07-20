@@ -52,21 +52,6 @@ graph TD
 Single Hetzner CX33 (4 vCPU, 8 GB, 80 GB NVMe) for ~EUR 7/month + S3 as needed by apps.
 No HA: All persistent data lives in S3. Full rebuild from git takes ~20 minutes.
 
-## Wanderbound uploads
-
-Browsers upload Polarsteps ZIPs directly to the private
-`wanderbound-uploads-raveh-dev` bucket through short-lived signed URLs. The
-bucket allows only the production Wanderbound origin, expires completed
-temporary objects after 3 days, and aborts incomplete multipart uploads after
-2 days. A dedicated cross-project application credential has access only to
-the upload-object actions required by the backend.
-
-The credential values live in `tofu/secrets.sops.yaml` and
-`clusters/shire/apps/wanderbound/wanderbound-upload-s3-creds.sops.yaml`. Never
-print decrypted values in plans, logs, commits, or pull requests. The operator
-must also keep Wanderbound's privacy notice accurate and complete any required
-data-processing agreement with the storage provider before serving users.
-
 ## Development
 
 [mise](https://mise.jdx.dev/) manages tool versions and all project
