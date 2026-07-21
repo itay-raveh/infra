@@ -14,7 +14,7 @@ spec:
       middlewares:
         - name: wanderbound-demo-limit
       services:
-        - name: wanderbound-app
+        - name: wanderbound
           port: 8000
     - match: Host(`wanderbound.raveh.dev`) && PathRegexp(`^/api/v1/albums/[^/]+/media/[^/]+$`) && Method(`GET`, `HEAD`)
       kind: Rule
@@ -22,7 +22,7 @@ spec:
       middlewares:
         - name: wanderbound-media-limit
       services:
-        - name: wanderbound-app
+        - name: wanderbound
           port: 8000
     - match: Host(`wanderbound.raveh.dev`) && PathPrefix(`/api/`)
       kind: Rule
@@ -30,11 +30,11 @@ spec:
       middlewares:
         - name: wanderbound-api-limit
       services:
-        - name: wanderbound-app
+        - name: wanderbound
           port: 8000
     - match: Host(`wanderbound.raveh.dev`)
       kind: Rule
       priority: 10
       services:
-        - name: wanderbound-app
+        - name: wanderbound
           port: 8000

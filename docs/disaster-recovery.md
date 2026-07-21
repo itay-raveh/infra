@@ -5,8 +5,8 @@ is the DR path. Every time you rebuild shire for any reason, you're
 drilling DR.
 
 The node is cattle. All infrastructure rebuilds from git. Stateful
-data lives in S3 backups (CNPG PITR, app-data tarballs, etcd
-snapshots). Full recovery: rebuild from git + restore from S3.
+data lives in S3 backups (CNPG PITR, persistent-volume tarballs, and
+etcd snapshots). Full recovery: rebuild from git and restore from S3.
 
 ---
 
@@ -27,8 +27,8 @@ Both YubiKeys = start from scratch.
 ## Restore procedures
 
 When rebuilding after data loss, restore in this order: etcd first
-(cluster state), then Postgres (application data), then app-data files
-(uploads). Each section is self-contained.
+(cluster state), then Postgres, then persistent-volume files. Each
+section is self-contained.
 
 ### 1. etcd restore
 
@@ -66,49 +66,48 @@ Cluster CR that references the Barman backup in S3:
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: wanderbound-db-restore
-  namespace: wanderbound
+  name: <restored-cluster>
+  namespace: <namespace>
 spec:
   instances: 1
   storage:
     size: 5Gi
   bootstrap:
     recovery:
-      source: wanderbound-backup
+      source: <object-store>
       # recoveryTarget:
       #   targetTime: "2026-04-14T12:00:00Z"  # optional PITR
   plugins:
     - name: barman-cloud.cloudnative-pg.io
   externalClusters:
-    - name: wanderbound-backup
+    - name: <object-store>
       plugin:
         name: barman-cloud.cloudnative-pg.io
         parameters:
-          barmanObjectName: wanderbound-backup
-          serverName: wanderbound-db
+          barmanObjectName: <object-store>
+          serverName: <source-cluster>
 ```
 
 Apply and watch the restore:
 
 ```
-kubectl apply -f wanderbound-db-restore.yaml
-kubectl -n wanderbound get cluster wanderbound-db-restore --watch
-kubectl cnpg status -n wanderbound wanderbound-db-restore
+kubectl apply -f <restore-manifest>
+kubectl -n <namespace> get cluster <restored-cluster> --watch
+kubectl cnpg status -n <namespace> <restored-cluster>
 ```
 
-After the restore cluster reports healthy, update `wanderbound-db.yaml`
-to point at the restored data (rename the cluster or update secret
-references), commit, and push.
+After the restore cluster reports healthy, update the application
+manifests to reference it, commit, and push.
 
-### 3. App-data files
+### 3. Persistent-volume files
 
 Download the latest tarball and pipe it into a temporary pod that
 mounts the PVC:
 
 ```
-mc cp hetzner/shire-backups/app-data/wanderbound/<latest>.tar.gz /tmp/
+mc cp hetzner/shire-backups/app-data/<application>/<latest>.tar.gz /tmp/
 
-kubectl -n wanderbound run restore --rm -i \
+kubectl -n <namespace> run restore --rm -i \
   --image=alpine --restart=Never \
   --overrides='{
     "spec": {
@@ -125,31 +124,30 @@ kubectl -n wanderbound run restore --rm -i \
       "volumes": [{
         "name": "data",
         "persistentVolumeClaim": {
-          "claimName": "wanderbound-app-data"
+          "claimName": "<claim>"
         }
       }]
     }
   }' < /tmp/<latest>.tar.gz
 ```
 
-### 4. App rollback
+### 4. Application rollback
 
 If a bad image was auto-deployed by Flux image automation:
 
 ```
 # 1. Stop image automation from pushing more updates
-flux suspend image update-automation wanderbound -n flux-system
+flux suspend image update-automation <automation> -n flux-system
 
 # 2. Find the previous working digest
-flux get image policy wanderbound -n flux-system
-kubectl -n wanderbound get deploy wanderbound-app -o jsonpath='{.spec.template.spec.containers[0].image}'
+flux get image policy <policy> -n flux-system
+kubectl -n <namespace> get deploy <deployment> -o jsonpath='{.spec.template.spec.containers[0].image}'
 
-# 3. Pin both images to the known-good release
-#    Edit both newTag values in the app Kustomization, commit, push.
-#    Flux will reconcile the paired app and source-map images.
+# 3. Pin the manifest to the known-good release, commit, and push.
+#    Flux will reconcile the pinned version.
 
 # 4. After fixing the root cause, resume automation
-flux resume image update-automation wanderbound -n flux-system
+flux resume image update-automation <automation> -n flux-system
 ```
 
 ---

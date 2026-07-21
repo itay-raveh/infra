@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wanderbound-app
+  name: wanderbound
   namespace: wanderbound
 spec:
   replicas: 1
@@ -9,11 +9,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: wanderbound-app
+      app: wanderbound
   template:
     metadata:
       labels:
-        app: wanderbound-app
+        app: wanderbound
     spec:
       automountServiceAccountToken: false
       securityContext:
