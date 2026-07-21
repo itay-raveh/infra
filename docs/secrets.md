@@ -141,9 +141,10 @@ Same procedure for primary and backup  - only the last step differs.
    set:
 
    ```
-   scripts/rewrap-sops-keys.sh
+   sops updatekeys <file>
    ```
 
+   Repeat this for every committed `.sops.*` file.
    `updatekeys` re-wraps the data key without re-encrypting the
    payload, so the diff is small and reviewable.
 5. Register the new SSH pubkey with GitHub as a signing key and remove
