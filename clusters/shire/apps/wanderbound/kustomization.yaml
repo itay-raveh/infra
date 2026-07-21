@@ -9,12 +9,18 @@ resources:
   - wanderbound-db-scheduled-backup.yaml
   - wanderbound-secrets.sops.yaml
   - wanderbound-upload-s3-creds.sops.yaml
+  - wanderbound-sourcemaps-secrets.sops.yaml
   - wanderbound-backup-secrets.sops.yaml
   - app-data-pvc.yaml
-  - backend-deployment.yaml
-  - backend-service.yaml
-  - frontend-deployment.yaml
-  - frontend-service.yaml
+  - app-config.yaml
+  - app-deployment.yaml
+  - app-service.yaml
+  - rate-limit.yaml
   - ingressroute.yaml
   - data-backup.yaml
   - image-automation.yaml
+images:
+  - name: ghcr.io/itay-raveh/wanderbound
+    newTag: 1.8.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}
+  - name: ghcr.io/itay-raveh/wanderbound-sourcemaps
+    newTag: 1.8.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}

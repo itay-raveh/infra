@@ -25,7 +25,7 @@ mise run unhealthy
 # 5. Check the failing layer (tunnel, traefik, or app)
 mise run klogs -- -n cloudflared deploy/cloudflared-cloudflared
 mise run klogs -- -n traefik deploy/traefik
-mise run klogs -- -n wanderbound deploy/wanderbound-backend
+mise run klogs -- -n wanderbound deploy/wanderbound-app
 ```
 
 If the node itself is unreachable, check the management tunnel first:
@@ -100,8 +100,15 @@ kubectl -n <ns> describe pod <pod>
 kubectl -n <ns> logs <pod> --previous
 ```
 
-For the wanderbound backend, common causes:
+For the Wanderbound app, common causes:
 
+- **Source maps not uploaded.** The first init container uploads the
+  exact frontend source maps for the selected release before migrations
+  or the app can start. Check its logs with
+  `kubectl -n wanderbound logs deploy/wanderbound-app -c sourcemaps`.
+  Confirm that `wanderbound-sourcemaps-secrets` contains a valid
+  `SENTRY_AUTH_TOKEN` and that `SENTRY_ORG` and `SENTRY_PROJECT` are set
+  in `wanderbound-config`.
 - **Database not ready.** The init container runs `alembic upgrade
   head` before the app starts. If the CNPG cluster is still
   bootstrapping, migrations fail. Check:

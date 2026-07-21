@@ -141,12 +141,12 @@ If a bad image was auto-deployed by Flux image automation:
 flux suspend image update-automation wanderbound -n flux-system
 
 # 2. Find the previous working digest
-flux get image policy wanderbound-backend -n flux-system
-kubectl -n wanderbound get deploy wanderbound-backend -o jsonpath='{.spec.template.spec.containers[0].image}'
+flux get image policy wanderbound -n flux-system
+kubectl -n wanderbound get deploy wanderbound-app -o jsonpath='{.spec.template.spec.containers[0].image}'
 
-# 3. Pin the deployment to the known-good digest
-#    Edit the image tag in the deployment YAML, commit, push.
-#    Flux will reconcile the pinned version.
+# 3. Pin both images to the known-good release
+#    Edit both newTag values in the app Kustomization, commit, push.
+#    Flux will reconcile the paired app and source-map images.
 
 # 4. After fixing the root cause, resume automation
 flux resume image update-automation wanderbound -n flux-system

@@ -2,50 +2,26 @@
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
 metadata:
-  name: wanderbound-frontend
+  name: wanderbound
   namespace: flux-system
 spec:
-  image: ghcr.io/itay-raveh/wanderbound-frontend
-  interval: 5m
----
-apiVersion: image.toolkit.fluxcd.io/v1
-kind: ImageRepository
-metadata:
-  name: wanderbound-backend
-  namespace: flux-system
-spec:
-  image: ghcr.io/itay-raveh/wanderbound-backend
+  image: ghcr.io/itay-raveh/wanderbound
   interval: 5m
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImagePolicy
 metadata:
-  name: wanderbound-frontend
+  name: wanderbound
   namespace: flux-system
 spec:
   imageRepositoryRef:
-    name: wanderbound-frontend
+    name: wanderbound
   filterTags:
-    pattern: '^latest$'
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
   policy:
-    alphabetical: {}
-  digestReflectionPolicy: Always
-  interval: 10m
----
-apiVersion: image.toolkit.fluxcd.io/v1
-kind: ImagePolicy
-metadata:
-  name: wanderbound-backend
-  namespace: flux-system
-spec:
-  imageRepositoryRef:
-    name: wanderbound-backend
-  filterTags:
-    pattern: '^latest$'
-  policy:
-    alphabetical: {}
-  digestReflectionPolicy: Always
-  interval: 10m
+    semver:
+      range: '>=0.0.0'
+  digestReflectionPolicy: IfNotPresent
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
@@ -65,7 +41,7 @@ spec:
       author:
         email: flux@raveh.dev
         name: flux
-      messageTemplate: 'deploy: update wanderbound container images'
+      messageTemplate: 'deploy: update wanderbound container image'
     push:
       branch: flux-image-automation
   update:

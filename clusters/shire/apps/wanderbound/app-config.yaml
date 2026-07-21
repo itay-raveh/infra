@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wanderbound-config
+  namespace: wanderbound
+data:
+  ENVIRONMENT: production
+  PUBLIC_URL: https://wanderbound.raveh.dev
+  GOOGLE_CLIENT_ID: 630509937439-d8gtaum419mq8elhvu46244krh8or9pp.apps.googleusercontent.com
+  MICROSOFT_CLIENT_ID: 6234cd5d-4f13-4a21-bd0e-8485e10193fc
+  MAPBOX_TOKEN: pk.eyJ1IjoiaXRheXIiLCJhIjoiY21uejIycDViMDZhbTJzc2dya3hkemlidyJ9.gZAiZcb5u-KJ0NEo78z8sg # gitleaks:allow
+  CONTACT_EMAIL: wanderbound@raveh.dev
+  GITHUB_URL: https://github.com/itay-raveh/wanderbound/issues
+  AUTHOR_NAME: Itay Raveh
+  AUTHOR_URL: https://itay.raveh.dev
+  PUBLIC_SENTRY_DSN: https://1d5a9cc11a320cd76640350975837459@o4511082013589504.ingest.de.sentry.io/4511082170941520
+  SENTRY_ORG: ravehdev
+  SENTRY_PROJECT: wanderbound-fe
+  DATA_FOLDER: /data
+  UPLOAD_S3_BUCKET: wanderbound-uploads-raveh-dev
+  UPLOAD_S3_REGION: fsn1
+  UPLOAD_S3_INTERNAL_ENDPOINT_URL: https://fsn1.your-objectstorage.com
+  UPLOAD_S3_PUBLIC_ENDPOINT_URL: https://fsn1.your-objectstorage.com
+  UPLOAD_S3_ADDRESSING_STYLE: virtual
+  MAX_STORAGE_BYTES: "21474836480"

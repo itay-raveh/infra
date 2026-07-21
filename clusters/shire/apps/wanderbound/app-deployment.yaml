@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wanderbound-backend
+  name: wanderbound-app
   namespace: wanderbound
 spec:
   replicas: 1
@@ -9,19 +9,59 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: wanderbound-backend
+      app: wanderbound-app
   template:
     metadata:
       labels:
-        app: wanderbound-backend
+        app: wanderbound-app
     spec:
       automountServiceAccountToken: false
       securityContext:
         fsGroup: 999
       initContainers:
+        - name: sourcemaps
+          image: ghcr.io/itay-raveh/wanderbound-sourcemaps
+          envFrom:
+            - secretRef:
+                name: wanderbound-sourcemaps-secrets
+          env:
+            - name: SENTRY_ORG
+              valueFrom:
+                configMapKeyRef:
+                  name: wanderbound-config
+                  key: SENTRY_ORG
+            - name: SENTRY_PROJECT
+              valueFrom:
+                configMapKeyRef:
+                  name: wanderbound-config
+                  key: SENTRY_PROJECT
+            - name: HOME
+              value: /tmp
+            - name: SENTRY_DISABLE_UPDATE_CHECK
+              value: "true"
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 65532
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
         - name: migrations
-          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:0ba4078842ce6d65b662e805b9fd41764b3e03c555627e1ae53cae7c51e9131c # {"$imagepolicy": "flux-system:wanderbound-backend"}
+          image: ghcr.io/itay-raveh/wanderbound
           command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: wanderbound-config
+            - secretRef:
+                name: wanderbound-secrets
+            - secretRef:
+                name: wanderbound-upload-s3-creds
           env:
             - name: SQLALCHEMY_DATABASE_URI
               valueFrom:
@@ -39,57 +79,26 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           volumeMounts:
-            - name: app-secrets
-              mountPath: /run/secrets
-              readOnly: true
             - name: tmp
               mountPath: /tmp
       containers:
-        - name: backend
-          image: ghcr.io/itay-raveh/wanderbound-backend:latest@sha256:0ba4078842ce6d65b662e805b9fd41764b3e03c555627e1ae53cae7c51e9131c # {"$imagepolicy": "flux-system:wanderbound-backend"}
-          command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+        - name: app
+          image: ghcr.io/itay-raveh/wanderbound
           ports:
             - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: wanderbound-config
+            - secretRef:
+                name: wanderbound-secrets
+            - secretRef:
+                name: wanderbound-upload-s3-creds
           env:
             - name: SQLALCHEMY_DATABASE_URI
               valueFrom:
                 secretKeyRef:
                   name: wanderbound-db-app
                   key: uri
-            - name: ENVIRONMENT
-              value: "production"
-            - name: VITE_FRONTEND_URL
-              value: "https://wanderbound.raveh.dev"
-            - name: DATA_FOLDER
-              value: "/data"
-            - name: UPLOAD_S3_BUCKET
-              value: "wanderbound-uploads-raveh-dev"
-            - name: UPLOAD_S3_REGION
-              value: "fsn1"
-            - name: UPLOAD_S3_INTERNAL_ENDPOINT_URL
-              value: "https://fsn1.your-objectstorage.com"
-            - name: UPLOAD_S3_PUBLIC_ENDPOINT_URL
-              value: "https://fsn1.your-objectstorage.com"
-            - name: UPLOAD_S3_ADDRESSING_STYLE
-              value: "virtual"
-            - name: UPLOAD_S3_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-upload-s3-creds
-                  key: ACCESS_KEY_ID
-            - name: UPLOAD_S3_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: wanderbound-upload-s3-creds
-                  key: SECRET_ACCESS_KEY
-            - name: UPLOAD_S3_PRESIGN_TTL_SECONDS
-              value: "900"
-            - name: UPLOAD_PART_SIZE_BYTES
-              value: "67108864"
-            - name: UPLOAD_SESSION_TTL_SECONDS
-              value: "86400"
-            - name: MAX_STORAGE_BYTES
-              value: "21474836480"
           resources:
             requests:
               memory: "512Mi"
@@ -124,9 +133,6 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           volumeMounts:
-            - name: app-secrets
-              mountPath: /run/secrets
-              readOnly: true
             - name: app-data
               mountPath: /data
             - name: dshm
@@ -134,9 +140,6 @@ spec:
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: app-secrets
-          secret:
-            secretName: wanderbound-secrets
         - name: app-data
           persistentVolumeClaim:
             claimName: wanderbound-app-data

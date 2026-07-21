@@ -42,7 +42,7 @@ gen_yubikey() {
 
     local age_pub
     age_pub=$(age-plugin-yubikey --generate --slot 1 \
-        --touch-policy cached --pin-policy once \
+        --touch-policy always --pin-policy never \
         | grep -m1 -oE 'age1yubikey1[02-9ac-hj-np-z]+')
     if [[ -z "$age_pub" ]]; then
         echo "error: could not parse age pubkey from age-plugin-yubikey" >&2
