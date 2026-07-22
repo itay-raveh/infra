@@ -46,3 +46,6 @@ provider "tailscale" {
     "auth_keys",        # granted to the operator oauth client we create
   ]
 }
+
+# SENTRY_AUTH_TOKEN is injected from tofu/secrets.sops.yaml by tofu-wrapper.sh.
+provider "sentry" {}

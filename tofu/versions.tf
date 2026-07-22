@@ -41,5 +41,10 @@ terraform {
       source  = "tailscale/tailscale"
       version = "= 0.28.0"
     }
+
+    sentry = {
+      source  = "jianyuan/sentry"
+      version = "= 0.15.4"
+    }
   }
 }
