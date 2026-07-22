@@ -22,5 +22,3 @@ resources:
 images:
   - name: ghcr.io/itay-raveh/wanderbound
     newTag: 1.8.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}
-  - name: ghcr.io/itay-raveh/wanderbound-sourcemaps
-    newTag: 1.8.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}

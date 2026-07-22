@@ -20,7 +20,8 @@ spec:
         fsGroup: 999
       initContainers:
         - name: sourcemaps
-          image: ghcr.io/itay-raveh/wanderbound-sourcemaps
+          image: ghcr.io/itay-raveh/wanderbound
+          command: ["/usr/local/bin/upload-sourcemaps"]
           envFrom:
             - secretRef:
                 name: wanderbound-sourcemaps-secrets
@@ -40,8 +41,8 @@ spec:
             - name: SENTRY_DISABLE_UPDATE_CHECK
               value: "true"
           securityContext:
-            runAsUser: 65532
-            runAsGroup: 65532
+            runAsUser: 999
+            runAsGroup: 999
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
