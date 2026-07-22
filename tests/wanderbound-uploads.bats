@@ -5,6 +5,15 @@ load test_helper/common
 setup() {
     setup_repo
     LIFECYCLE=tofu/wanderbound_uploads.tf
+    CREDENTIALS=clusters/shire/apps/wanderbound/wanderbound-upload-s3-creds.sops.yaml
+}
+
+@test "exposes upload credentials with the application setting names" {
+    run yq -e '(.stringData | keys | sort | join(",")) == "UPLOAD_S3_ACCESS_KEY_ID,UPLOAD_S3_SECRET_ACCESS_KEY"' "$CREDENTIALS"
+    [ "$status" -eq 0 ]
+
+    run yq -e '.data == null' "$CREDENTIALS"
+    [ "$status" -eq 0 ]
 }
 
 @test "manages Wanderbound upload lifecycle through the AWS S3 API" {
