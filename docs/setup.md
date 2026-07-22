@@ -68,7 +68,8 @@ any PIV command.
 
 Each YubiKey holds two on-device keys in independent applets:
 
-- **PIV slot 1**  - age P-256 key for SOPS (decrypts `.sops.*` files)
+- **PIV retired slot**  - age P-256 key for SOPS (decrypts `.sops.*`
+  files with one touch per decryption and no PIN)
 - **FIDO2 resident**  - ed25519 SSH key for Hetzner rescue-mode
   break-glass and git commit signing
 
@@ -120,7 +121,7 @@ pre-commit install
 ```
 
 Plug in a YubiKey. The mise tofu tasks decrypt `tofu/secrets.sops.yaml`
-on every run (YubiKey PIN + touch, one touch covers all via 15s cache).
+on every run after a physical touch. No PIN is required.
 
 ### 2. `gh auth login`
 
@@ -130,13 +131,13 @@ Authenticate with GitHub so `flux bootstrap github` (step 5) can read
 ### 3. `mise run tofu:init`
 
 Initialises the S3 backend and downloads providers. Like every tofu
-task, this decrypts `tofu/secrets.sops.yaml` (YubiKey PIN + touch).
+task, this decrypts `tofu/secrets.sops.yaml` after a YubiKey touch.
 Only needed once per clone, or after backend/provider changes.
 
 ### 4. `mise run rebuild`
 
 Runs the full rebuild in one command. Decrypts
-`tofu/secrets.sops.yaml` (YubiKey PIN + touch), then:
+`tofu/secrets.sops.yaml` after a YubiKey touch, then:
 
 1. Creates the Talos image and stable Hetzner primary IP with a targeted
    first apply.
@@ -177,7 +178,7 @@ and `talosctl` work immediately after.
 - `kubectl -n traefik get pods`  - Traefik pod is `Running`
 - `curl -sI https://raveh.dev`  - returns `404 Not Found` served by
   Traefik through the tunnel. That proves DNS → Cloudflare edge →
-  tunnel → Traefik end-to-end. No backend yet is expected at v1.
+  tunnel → Traefik end-to-end. No application is expected at v1.
 
 ---
 

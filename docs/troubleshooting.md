@@ -25,7 +25,7 @@ mise run unhealthy
 # 5. Check the failing layer (tunnel, traefik, or app)
 mise run klogs -- -n cloudflared deploy/cloudflared-cloudflared
 mise run klogs -- -n traefik deploy/traefik
-mise run klogs -- -n wanderbound deploy/wanderbound-backend
+mise run klogs -- -n <namespace> deploy/<name>
 ```
 
 If the node itself is unreachable, check the management tunnel first:
@@ -100,16 +100,6 @@ kubectl -n <ns> describe pod <pod>
 kubectl -n <ns> logs <pod> --previous
 ```
 
-For the wanderbound backend, common causes:
-
-- **Database not ready.** The init container runs `alembic upgrade
-  head` before the app starts. If the CNPG cluster is still
-  bootstrapping, migrations fail. Check:
-  `kubectl cnpg status -n wanderbound wanderbound-db`
-- **Missing secrets.** The `wanderbound-secrets` Secret is
-  SOPS-encrypted. If Flux can't decrypt it, the pod has no env vars.
-  Check Flux SOPS status above.
-
 ---
 
 ## Image pull errors
@@ -118,15 +108,20 @@ For the wanderbound backend, common causes:
 kubectl -n <ns> describe pod <pod> | grep -A5 Events
 ```
 
-The images are public, so `ghcr.io/itay-raveh/*` pull failures are
-transient. Retry:
+Verify the image name, tag, and any registry credentials in the pod
+events. Retry after correcting the cause:
 
 ```
 kubectl -n <ns> rollout restart deploy/<name>
 ```
 
-If Flux image automation is writing bad digests, suspend it
-(see "App rollback" in `disaster-recovery.md`).
+If Flux image automation selected an unexpected release, inspect the
+policy and suspend the automation before changing the manifest:
+
+```
+flux get image policy -A
+flux suspend image update-automation <name> -n flux-system
+```
 
 ---
 
@@ -134,30 +129,30 @@ If Flux image automation is writing bad digests, suspend it
 
 ```
 # Cluster health
-kubectl cnpg status -n wanderbound wanderbound-db --verbose
+kubectl cnpg status -n <namespace> <cluster> --verbose
 
 # Postgres logs (structured JSON, filter with jq)
-kubectl -n wanderbound logs wanderbound-db-1 | jq 'select(.logger=="postgres") | .record.message'
+kubectl -n <namespace> logs <postgres-pod> | jq 'select(.logger=="postgres") | .record.message'
 
 # Fatal errors only
-kubectl -n wanderbound logs wanderbound-db-1 | jq -r '.record | select(.error_severity == "FATAL")'
+kubectl -n <namespace> logs <postgres-pod> | jq -r '.record | select(.error_severity == "FATAL")'
 
 # Backup status
-kubectl -n wanderbound get backup -l cnpg.io/cluster=wanderbound-db
-kubectl -n wanderbound wait --for=condition=LastBackupSucceeded cluster/wanderbound-db
+kubectl -n <namespace> get backup -l cnpg.io/cluster=<cluster>
+kubectl -n <namespace> wait --for=condition=LastBackupSucceeded cluster/<cluster>
 
 # WAL archiving status
-kubectl -n wanderbound wait --for=condition=ContinuousArchiving cluster/wanderbound-db
+kubectl -n <namespace> wait --for=condition=ContinuousArchiving cluster/<cluster>
 ```
 
 If the PG pod is stuck pending, check if the PVC is bound:
 
 ```
-kubectl -n wanderbound get pvc
+kubectl -n <namespace> get pvc
 ```
 
-If the pod's storage is full, increase the PVC size in
-`wanderbound-db.yaml`, commit, and push. CNPG handles the resize.
+If the pod's storage is full, increase the storage size in the matching
+CNPG `Cluster` manifest, commit, and push. CNPG handles the resize.
 
 If the database is corrupted or unrecoverable, restore from backup
 using the CNPG PITR procedure in `disaster-recovery.md`.

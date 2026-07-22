@@ -44,7 +44,7 @@ graph TD
 | [Headlamp](https://headlamp.dev) | Flux-aware admin dashboard (Tailnet-only) |
 | [CNPG](https://cloudnative-pg.io) | PostgreSQL operator |
 | [hcloud-csi](https://github.com/hetznercloud/csi-driver) | Hetzner Volumes CSI for app-data PVCs |
-| [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Private temporary Wanderbound uploads and infrastructure backups |
+| [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Private temporary application uploads and infrastructure backups |
 | [SOPS](https://github.com/getsops/sops) | Secret encryption (age + YubiKey) |
 
 ## Hardware

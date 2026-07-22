@@ -8,8 +8,33 @@ spec:
   entryPoints:
     - web
   routes:
+    - match: Host(`wanderbound.raveh.dev`) && Path(`/api/v1/users/demo`)
+      kind: Rule
+      priority: 40
+      middlewares:
+        - name: wanderbound-demo-limit
+      services:
+        - name: wanderbound
+          port: 8000
+    - match: Host(`wanderbound.raveh.dev`) && PathRegexp(`^/api/v1/albums/[^/]+/media/[^/]+$`) && Method(`GET`, `HEAD`)
+      kind: Rule
+      priority: 30
+      middlewares:
+        - name: wanderbound-media-limit
+      services:
+        - name: wanderbound
+          port: 8000
+    - match: Host(`wanderbound.raveh.dev`) && PathPrefix(`/api/`)
+      kind: Rule
+      priority: 20
+      middlewares:
+        - name: wanderbound-api-limit
+      services:
+        - name: wanderbound
+          port: 8000
     - match: Host(`wanderbound.raveh.dev`)
       kind: Rule
+      priority: 10
       services:
-        - name: wanderbound-frontend
-          port: 8080
+        - name: wanderbound
+          port: 8000

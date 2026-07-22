@@ -38,9 +38,8 @@ How secrets are stored, encrypted, decrypted, and rotated in this repo.
 **Hardware:** two YubiKey 5s (primary + backup). Each holds two
 on-device keys in independent applets:
 
-- **PIV slot 1**  - age P-256 key for SOPS. Touch-cached (one touch
-  authorizes decryptions within ~15s), PIN-once (one PIN entry per
-  boot).
+- **PIV retired slot**  - age P-256 key for SOPS. A physical touch is
+  required for every decryption. No PIN is required.
 - **FIDO2 resident**  - ed25519 SSH key for Hetzner rescue-mode
   break-glass and git commit signing. Touch required on every use.
 
@@ -127,7 +126,7 @@ Same procedure for primary and backup  - only the last step differs.
    replacing so `.env` and `user.signingkey` keep working unchanged:
 
    ```
-   age-plugin-yubikey --generate --slot 1 --touch-policy cached --pin-policy once
+   age-plugin-yubikey --generate --slot 1 --touch-policy always --pin-policy never
    # primary:
    ssh-keygen -t ed25519-sk -O resident -f ~/.ssh/id_ed25519_sk        -C "yubikey-primary"
    # backup:
@@ -142,12 +141,10 @@ Same procedure for primary and backup  - only the last step differs.
    set:
 
    ```
-   sops updatekeys clusters/shire/.../secret.sops.yaml
-   sops updatekeys tofu/secrets.sops.yaml
-   sops updatekeys bootstrap/cluster-age-key.sops.txt
-   # ...etc for every .sops.* file
+   sops updatekeys <file>
    ```
 
+   Repeat this for every committed `.sops.*` file.
    `updatekeys` re-wraps the data key without re-encrypting the
    payload, so the diff is small and reviewable.
 5. Register the new SSH pubkey with GitHub as a signing key and remove

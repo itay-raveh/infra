@@ -2,7 +2,7 @@
 # Wrapper that decrypts SOPS secrets into env vars before running tofu.
 # Usage: bash scripts/tofu-wrapper.sh <subcommand> [args...]
 #
-# YubiKey touch-policy "cached" (15s) means one touch covers the decrypt.
+# The SOPS YubiKey identity requires a physical touch for each decrypt.
 # When rops gains age-plugin support (gibbz00/rops#17), replace this script
 # with a single [env] line: _.file = "tofu/secrets.sops.yaml"
 set -euo pipefail

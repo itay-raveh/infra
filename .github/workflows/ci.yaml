@@ -55,9 +55,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
       - run: |
+          flux build kustomization apps \
+            --path clusters/shire/apps \
+            --kustomization-file clusters/shire/apps.yaml \
+            --dry-run
+
           token=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
           if [[ ! -f "$token" ]]; then
-            echo "::warning::$token not committed yet; skipping flux-build"
+            echo "::warning::$token not committed yet; skipping infrastructure build"
             exit 0
           fi
           flux build kustomization infrastructure \
