@@ -4,11 +4,8 @@ metadata:
     name: wanderbound-upload-s3-creds
     namespace: wanderbound
 stringData:
-    ACCESS_KEY_ID: ENC[AES256_GCM,data:kW7ED5S2b9Nx/BbaL14iX3kGLSM=,iv:XKmy64lGCOCtfQG5HnyxvWY30SNWYaTcuFTE1+fgWf4=,tag:phiUPrczLU0wygwGO3kikg==,type:str]
-    SECRET_ACCESS_KEY: ENC[AES256_GCM,data:gBKmq6l4cE84NUVgoGJeiRKsFpuHPmxThrPu4t1VMeDc9tVRwmxOAw==,iv:FcLFnmXbk6lB72qjpgwyiHp5BoYGp9BeUndZVINe1ZM=,tag:BnbJfGmmaPRNp3U+NZeNnw==,type:str]
-data:
-    UPLOAD_S3_ACCESS_KEY_ID: null
-    UPLOAD_S3_SECRET_ACCESS_KEY: null
+    UPLOAD_S3_ACCESS_KEY_ID: ENC[AES256_GCM,data:zzZ4bSc+ugP14eYpfkyJtO7vye4=,iv:nKpnCHcLprkD3dOkGyl+jNqiRcblzPFGC2dUpeqM0sM=,tag:hdhjPCKQ8LVH76JxTcxulA==,type:str]
+    UPLOAD_S3_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:0P/xkUNKfYs5UWgMHFsIqVNeT+p6Hxdg/a1FejF7VZvNzCDp1BoEyQ==,iv:0WvVAuDFy8xCtCInjGcUDYcSXGgfgy+99pzw0uToc5I=,tag:YqP67jHF9AKs20NVFqNgSw==,type:str]
 sops:
     age:
         - recipient: age1yubikey1qghympnz70sye3tx2a9yvudmmnvrq3ms7yd3gns8wz76r7k46hx0upwcu33
@@ -40,7 +37,7 @@ sops:
             NkZ2cWk2cW1pNlVJYXhHbHpXcnpyVWsKk41EgH3qKFgkUbiX683TZ86EAbySbQpq
             CRs7chnwO+pxkD887p4WspujVNCaxlGnjzcJ5gyWgaQ6SwE123u4lA==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-07-21T13:35:27Z"
-    mac: ENC[AES256_GCM,data:GhrzhQg/1vOMpgaZlSWaAxErx39xM2pYmR4vPZur6lQeC4+4CaHpqKjTJz11L7DbhqSR1s5pPsXx+X6EG46DPrpklH2d3/927iMPJwtTqKH6S4F/Bfw09rkG1O8IV1vbCdTc+4p0UAwh6wOGJHKm4z20wkQekRccHSSQcbeV7/c=,iv:oNaspw2XIxSn2/0omzXNIWAEzZX5mcxk3tUcLYSakr4=,tag:PYLZnJC82xwM+Kc7uWrCQg==,type:str]
+    lastmodified: "2026-07-22T12:45:18Z"
+    mac: ENC[AES256_GCM,data:eY+V8QR9ttFBN7OaKc5DrbpQefxjyON5mIEdk9yA+9s7N47i9koWHxmLWr06xZEDu33qMuftiJTCIhMTMfVK/mZA9MQeTwfTX0/h+26BuHe/1U2WJ9xQ4gkE7FFN+H1t/rAi32gtZGfRT8U8Ple7zztnldKnaBJ1IhG2PMWDS0U=,iv:v0CSsyKVE8zgUiYnLN9dznsQqdfpGYE1FJUF1i/D4hs=,tag:z4rOHOkd+PEapxzmG7aJzg==,type:str]
     encrypted_regex: ^(data|stringData)$
     version: 3.12.2
