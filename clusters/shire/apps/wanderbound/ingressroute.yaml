@@ -16,7 +16,7 @@ spec:
       services:
         - name: wanderbound
           port: 8000
-    - match: Host(`wanderbound.raveh.dev`) && PathRegexp(`^/api/v1/albums/[^/]+/media/[^/]+$`) && Method(`GET`, `HEAD`)
+    - match: Host(`wanderbound.raveh.dev`) && PathRegexp(`^/api/v1/albums/[^/]+/media/[^/]+$`) && (Method(`GET`) || Method(`HEAD`))
       kind: Rule
       priority: 30
       middlewares:
