@@ -95,20 +95,23 @@ url_api = "https://api.github.com/repos/cloudnative-pg/cloudnative-pg/releases/a
 url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.30.0/multiple.intoto.jsonl"
 
 [[tools."aqua:str4d/age-plugin-yubikey"]]
-version = "0.5.0"
+version = "0.5.1"
 backend = "aqua:str4d/age-plugin-yubikey"
 
-[tools."aqua:str4d/age-plugin-yubikey"."platforms.linux-x64"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-x86_64-linux.tar.gz"
-
-[tools."aqua:str4d/age-plugin-yubikey"."platforms.linux-x64-musl"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-x86_64-linux.tar.gz"
-
 [tools."aqua:str4d/age-plugin-yubikey"."platforms.macos-arm64"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-arm64-darwin.tar.gz"
+checksum = "sha256:c83f3ec50921778bdaa555ef2d70fbaf32374a8527eeb4f3171d819c29236243"
+url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.1/age-plugin-yubikey-v0.5.1-arm64-darwin.tar.gz"
+url_api = "https://api.github.com/repos/str4d/age-plugin-yubikey/releases/assets/391312796"
+
+[tools."aqua:str4d/age-plugin-yubikey"."platforms.macos-x64"]
+checksum = "sha256:857a120837f60f5c02018466f57e90718857686b31d56d319ae10c737835b52a"
+url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.1/age-plugin-yubikey-v0.5.1-x86_64-darwin.tar.gz"
+url_api = "https://api.github.com/repos/str4d/age-plugin-yubikey/releases/assets/391312396"
 
 [tools."aqua:str4d/age-plugin-yubikey"."platforms.windows-x64"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-x86_64-windows.zip"
+checksum = "sha256:ba00ebd999b928994dc1f1ee0a83562f97b538f8ece75945aa6caf3695bfe3aa"
+url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.1/age-plugin-yubikey-v0.5.1-x86_64-windows.zip"
+url_api = "https://api.github.com/repos/str4d/age-plugin-yubikey/releases/assets/391312965"
 
 [[tools."aqua:tailscale/tailscale"]]
 version = "1.96.4"
