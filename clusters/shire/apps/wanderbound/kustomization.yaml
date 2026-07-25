@@ -10,14 +10,8 @@ resources:
   - wanderbound-upload-s3-creds.sops.yaml
   - wanderbound-sourcemaps-secrets.sops.yaml
   - wanderbound-backup-secrets.sops.yaml
-  - app-data-pvc.yaml
-  - app-config.yaml
-  - app-deployment.yaml
-  - app-service.yaml
+  - app-chart.yaml
   - rate-limit.yaml
   - ingressroute.yaml
   - data-backup.yaml
   - image-automation.yaml
-images:
-  - name: ghcr.io/itay-raveh/wanderbound
-    newTag: 1.10.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}
