@@ -22,7 +22,7 @@ opentofu = "1.12.5"
 "pipx:yubikey-manager" = "5.9.2"
 prek = "0.4.10"
 shellcheck = "0.11"
-sops = "3"
+sops = "3.13.2"
 talosctl = "1.12.8"
 yq = "4.53.3"
 
