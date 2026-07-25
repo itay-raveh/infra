@@ -27,7 +27,7 @@ setup() {
         .metadata.name == "wanderbound-chart" and
         .metadata.namespace == "wanderbound" and
         .spec.url == "oci://ghcr.io/itay-raveh/charts/wanderbound" and
-        .spec.ref.tag == "1.9.0"' "$CHART"
+        .spec.ref.tag == "1.10.0"' "$CHART"
     [ "$status" -eq 0 ]
 
     image_policy_key="\$imagepolicy"
