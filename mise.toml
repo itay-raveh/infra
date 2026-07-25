@@ -13,6 +13,7 @@ flux2 = "2.9.2"
 gh = "2.96.0"
 gitleaks = "8"
 hcloud = "1.66.0"
+helm = "4.2.3"
 jq = "1.8.2"
 k9s = "0.51.0"
 kubectl = "1.36.2"
@@ -74,7 +75,7 @@ talosctl config node "$private_ipv4"
 """
 
 [tasks.test]
-description = "Run the offline repository test suite"
+description = "Run the repository test suite"
 run = "bats tests"
 
 [tasks."wireguard:configure"]

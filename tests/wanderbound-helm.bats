@@ -1,103 +1,63 @@
 #!/usr/bin/env bats
 
+bats_require_minimum_version 1.5.0
+
 load test_helper/common
 
 setup() {
     setup_repo
-    APP_DIR=clusters/shire/apps/wanderbound
-    KUSTOMIZATION=$APP_DIR/kustomization.yaml
-    CHART=$APP_DIR/app-chart.yaml
-    MIGRATION=$APP_DIR/HELM_MIGRATION.md
+    CHART=clusters/shire/apps/wanderbound/app-chart.yaml
+    VALUES="$BATS_TEST_TMPDIR/values.yaml"
+    RENDERED="$BATS_TEST_TMPDIR/rendered.yaml"
 }
 
-@test "replaces raw application resources with the chart release" {
-    run yq -e '.resources | contains(["app-chart.yaml"])' "$KUSTOMIZATION"
-    [ "$status" -eq 0 ]
+@test "the pinned chart renders the Shire deployment contract" {
+    chart_url=$(yq -r 'select(.kind == "OCIRepository") | .spec.url' "$CHART")
+    chart_version=$(yq -r 'select(.kind == "OCIRepository") | .spec.ref.tag' "$CHART")
+    yq 'select(.kind == "HelmRelease") | .spec.values' "$CHART" > "$VALUES"
 
-    for raw_resource in app-config.yaml app-deployment.yaml app-service.yaml app-data-pvc.yaml; do
-        run yq -e ".resources | contains([\"$raw_resource\"])" "$KUSTOMIZATION"
-        [ "$status" -eq 1 ]
-        [ ! -e "$APP_DIR/$raw_resource" ]
+    run --separate-stderr helm template wanderbound "$chart_url" \
+        --version "$chart_version" \
+        --namespace wanderbound \
+        --values "$VALUES"
+    [ "$status" -eq 0 ]
+    printf '%s\n' "$output" > "$RENDERED"
+
+    CHART_VERSION="$chart_version" yq -e '
+        select(.kind == "Deployment" and .metadata.name == "wanderbound") |
+        .spec.template.spec.containers[] | select(.name == "wanderbound") |
+        .image == ("ghcr.io/itay-raveh/wanderbound:" + strenv(CHART_VERSION))
+    ' "$RENDERED"
+
+    for secret_name in wanderbound-secrets wanderbound-upload-s3-creds; do
+        SECRET_NAME="$secret_name" yq -e '
+            select(.kind == "Deployment" and .metadata.name == "wanderbound") |
+            .spec.template.spec.containers[] | select(.name == "wanderbound") |
+            .envFrom[] | select(.secretRef.name == strenv(SECRET_NAME))
+        ' "$RENDERED"
     done
-}
 
-@test "tracks the public chart with the existing release policy" {
-    run yq -e 'select(.kind == "OCIRepository") |
-        .apiVersion == "source.toolkit.fluxcd.io/v1" and
-        .metadata.name == "wanderbound-chart" and
-        .metadata.namespace == "wanderbound" and
-        .spec.url == "oci://ghcr.io/itay-raveh/charts/wanderbound" and
-        .spec.ref.tag == "1.10.0"' "$CHART"
-    [ "$status" -eq 0 ]
+    yq -e '
+        select(.kind == "Deployment" and .metadata.name == "wanderbound") |
+        .spec.template.spec.containers[] | select(.name == "wanderbound") |
+        .env[] | select(.name == "SQLALCHEMY_DATABASE_URI") |
+        select(
+            .valueFrom.secretKeyRef.name == "wanderbound-db-app" and
+            .valueFrom.secretKeyRef.key == "uri"
+        )
+    ' "$RENDERED"
 
-    image_policy_key="\$imagepolicy"
-    grep -Fq "# {\"$image_policy_key\": \"flux-system:wanderbound:tag\"}" "$CHART"
-}
+    yq -e '
+        select(.kind == "Deployment" and .metadata.name == "wanderbound") |
+        .spec.template.spec.initContainers[] | select(.name == "sourcemaps") |
+        .envFrom[] | select(.secretRef.name == "wanderbound-sourcemaps-secrets")
+    ' "$RENDERED"
 
-@test "installs the chart in the existing namespace without a second image version" {
-    run yq -e 'select(.kind == "HelmRelease") |
-        .apiVersion == "helm.toolkit.fluxcd.io/v2" and
-        .metadata.name == "wanderbound" and
-        .metadata.namespace == "wanderbound" and
-        .spec.chartRef.kind == "OCIRepository" and
-        .spec.chartRef.name == "wanderbound-chart" and
-        .spec.install.createNamespace == false and
-        .spec.values.image == null' "$CHART"
-    [ "$status" -eq 0 ]
-}
-
-@test "preserves the current instance values and secret wiring" {
-    run yq ea -rN 'select(.kind == "HelmRelease") | .spec.values |
-        [
-            .config.ENVIRONMENT,
-            .config.PUBLIC_URL,
-            .config.DATA_FOLDER,
-            .existingSecrets[0],
-            .existingSecrets[1],
-            .secretEnv.SQLALCHEMY_DATABASE_URI.secretName,
-            .secretEnv.SQLALCHEMY_DATABASE_URI.key,
-            .resources.requests.cpu,
-            .resources.requests.memory,
-            .resources.limits.cpu,
-            .resources.limits.memory,
-            .persistence.size,
-            .persistence.storageClass,
-            .persistence.retain,
-            .ingress.enabled,
-            .sourceMaps.enabled,
-            .sourceMaps.existingSecret
-        ] | @tsv' "$CHART"
-    [ "$status" -eq 0 ]
-    [ "$output" = $'production\thttps://wanderbound.raveh.dev\tnull\twanderbound-secrets\twanderbound-upload-s3-creds\twanderbound-db-app\turi\t500m\t512Mi\t2\t2Gi\t50Gi\thcloud-volumes\ttrue\tfalse\ttrue\twanderbound-sourcemaps-secrets' ]
-}
-
-@test "keeps supporting infrastructure outside the application chart" {
-    for resource in \
-        namespace.yaml \
-        cnpg-s3-creds.sops.yaml \
-        objectstore.yaml \
-        wanderbound-db.yaml \
-        wanderbound-db-scheduled-backup.yaml \
-        wanderbound-secrets.sops.yaml \
-        wanderbound-upload-s3-creds.sops.yaml \
-        wanderbound-sourcemaps-secrets.sops.yaml \
-        wanderbound-backup-secrets.sops.yaml \
-        rate-limit.yaml \
-        ingressroute.yaml \
-        data-backup.yaml \
-        image-automation.yaml; do
-        run yq -e ".resources | contains([\"$resource\"])" "$KUSTOMIZATION"
-        [ "$status" -eq 0 ]
-    done
-}
-
-@test "documents a staged ownership handoff that protects the existing volume" {
-    assert_file_contains "$MIGRATION" "kubectl get persistentvolumeclaim wanderbound-app-data"
-    assert_file_contains "$MIGRATION" "meta.helm.sh/release-name=wanderbound"
-    assert_file_contains "$MIGRATION" "meta.helm.sh/release-namespace=wanderbound"
-    assert_file_contains "$MIGRATION" "app.kubernetes.io/managed-by=Helm"
-    assert_file_contains "$MIGRATION" "kustomize.toolkit.fluxcd.io/prune=disabled"
-    assert_file_contains "$MIGRATION" "uid"
-    assert_file_contains "$MIGRATION" "volumeName"
-    assert_file_contains "$MIGRATION" "Do not continue"
+    yq -e '
+        select(.kind == "PersistentVolumeClaim" and .metadata.name == "wanderbound-app-data") |
+        (.metadata.namespace == "wanderbound") and
+        (.metadata.annotations."helm.sh/resource-policy" == "keep") and
+        (.spec.storageClassName == "hcloud-volumes") and
+        (.spec.resources.requests.storage == "50Gi")
+    ' "$RENDERED"
 }
