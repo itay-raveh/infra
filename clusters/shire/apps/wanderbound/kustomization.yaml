@@ -20,4 +20,4 @@ resources:
   - image-automation.yaml
 images:
   - name: ghcr.io/itay-raveh/wanderbound
-    newTag: 1.9.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}
+    newTag: 1.10.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}
