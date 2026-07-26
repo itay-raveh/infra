@@ -60,6 +60,15 @@ jobs:
             --kustomization-file clusters/shire/apps.yaml \
             --dry-run
 
+          chart=clusters/shire/apps/wanderbound/app-chart.yaml
+          chart_url=$(yq -r 'select(.kind == "OCIRepository") | .spec.url' "$chart")
+          chart_version=$(yq -r 'select(.kind == "OCIRepository") | .spec.ref.tag' "$chart")
+          helm template wanderbound "$chart_url" \
+            --version "$chart_version" \
+            --namespace wanderbound \
+            --values <(yq 'select(.kind == "HelmRelease") | .spec.values' "$chart") \
+            >/dev/null
+
           token=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
           if [[ ! -f "$token" ]]; then
             echo "::warning::$token not committed yet; skipping infrastructure build"

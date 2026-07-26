@@ -41,7 +41,7 @@ spec:
       author:
         email: flux@raveh.dev
         name: flux
-      messageTemplate: 'deploy: update wanderbound container image'
+      messageTemplate: 'deploy: update wanderbound release'
     push:
       branch: flux-image-automation
   update:
