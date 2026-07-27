@@ -83,11 +83,11 @@ resource "sentry_metric_monitor" "wanderbound_media_storage" {
 resource "sentry_metric_monitor" "wanderbound_filesystem_storage" {
   organization = local.sentry_organization
   project      = data.sentry_project.wanderbound_backend.slug
-  name         = "Wanderbound filesystem available storage"
-  description  = "Available bytes on the filesystem containing the Wanderbound data folder."
+  name         = "Wanderbound filesystem storage utilization"
+  description  = "Filesystem utilization for the volume containing the Wanderbound data folder."
   environment  = "production"
 
-  aggregate           = "min(value,storage.filesystem.available_bytes,gauge,byte)"
+  aggregate           = "max(value,storage.filesystem.utilization,gauge,percent)"
   dataset             = "metrics"
   event_types         = ["trace_item_metric"]
   time_window_seconds = 900
@@ -95,18 +95,18 @@ resource "sentry_metric_monitor" "wanderbound_filesystem_storage" {
   condition_group = {
     conditions = [
       {
-        type             = "lte"
-        comparison       = 5 * 1024 * 1024 * 1024
+        type             = "gte"
+        comparison       = 90
         condition_result = 75
       },
       {
-        type             = "lte"
-        comparison       = 10 * 1024 * 1024 * 1024
+        type             = "gte"
+        comparison       = 80
         condition_result = 50
       },
       {
-        type             = "gt"
-        comparison       = 10 * 1024 * 1024 * 1024
+        type             = "lt"
+        comparison       = 80
         condition_result = 0
       },
     ]
