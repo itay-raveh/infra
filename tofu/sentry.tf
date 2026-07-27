@@ -51,8 +51,10 @@ resource "sentry_metric_monitor" "wanderbound_media_storage" {
   environment  = "production"
 
   aggregate           = "max(value,storage.media.utilization,gauge,percent)"
-  dataset             = "metrics"
+  dataset             = "events_analytics_platform"
   event_types         = ["trace_item_metric"]
+  extrapolation_mode  = "unknown"
+  query_type          = "performance"
   time_window_seconds = 900
 
   condition_group = {
@@ -88,8 +90,10 @@ resource "sentry_metric_monitor" "wanderbound_filesystem_storage" {
   environment  = "production"
 
   aggregate           = "max(value,storage.filesystem.utilization,gauge,percent)"
-  dataset             = "metrics"
+  dataset             = "events_analytics_platform"
   event_types         = ["trace_item_metric"]
+  extrapolation_mode  = "unknown"
+  query_type          = "performance"
   time_window_seconds = 900
 
   condition_group = {
