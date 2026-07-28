@@ -1,66 +1,71 @@
-# Personal infrastructure
+# `raveh.dev` infrastructure
 
 [![CI](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml/badge.svg)](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/github/license/itay-raveh/infra)](https://github.com/itay-raveh/infra/blob/main/LICENSE)
 
-GitOps-managed personal infrastructure for `raveh.dev`.
+Built to be as stateless and immutable as possible.
+Everything is IaC, data is backed up in S3, so all other infrastructure is essentially ephemeral (namely the VPS).
 
 ## Architecture
 
 ```mermaid
-graph TD
-    Internet -->|HTTPS| CF[Cloudflare]
-    CF -->|tunnel| cloudflared
-    Tailnet[Tailnet devices] -->|WireGuard| TSProxy[Tailscale operator proxy]
-    Workstation -->|native WireGuard management tunnel| Server
-    OpenTofu -.->|private API access| Server
-    OpenTofu -.->|provisions| CF & Tailnet & Server
+flowchart
+    Cloudflare@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/cloudflare.svg?raw=true, label: Cloudflare, h: 30, constraint: on}
+    Cloudflared@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/cloudflared.svg?raw=true, label: Cloudflared, h: 50, constraint: on}
+    Tailscale@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/tailscale-light.svg?raw=true, label: Tailscale, h: 50, constraint: on}
+    TailscaleOperator@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/tailscale-light.svg?raw=true, label: Tailscale Operator, h: 50, constraint: on}
+    Traefik@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/traefik.svg?raw=true, label: Traefik, h: 40, constraint: on}
+    GitHubInfra@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/github-light.svg?raw=true, label: GitHub (infra), h: 50, constraint: on}
+    GitHubApp@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/github-light.svg?raw=true, label: GitHub (app), h: 50, constraint: on}
+    FluxCD@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/flux-cd.svg?raw=true, label: FluxCD, h: 50, constraint: on}
+    CNPG@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/cloud-native-pg-light.svg?raw=true, label: CloudNativePG, h: 50, constraint: on}
+    Headlamp@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/headlamp-dark.svg?raw=true, label: Headlamp, h: 50, constraint: on}
+    Restic@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/png/restic.png?raw=true, label: Restic, h: 50, constraint: on}
 
-    subgraph Server["Hetzner CX33 - Talos Linux"]
-        cloudflared --> Traefik --> Apps
-        TSProxy --> Headlamp
-        Apps --> CNPG[(PostgreSQL)]
-        Apps -->|downloads completed ZIP| UploadS3[(Private upload bucket)]
-        Flux -->|reconciles| Apps & Headlamp
+    GitHubApp <-.-|reconciles| FluxCD
+    GitHubInfra <-.-|watches| FluxCD
+
+    Internet@{shape: cloud} -.- Cloudflare
+    Cloudflare -.- Cloudflared
+
+    MyDevices((My Devices)) -.- Tailscale
+    Tailscale -.- TailscaleOperator
+
+    subgraph Server["K3S on Talos (Hetzner)"]
+        FluxCD -->|deploys| App
+
+        subgraph Public["Public (Traefik)"]
+            Cloudflared --- Traefik
+            Traefik --- App
+        end
+
+        subgraph Private["Private (Tailnet)"]
+            TailscaleOperator --- Headlamp
+        end
+
+        App --- CNPG
+        CNPG -->|backup| Barman
+
+        App --- PVC[(PVC)]
+        PVC -->|backup| Restic
+        
     end
 
-    CNPG -.->|WAL archive| S3[(Hetzner S3)]
-    Apps -.->|daily backup| S3
-    Internet -->|signed multipart PUT| UploadS3
-    Flux -.->|watches| Git[GitHub repo]
+    Barman -.-> S3[("S3 (Hetnzer)")]
+    Restic -.-> S3
 ```
 
 ## Stack
 
-| Tool | Role |
+|   |   |
 |---|---|
 | [Talos Linux](https://talos.dev) | Immutable Kubernetes OS |
 | [Flux CD](https://fluxcd.io) | GitOps reconciliation |
 | [OpenTofu](https://opentofu.org) | Infrastructure provisioning |
-| [Traefik](https://traefik.io) | Ingress + reverse proxy (public apps) |
-| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public app ingress without exposing an origin HTTP port |
-| [WireGuard](https://www.wireguard.com/) | Key-authenticated private Kubernetes and Talos API transport |
-| [Tailscale](https://tailscale.com) | Admin-only Kubernetes ingress for Headlamp |
+| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public ingress without exposing an origin HTTP port |
+| [Traefik](https://traefik.io) | Reverse proxy |
+| [Tailscale](https://tailscale.com) | Private ingress |
 | [Headlamp](https://headlamp.dev) | Flux-aware admin dashboard (Tailnet-only) |
-| [CNPG](https://cloudnative-pg.io) | PostgreSQL operator |
-| [hcloud-csi](https://github.com/hetznercloud/csi-driver) | Hetzner Volumes CSI for app-data PVCs |
-| [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Private temporary application uploads and infrastructure backups |
-| [SOPS](https://github.com/getsops/sops) | Secret encryption (age + YubiKey) |
-
-## Hardware
-
-Single Hetzner CX33 (4 vCPU, 8 GB, 80 GB NVMe) for ~EUR 7/month + S3 as needed by apps.
-No HA: All persistent data lives in S3. Full rebuild from git takes ~20 minutes.
-
-## Development
-
-[mise](https://mise.jdx.dev/) manages tool versions and all project
-commands. Run `mise tasks` to see available commands.
-
-### Testing
-
-Run the offline repository test suite with:
-
-```bash
-mise run test
-```
+| [CNPG](https://cloudnative-pg.io) | PostgreSQL |
+| [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Backups, [Wanderbound](https://github.com/itay-raveh/wanderbound) user uploads (presigned S3 PUTs avoid uploading through the Cloudflare tunnel) |
+| [SOPS](https://github.com/getsops/sops) | Secret encryption |
