@@ -113,14 +113,6 @@ description = "Open a psql shell in the Wanderbound database"
 run = "kubectl cnpg psql -n wanderbound wanderbound-db -- wanderbound"
 raw = true
 
-[tasks."wanderbound:verify-deploy"]
-description = "Reconcile and verify a Wanderbound release (usage: mise run wanderbound:verify-deploy -- <x.y.z>)"
-file = "scripts/verify-wanderbound-deployment.sh"
-
-[tasks."wanderbound:verify-backups"]
-description = "Restore-test Wanderbound database and app-data backups"
-file = "scripts/verify-wanderbound-backups.sh"
-
 [tasks.nodes]
 description = "List cluster nodes"
 run = "kubectl get nodes -o wide"
