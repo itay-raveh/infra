@@ -61,17 +61,17 @@ resource "sentry_metric_monitor" "wanderbound_media_storage" {
     conditions = [
       {
         type             = "gte"
-        comparison       = 95
+        comparison       = 0.95
         condition_result = 75
       },
       {
         type             = "gte"
-        comparison       = 80
+        comparison       = 0.8
         condition_result = 50
       },
       {
         type             = "lt"
-        comparison       = 80
+        comparison       = 0.8
         condition_result = 0
       },
     ]
@@ -100,17 +100,17 @@ resource "sentry_metric_monitor" "wanderbound_filesystem_storage" {
     conditions = [
       {
         type             = "gte"
-        comparison       = 90
+        comparison       = 0.9
         condition_result = 75
       },
       {
         type             = "gte"
-        comparison       = 80
+        comparison       = 0.8
         condition_result = 50
       },
       {
         type             = "lt"
-        comparison       = 80
+        comparison       = 0.8
         condition_result = 0
       },
     ]
