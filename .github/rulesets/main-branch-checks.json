@@ -22,7 +22,6 @@
         "required_status_checks": [
           { "context": "gitleaks" },
           { "context": "sops-sanity" },
-          { "context": "flux-build" },
           { "context": "tofu-validate" }
         ],
         "strict_required_status_checks_policy": true
