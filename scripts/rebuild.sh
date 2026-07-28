@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+bash scripts/doctor.sh
 git pull --rebase
 set -a
 eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"

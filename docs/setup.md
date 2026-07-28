@@ -38,7 +38,7 @@ These live outside any tool we run; create them manually first.
 
 ```
 mise install        # reads mise.toml and pulls every tool
-pre-commit install  # activates the local hooks
+prek install        # activates the local hooks
 ```
 
 On Linux, also install the PC/SC daemon so `age-plugin-yubikey` can
@@ -113,31 +113,55 @@ already in git. Target wall-clock: ~20 minutes.
 
 ### 1. Local prep
 
+Install the operating-system packages listed under "Laptop prerequisites"
+above, then clone over HTTPS so a new machine does not need an SSH key yet:
+
 ```
-git clone git@github.com:itay-raveh/infra.git
+git clone https://github.com/itay-raveh/infra.git
 cd infra
 mise install
-pre-commit install
+prek install
 ```
 
-Plug in a YubiKey. The mise tofu tasks decrypt `tofu/secrets.sops.yaml`
-on every run after a physical touch. No PIN is required.
+Plug in the primary YubiKey and restore its resident FIDO credential.
+`ssh-keygen -K` writes the downloaded key handle and public key to the
+current directory, so run it from `~/.ssh` and configure Git with the
+downloaded public-key path:
 
-### 2. `gh auth login`
+```
+mkdir -p ~/.ssh
+cd ~/.ssh
+ssh-keygen -K
+mv <DOWNLOADED_KEY> id_ed25519_sk
+mv <DOWNLOADED_KEY>.pub id_ed25519_sk.pub
+chmod 600 id_ed25519_sk
+chmod 644 id_ed25519_sk.pub
+cd -
 
-Authenticate with GitHub so `flux bootstrap github` (step 5) can read
-`GITHUB_TOKEN` via `gh auth token`.
+git config --global user.name '<YOUR_NAME>'
+git config --global user.email '<YOUR_EMAIL>'
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519_sk.pub
+git config --global commit.gpgsign true
 
-### 3. `mise run tofu:init`
+gh auth login
+gh auth setup-git
+git remote set-url origin https://github.com/itay-raveh/infra.git
+```
 
-Initialises the S3 backend and downloads providers. Like every tofu
-task, this decrypts `tofu/secrets.sops.yaml` after a YubiKey touch.
-Only needed once per clone, or after backend/provider changes.
+The GitHub session supplies HTTPS push access and lets the rebuild preflight
+verify repository permissions and the main-branch bypass. The explicit remote
+URL also converts older SSH clones to the authenticated HTTPS path checked by
+`doctor`. The mise tofu tasks decrypt `tofu/secrets.sops.yaml` after a physical
+YubiKey touch. No PIV PIN is required.
 
-### 4. `mise run rebuild`
+### 2. `mise run rebuild`
 
-Runs the full rebuild in one command. Decrypts
-`tofu/secrets.sops.yaml` after a YubiKey touch, then:
+Runs the full rebuild in one command. It starts with the same preflight
+available separately as `mise run doctor`, which checks the required
+tools and files, YubiKey access, SOPS decryption, sudo authentication,
+git state, and the OpenTofu backend.
+It then decrypts `tofu/secrets.sops.yaml` after a YubiKey touch and:
 
 1. Creates the Talos image and stable Hetzner primary IP with a targeted
    first apply.
@@ -151,15 +175,18 @@ Runs the full rebuild in one command. Decrypts
    SOPS-encrypted manifests.
 6. Installs Flux and applies its GitHub App credentials and sync object.
 
-Expect ~15 minutes total. Requires YubiKey + `gh auth login`.
+Expect ~15 minutes total. Requires a YubiKey and authenticated GitHub CLI
+session for the automatic tunnel-token commit and push.
 
 For subsequent changes after the cluster exists, use
 `mise run tofu:apply` (infrastructure) or commit+push (cluster state).
 
-### 5. Flux reconciles `infrastructure/`
+### 3. Flux reconciles the cluster
 
-cloudflared, traefik, and local-path-provisioner come up as soon as
-Flux can decrypt the tunnel-token Secret. Watch with:
+Flux first reconciles infrastructure controllers, then dependent
+infrastructure configuration and applications. Cloudflared, Traefik,
+and local-path-provisioner come up as soon as Flux can decrypt the
+tunnel-token Secret. Watch with:
 
 ```
 flux get kustomizations --watch
@@ -167,7 +194,7 @@ flux get kustomizations --watch
 
 ~3 minutes from zero to ready.
 
-### 6. Verify
+### 4. Verify
 
 The rebuild writes `~/.kube/config` and `~/.talos/config` so `kubectl`
 and `talosctl` work immediately after.

@@ -54,30 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
-      - run: |
-          flux build kustomization apps \
-            --path clusters/shire/apps \
-            --kustomization-file clusters/shire/apps.yaml \
-            --dry-run
-
-          chart=clusters/shire/apps/wanderbound/app-chart.yaml
-          chart_url=$(yq -r 'select(.kind == "OCIRepository") | .spec.url' "$chart")
-          chart_version=$(yq -r 'select(.kind == "OCIRepository") | .spec.ref.tag' "$chart")
-          helm template wanderbound "$chart_url" \
-            --version "$chart_version" \
-            --namespace wanderbound \
-            --values <(yq 'select(.kind == "HelmRelease") | .spec.values' "$chart") \
-            >/dev/null
-
-          token=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
-          if [[ ! -f "$token" ]]; then
-            echo "::warning::$token not committed yet; skipping infrastructure build"
-            exit 0
-          fi
-          flux build kustomization infrastructure \
-            --path clusters/shire/infrastructure/controllers \
-            --kustomization-file clusters/shire/infrastructure.yaml \
-            --dry-run
+      - run: mise run manifests:validate
 
   tofu-validate:
     runs-on: ubuntu-24.04
