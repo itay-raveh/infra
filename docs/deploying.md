@@ -19,12 +19,14 @@ interface active. Run `mise run wireguard:configure` if needed.
 ## 1. Cluster state changes (the common case)
 
 The Flux loop is: edit → commit → push → wait. Flux polls this repo
-every minute and reconciles `clusters/shire/infrastructure/` against
-the live cluster.
+every minute and reconciles infrastructure controllers, dependent
+infrastructure configuration, and applications against the live cluster.
 
-All HelmReleases and SOPS-encrypted Secrets follow the existing
-patterns in `clusters/shire/infrastructure/controllers/`. Add new
-resources to the directory's `kustomization.yaml`.
+Cluster-wide controllers and their Secrets live in
+`clusters/shire/infrastructure/controllers/`. Configuration that depends
+on their CRDs lives in `clusters/shire/infrastructure/configs/`.
+Application releases and Secrets live under `clusters/shire/apps/`.
+Add each resource to the `kustomization.yaml` in the matching directory.
 
 SOPS files must use the `.sops.yaml` suffix. The pre-commit hook
 refuses to commit without `ENC[` markers. Edit existing ones with
@@ -47,27 +49,26 @@ Anything in `tofu/` is operator-driven, not Flux-driven.
    one YubiKey touch during its cached authorization window.
 3. `mise run tofu:apply`  - decrypts the same file, then applies.
    Targeted changes (firewall rules, DNS records, Cloudflare tunnel config) are
-   non-disruptive. Server-replacement changes (server type bump,
-   image swap) destroy and recreate the node  - see "Replacing the
-   server" below.
+   non-disruptive. If the plan replaces the server, do not apply it here.
+   Follow "Replacing the server" below so preflight runs before destruction.
 4. Commit and push the `.tf` change.
 
 ### Replacing the server (server type bump, image swap, etc.)
 
-The node is cattle. All persistent data lives in S3 backups (CNPG PITR
-for Postgres, tarballs for app data, etcd snapshots for cluster state).
+The node is cattle. Live data uses node-local or Hetzner volumes, while
+recoverable copies live in S3 backups (CNPG PITR for Postgres, tarballs
+for app data, and etcd snapshots for cluster state).
 
-1. Edit `tofu/locals.tf` (or wherever the change lives).
-2. `tofu:apply`. The hcloud-talos module destroys the old server,
-   creates a new one, and delivers the WireGuard machine configuration
-   in Hetzner user data before private API bootstrap begins.
-3. Cluster downtime: ~5 minutes. Single-node, no HA  - accept it or
-   schedule it.
-4. If the server is fully replaced, use `mise run rebuild` which
-   handles the tunnel token, Flux bootstrap, and SOPS key seeding.
-5. The cluster's PKI lives in tofu state, so the new server boots into
-   the same Kubernetes cluster identity.
-6. Restore stateful data from S3 if needed (see `disaster-recovery.md`).
+1. Edit the relevant OpenTofu configuration and run `mise run tofu:plan`.
+2. Commit the desired state, merge it to `main`, and update the local
+   `main` branch. The rebuild preflight requires a clean `main` tracking
+   `origin/main`, because Flux reconciles that branch.
+3. Run `mise run rebuild`. Its doctor preflight completes before any apply.
+   The hcloud-talos module then replaces the server and delivers the
+   WireGuard machine configuration before private API bootstrap begins.
+4. Expect about 15 minutes of downtime. The cluster PKI lives in OpenTofu
+   state, so the replacement boots into the same Kubernetes identity.
+5. Restore stateful data from S3 if needed (see `disaster-recovery.md`).
 
 ---
 

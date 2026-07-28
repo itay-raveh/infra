@@ -187,6 +187,11 @@ echo "wrote $target - review, commit, and push when ready" >&2
 
 # -- Rebuild ------------------------------------------------------
 
+[tasks.doctor]
+description = "Check every local prerequisite required for a rebuild"
+dir = "{{config_root}}"
+file = "scripts/doctor.sh"
+
 [tasks.rebuild]
 description = "Full rebuild: image + infra + tunnel token + Flux + SOPS age key"
 dir = "{{config_root}}"
