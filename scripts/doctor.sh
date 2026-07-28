@@ -146,12 +146,22 @@ if ((available[ykman])); then
     fi
 fi
 
+tofu_dotenv=
 if ((available[sops])); then
     for file in \
         tofu/secrets.sops.yaml \
         bootstrap/cluster-age-key.sops.txt \
         clusters/shire/flux-system/flux-github-app.sops.yaml; do
-        if sops decrypt "$file" >/dev/null 2>&1; then
+        printf 'check: decrypting %s\n' "$file"
+        if [[ "$file" == "tofu/secrets.sops.yaml" ]]; then
+            tofu_dotenv=$(sops decrypt --output-type dotenv "$file")
+            decrypted=$?
+        else
+            sops decrypt "$file" >/dev/null
+            decrypted=$?
+        fi
+
+        if ((decrypted == 0)); then
             pass "can decrypt $file"
         else
             fail "cannot decrypt $file"
@@ -167,14 +177,15 @@ if ((available[sudo])); then
     fi
 fi
 
-if ((available[sops] && available[tofu])) &&
-    dotenv=$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml 2>/dev/null); then
+if ((available[sops] && available[tofu])) && [[ -n "$tofu_dotenv" ]]; then
     if (
         set -a
-        eval "$dotenv"
+        eval "$tofu_dotenv"
         set +a
-        tofu -chdir=tofu init -input=false >/dev/null 2>&1 &&
-            tofu -chdir=tofu state pull >/dev/null 2>&1
+        printf 'check: initializing OpenTofu backend\n'
+        tofu -chdir=tofu init -input=false >/dev/null &&
+            printf 'check: reading OpenTofu state\n' &&
+            tofu -chdir=tofu state pull >/dev/null
     ); then
         pass "OpenTofu state backend is accessible"
     else
