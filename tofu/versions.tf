@@ -34,7 +34,7 @@ terraform {
 
     aws = {
       source  = "hashicorp/aws"
-      version = "6.49.0"
+      version = "6.57.1"
     }
 
     tailscale = {
