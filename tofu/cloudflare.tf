@@ -3,11 +3,16 @@ resource "random_id" "tunnel_secret" {
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared" "shire" {
-  account_id = local.cloudflare_account_id
-  name       = local.cluster_name
-  secret     = random_id.tunnel_secret.b64_std
+  account_id    = local.cloudflare_account_id
+  name          = local.cluster_name
+  tunnel_secret = random_id.tunnel_secret.b64_std
   # API-managed config (required for the *_config resource below to work).
   config_src = "cloudflare"
+}
+
+data "cloudflare_zero_trust_tunnel_cloudflared_token" "shire" {
+  account_id = local.cloudflare_account_id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.shire.id
 }
 
 # One dumb wildcard rule: every request goes to in-cluster Traefik, which
@@ -18,25 +23,25 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "shire" {
   account_id = local.cloudflare_account_id
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.shire.id
 
-  config {
-    ingress_rule {
-      hostname = "*.raveh.dev"
-      service  = "http://traefik.traefik.svc.cluster.local:80"
-    }
-
-    ingress_rule {
-      hostname = "raveh.dev"
-      service  = "http://traefik.traefik.svc.cluster.local:80"
-    }
-
-    ingress_rule {
-      service = "http_status:404"
-    }
+  config = {
+    ingress = [
+      {
+        hostname = "*.raveh.dev"
+        service  = "http://traefik.traefik.svc.cluster.local:80"
+      },
+      {
+        hostname = "raveh.dev"
+        service  = "http://traefik.traefik.svc.cluster.local:80"
+      },
+      {
+        service = "http_status:404"
+      },
+    ]
   }
 }
 
 # ttl=1 means "automatic", required for proxied records.
-resource "cloudflare_record" "tunnel" {
+resource "cloudflare_dns_record" "tunnel" {
   for_each = toset(["@", "*"])
   zone_id  = local.cloudflare_zone_id
   name     = each.key
@@ -44,4 +49,9 @@ resource "cloudflare_record" "tunnel" {
   content  = "${cloudflare_zero_trust_tunnel_cloudflared.shire.id}.cfargotunnel.com"
   proxied  = true
   ttl      = 1
+}
+
+moved {
+  from = cloudflare_record.tunnel
+  to   = cloudflare_dns_record.tunnel
 }
