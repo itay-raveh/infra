@@ -5,6 +5,13 @@ metadata:
   name: wanderbound-backup
   namespace: wanderbound
 spec:
+  instanceSidecarConfiguration:
+    env:
+      - name: AWS_RETRY_MODE
+        value: standard
+      - name: AWS_MAX_ATTEMPTS
+        value: "10"
+    retentionPolicyIntervalSeconds: 86400
   configuration:
     destinationPath: "s3://shire-backups/cnpg/wanderbound/"
     endpointURL: "https://fsn1.your-objectstorage.com"
