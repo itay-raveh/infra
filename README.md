@@ -62,7 +62,7 @@ flowchart
 | [Talos Linux](https://talos.dev) | Immutable Kubernetes OS |
 | [Flux CD](https://fluxcd.io) | GitOps reconciliation |
 | [OpenTofu](https://opentofu.org) | Infrastructure provisioning |
-| [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/) | Static hosting for `itay.raveh.dev` |
+| [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/) | Static hosting for `itay.raveh.dev` and `quizmon.raveh.dev` |
 | [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public ingress without exposing an origin HTTP port |
 | [Traefik](https://traefik.io) | Reverse proxy |
 | [Tailscale](https://tailscale.com) | Private ingress |
