@@ -76,6 +76,7 @@ Kubernetes Secret named `sops-age` in the `flux-system` namespace.
 | WireGuard workstation private key | `tofu/secrets.sops.yaml` | YubiKeys only | Installed as root-only `/etc/wireguard/shire.conf` by `mise run wireguard:configure` |
 | WireGuard workstation public key | `tofu/secrets.sops.yaml` | YubiKeys only | Included in the Talos machine configuration |
 | Tailscale provider OAuth client | `tofu/secrets.sops.yaml` | YubiKeys only | Manages the operator policy and the operator's scoped OAuth client |
+| Cloudflare Web Analytics API token | `tofu/secrets.sops.yaml` | YubiKeys only | Dedicated Account Settings read/write token for the aliased Web Analytics provider |
 | Cloudflare tunnel token | `clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml` | All three (Flux must read it) | Output of tofu, piped through SOPS by `mise run rebuild` |
 | Talos PKI + bootstrap token + etcd encryption key | Inside tofu state | Protected by state encryption | Generated once by the `hcloud-talos` module on first apply |
 

@@ -56,3 +56,9 @@ variable "wanderbound_upload_s3_access_key_id" {
   sensitive   = true
   description = "Hetzner Object Storage access key for the dedicated Wanderbound upload credential (from tofu/secrets.sops.yaml)."
 }
+
+variable "cloudflare_web_analytics_api_token" {
+  type        = string
+  sensitive   = true
+  description = "Cloudflare API token with Account Settings read and write access for Web Analytics (from tofu/secrets.sops.yaml)."
+}
