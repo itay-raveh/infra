@@ -6,6 +6,11 @@ provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
 
+provider "cloudflare" {
+  alias     = "web_analytics"
+  api_token = var.cloudflare_web_analytics_api_token
+}
+
 provider "imager" {
   token = var.hcloud_token
 }
