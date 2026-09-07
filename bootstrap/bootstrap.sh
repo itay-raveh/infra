@@ -127,7 +127,9 @@ cat >&2 <<'INSTRUCTIONS'
     Paste each token when prompted (nothing echoes). Values come from:
     - Hetzner Cloud console  - project API token (Read & Write)
     - Hetzner Object Storage - S3 credential for the tfstate bucket
-    - Cloudflare dashboard   - API token (Zone:DNS edit + Zero Trust edit)
+    - Cloudflare dashboard   - API token with these edit permissions:
+      Zone (raveh.dev): DNS, Single Redirect, Workers Routes
+      Account: Workers Scripts, Zero Trust
     - Tailscale admin console - OAuth client with these write scopes:
       policy_file, oauth_keys, feature_settings, dns, devices:core, auth_keys
 
