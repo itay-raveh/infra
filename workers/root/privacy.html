@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Shared advertising privacy information for websites on raveh.dev."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Privacy | raveh.dev</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --canvas: #f4f4f5;
+        --surface: #ffffff;
+        --text: #18181b;
+        --border: #d4d4d8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--text);
+        background: var(--canvas);
+        font-family: system-ui, sans-serif;
+      }
+      main {
+        display: grid;
+        min-height: 100svh;
+        padding: 0.75rem;
+        place-items: center;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --canvas: #09090b;
+          --surface: #18181b;
+          --text: #fafafa;
+          --border: #3f3f46;
+        }
+      }
+      .privacy-page {
+        width: min(44rem, 100%);
+        padding: clamp(1.5rem, 6vw, 3.5rem);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        line-height: 1.6;
+      }
+
+      .privacy-page h1 {
+        margin-top: 0;
+        line-height: 1.2;
+      }
+
+      .privacy-page a {
+        color: inherit;
+        text-underline-offset: 0.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="privacy-page">
+        <h1>Privacy on raveh.dev</h1>
+        <p>
+          raveh.dev hosts separate websites on its subdomains. For information
+          about the website you were using, including its data practices, your
+          rights, and how to contact its operator, refer to that website's
+          Privacy Policy.
+        </p>
+        <p>
+          The following applies to any website on raveh.dev that displays ads.
+        </p>
+        <h2>Advertising</h2>
+        <p>
+          <strong>We request non-personalized ads only.</strong> Google AdSense
+          selects these ads using context such as the page's content and your
+          general location, rather than your browsing history.
+        </p>
+        <p>
+          Google and the advertising partners identified in the consent message
+          may receive your IP address, the page URL, device information, and ad
+          interactions. They may use cookies, local storage, and identifiers to
+          limit repeated ads, measure performance, and prevent fraud.
+          Non-personalized advertising does not mean anonymous or cookie-free
+          advertising.
+        </p>
+        <p>
+          See
+          <a href="https://policies.google.com/technologies/partner-sites"
+            >how Google uses information from partner sites</a
+          >
+          and
+          <a href="https://policies.google.com/privacy"
+            >Google's Privacy Policy</a
+          >
+          for its data practices, retention, and international processing. Other
+          advertising partners and their privacy policies are available through
+          the consent message.
+        </p>
+        <h2>Your choices</h2>
+        <p>
+          We use Google's consent and privacy messages where applicable. Where
+          consent is required, ads wait for your permission. If you refuse,
+          withdraw consent, or opt out of advertising data sharing, we do not
+          show ads. We also honor Global Privacy Control opt-out signals.
+        </p>
+        <p>
+          Use the website's Privacy choices control to review or change your
+          decision. You can also manage Google's advertising preferences in
+          <a href="https://adssettings.google.com/">Ad Settings</a> and delete
+          or block cookies through your browser settings.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>
