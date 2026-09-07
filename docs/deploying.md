@@ -99,10 +99,20 @@ To upgrade:
 
 ## Pre-commit and CI
 
-See `prek.toml` and `.github/workflows/` for the full
-hook and CI job list. Key non-obvious detail: `tofu plan` does **not**
-run in CI - it needs the state encryption passphrase and live cloud
-credentials, both of which are operator-local and never touch a runner.
+Run `mise run check` before pushing. It runs the hooks, a full-history
+Betterleaks scan, the tests, and OpenTofu validation. Hooks use tools pinned
+in `mise.toml` and `mise.lock`, including actionlint and zizmor for workflows.
+The checks do not rewrite files. Use `tofu -chdir=tofu fmt -recursive` to fix
+OpenTofu formatting.
+
+CI runs the same check with locked installs of only the required tools.
+OpenTofu validation uses a temporary data directory and placeholder credentials.
+It does not read the remote backend or decrypt secrets. `tofu plan` needs the
+state encryption passphrase and live cloud credentials, so it remains local.
+
+YAML linting accepts Flux's generated sequence indentation only in
+`clusters/shire/flux-system/gotk-components.yaml`. Other YAML rules still apply
+to that file. See `prek.toml` for the encrypted and vendored file exclusions.
 
 ---
 

@@ -14,55 +14,29 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 env:
-  # Operator-only tools that need YubiKey hardware or libpcsclite
-  MISE_DISABLE_TOOLS: pipx:yubikey-manager,aqua:str4d/age-plugin-yubikey
+  MISE_LOCKED: "1"
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  betterleaks:
+  checks:
     runs-on: ubuntu-24.04
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
-      - run: betterleaks git --redact
-
-  sops-sanity:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: ./scripts/sops-sanity.sh
-
-  tests:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
-      - run: mise run test
-
-  tofu-validate:
-    runs-on: ubuntu-24.04
-    env:
-      # Dummy creds so the s3 backend's credential resolver doesn't error
-      AWS_ACCESS_KEY_ID: ci
-      AWS_SECRET_ACCESS_KEY: ci
-      TF_VAR_encryption_passphrase: ci
-      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
+        with:
+          install_args: actionlint bats betterleaks github:zizmorcore/zizmor opentofu pipx:yamllint prek shellcheck
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: tofu-plugins-${{ hashFiles('tofu/.terraform.lock.hcl', 'tofu/providers.tf') }}
-      - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
-      - run: tofu -chdir=tofu fmt -check -recursive
-      - run: tofu -chdir=tofu init -backend=false
-      - run: tofu -chdir=tofu validate
+      - run: mise run --skip-tools check

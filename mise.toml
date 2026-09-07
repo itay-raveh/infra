@@ -4,6 +4,7 @@ min_version = "2026.4.8"
 TF_VAR_ssh_public_key_path = "~/.ssh/id_ed25519_sk.pub"
 
 [tools]
+actionlint = "1.7.12"
 age = "1.3.2"
 bats = "1.14.0"
 betterleaks = "1.8.1"
@@ -12,6 +13,7 @@ betterleaks = "1.8.1"
 "aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg" = "1.30.0"
 flux2 = "2.9.5"
 gh = "2.100.0"
+"github:zizmorcore/zizmor" = "1.30.0"
 hcloud = "1.67.0"
 helm = "4.2.4"
 jq = "1.8.2"
@@ -77,6 +79,17 @@ talosctl config node "$private_ipv4"
 [tasks.test]
 description = "Run the repository test suite"
 run = "bats tests"
+
+[tasks.check]
+description = "Run all repository checks without cloud credentials"
+dir = "{{config_root}}"
+run = [
+    "prek validate-config prek.toml",
+    "prek run --all-files",
+    "betterleaks git --redact",
+    "bats tests",
+    "bash scripts/check-tofu.sh",
+]
 
 [tasks."wireguard:configure"]
 description = "Install and activate the private management tunnel"

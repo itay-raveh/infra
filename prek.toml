@@ -1,12 +1,14 @@
 #:schema https://www.schemastore.org/prek.json
 
 [[repos]]
-repo = "https://github.com/betterleaks/betterleaks"
-rev = "v1.8.1"
-hooks = [{ id = "betterleaks-system" }]
-
-[[repos]]
 repo = "local"
+
+[[repos.hooks]]
+id = "betterleaks"
+name = "betterleaks"
+language = "system"
+entry = "betterleaks git --pre-commit --redact --staged --verbose"
+pass_filenames = false
 
 [[repos.hooks]]
 id = "sops-sanity"
@@ -20,16 +22,35 @@ always_run = true
 id = "yamllint"
 name = "yamllint"
 language = "system"
-entry = "yamllint"
+entry = "bash scripts/lint-yaml.sh"
 types = ["yaml"]
 exclude = '\.sops\.(yaml|yml)$|^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$'
 
-[[repos]]
-repo = "https://github.com/shellcheck-py/shellcheck-py"
-rev = "v0.11.0.1"
-hooks = [{ id = "shellcheck" }]
+[[repos.hooks]]
+id = "shellcheck"
+name = "shellcheck"
+language = "system"
+entry = "shellcheck"
+types = ["shell"]
 
-[[repos]]
-repo = "https://github.com/tofuutils/pre-commit-opentofu"
-rev = "v2.2.2"
-hooks = [{ id = "tofu_fmt" }]
+[[repos.hooks]]
+id = "tofu-fmt"
+name = "tofu fmt"
+language = "system"
+entry = "tofu fmt -check"
+files = '\.(tf|tfvars|tftest\.hcl|tofu|tofutest\.hcl)$'
+
+[[repos.hooks]]
+id = "actionlint"
+name = "actionlint"
+language = "system"
+entry = "actionlint"
+files = '^\.github/workflows/.*\.ya?ml$'
+
+[[repos.hooks]]
+id = "zizmor"
+name = "zizmor"
+language = "system"
+entry = "zizmor --offline .github/workflows"
+files = '^\.github/workflows/.*\.ya?ml$'
+pass_filenames = false

@@ -16,6 +16,8 @@ jobs:
         with:
           app-id: ${{ secrets.FLUX_APP_ID }}
           private-key: ${{ secrets.FLUX_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Ensure PR with auto-merge
         env:

@@ -20,9 +20,7 @@
       "type": "required_status_checks",
       "parameters": {
         "required_status_checks": [
-          { "context": "betterleaks" },
-          { "context": "sops-sanity" },
-          { "context": "tofu-validate" }
+          { "context": "checks" }
         ],
         "strict_required_status_checks_policy": true
       }
