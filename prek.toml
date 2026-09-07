@@ -1,0 +1,35 @@
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "https://github.com/betterleaks/betterleaks"
+rev = "v1.8.1"
+hooks = [{ id = "betterleaks-system" }]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "sops-sanity"
+name = "sops-sanity"
+language = "system"
+entry = "scripts/sops-sanity.sh"
+pass_filenames = false
+always_run = true
+
+[[repos.hooks]]
+id = "yamllint"
+name = "yamllint"
+language = "system"
+entry = "yamllint"
+types = ["yaml"]
+exclude = '\.sops\.(yaml|yml)$|^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$'
+
+[[repos]]
+repo = "https://github.com/shellcheck-py/shellcheck-py"
+rev = "v0.11.0.1"
+hooks = [{ id = "shellcheck" }]
+
+[[repos]]
+repo = "https://github.com/tofuutils/pre-commit-opentofu"
+rev = "v2.2.2"
+hooks = [{ id = "tofu_fmt" }]

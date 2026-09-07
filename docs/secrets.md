@@ -8,9 +8,9 @@ How secrets are stored, encrypted, decrypted, and rotated in this repo.
 
 - **Repository leakage.** Anyone with a clone can read every encrypted
   file. Defense: SOPS payloads are designed to be public-safe.
-- **Accidental plaintext commit.** Defense: pre-commit gitleaks (local,
-  blocking) plus gitleaks in CI plus a `.sops.*` filename convention
-  enforced by the sops-verify pre-commit hook.
+- **Accidental plaintext commit.** Defense: Betterleaks through prek
+  (local, blocking) and CI, plus a `.sops.*` filename convention
+  enforced by the sops-sanity hook.
 - **Laptop compromise.** An attacker cannot decrypt the SOPS source of
   truth without a physical YubiKey touch. The active WireGuard private
   key is installed root-only at `/etc/wireguard/shire.conf`, so a root
@@ -156,7 +156,7 @@ Same procedure for primary and backup  - only the last step differs.
    ```
 
 6. Commit the updated `.sops.yaml` and re-wrapped files in one PR.
-   CI's gitleaks + sops-sanity jobs catch a botched `updatekeys` or a
+   CI's betterleaks + sops-sanity jobs catch a botched `updatekeys` or a
    stray plaintext slip before merge.
 7. If you replaced the **primary**, run `mise run tofu:apply` so tofu
    pushes the new FIDO2-sk pubkey to Hetzner as the rescue-mode SSH

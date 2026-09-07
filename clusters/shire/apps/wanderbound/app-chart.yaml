@@ -32,7 +32,7 @@ spec:
       PUBLIC_URL: https://wanderbound.raveh.dev
       GOOGLE_CLIENT_ID: 630509937439-d8gtaum419mq8elhvu46244krh8or9pp.apps.googleusercontent.com
       MICROSOFT_CLIENT_ID: 6234cd5d-4f13-4a21-bd0e-8485e10193fc
-      MAPBOX_TOKEN: pk.eyJ1IjoiaXRheXIiLCJhIjoiY21uejIycDViMDZhbTJzc2dya3hkemlidyJ9.gZAiZcb5u-KJ0NEo78z8sg # gitleaks:allow
+      MAPBOX_TOKEN: pk.eyJ1IjoiaXRheXIiLCJhIjoiY21uejIycDViMDZhbTJzc2dya3hkemlidyJ9.gZAiZcb5u-KJ0NEo78z8sg # betterleaks:allow
       CONTACT_EMAIL: wanderbound@raveh.dev
       GITHUB_URL: https://github.com/itay-raveh/wanderbound/issues
       AUTHOR_NAME: Itay Raveh

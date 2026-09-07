@@ -99,7 +99,7 @@ To upgrade:
 
 ## Pre-commit and CI
 
-See `.pre-commit-config.yaml` and `.github/workflows/` for the full
+See `prek.toml` and `.github/workflows/` for the full
 hook and CI job list. Key non-obvious detail: `tofu plan` does **not**
 run in CI - it needs the state encryption passphrase and live cloud
 credentials, both of which are operator-local and never touch a runner.

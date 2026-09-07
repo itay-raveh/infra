@@ -20,7 +20,7 @@
       "type": "required_status_checks",
       "parameters": {
         "required_status_checks": [
-          { "context": "gitleaks" },
+          { "context": "betterleaks" },
           { "context": "sops-sanity" },
           { "context": "tofu-validate" }
         ],

@@ -2,7 +2,6 @@
 # Two checks that together protect against committing plaintext secrets:
 #   1. Every file named *.sops.* must actually be SOPS-encrypted (contain ENC[).
 #   2. No plaintext k8s Secret (kind: Secret) in clusters/ outside *.sops.*.
-# Called from .pre-commit-config.yaml and .github/workflows/validate.yaml.
 set -euo pipefail
 
 fail=0
