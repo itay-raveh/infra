@@ -13,7 +13,7 @@ variable "hcloud_token" {
 variable "cloudflare_api_token" {
   type        = string
   sensitive   = true
-  description = "Cloudflare API token - Zone:DNS edit + Zero Trust edit on raveh.dev (from tofu/secrets.sops.yaml)."
+  description = "Cloudflare API token - DNS, Single Redirect, and Workers Routes edit on the zone, plus Workers Scripts and Zero Trust edit on its account (from tofu/secrets.sops.yaml)."
 }
 
 variable "ssh_public_key_path" {

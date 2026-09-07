@@ -26,7 +26,9 @@ These live outside any tool we run; create them manually first.
 - **Hetzner Object Storage bucket** named `shire-tfstate` (in `fsn1`),
   plus an S3 credential pair for it. This holds the encrypted tofu state.
 - **Cloudflare account** with `raveh.dev` on it. Create an API token
-  scoped to `Zone:DNS edit` + `Zero Trust edit` on that one zone.
+  with `DNS edit`, `Single Redirect edit`, and `Workers Routes edit`
+  scoped to that zone, plus `Workers Scripts edit` and `Zero Trust edit`
+  scoped to its account. See the [Cloudflare permission reference](https://developers.cloudflare.com/fundamentals/api/reference/permissions/).
 - **GitHub account** (`itay-raveh`) and a local `gh auth login` session.
 - **Tailscale account** with a tailnet and an OAuth client with write
   access to `policy_file`, `oauth_keys`, `feature_settings`, `dns`,
@@ -203,9 +205,11 @@ and `talosctl` work immediately after.
 - `kubectl get nodes`  - reaches the private Kubernetes API over WireGuard
 - `talosctl health`  - reaches the private Talos API over WireGuard
 - `kubectl -n traefik get pods`  - Traefik pod is `Running`
-- `curl -sI https://raveh.dev`  - returns `404 Not Found` served by
-  Traefik through the tunnel. That proves DNS → Cloudflare edge →
-  tunnel → Traefik end-to-end. No application is expected at v1.
+- `curl -sI https://raveh.dev`  - returns `301 Moved Permanently` with
+  `Location: https://itay.raveh.dev/`
+- `curl -sI https://unconfigured.raveh.dev`  - returns `404 Not Found`
+  served by Traefik. That proves DNS → Cloudflare edge → tunnel → Traefik
+  end-to-end for wildcard ingress.
 
 ---
 
