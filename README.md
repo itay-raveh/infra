@@ -6,6 +6,20 @@
 Built to be as stateless and immutable as possible.
 Everything is IaC, data is backed up in S3, so all other infrastructure is essentially ephemeral (namely the VPS).
 
+## Root-domain pages
+
+`workers/root/` contains the shared privacy page and AdSense `ads.txt` for
+`raveh.dev`. OpenTofu manages their Worker, deployment, and route in
+`tofu/root.tf`. The redirect in `tofu/cloudflare.tf` preserves the personal-site
+redirect for other paths, including the homepage.
+
+Changes to these files are deployed through the existing `mise run tofu:plan`
+and `mise run tofu:apply` workflow. Pushing to GitHub validates infrastructure
+but does not apply it. The privacy page provides conditional advertising
+disclosures for any site on `raveh.dev` that displays ads and refers visitors
+to each site's own policy for its other data practices. No advertising or
+consent scripts are included.
+
 ## Architecture
 
 ```mermaid
