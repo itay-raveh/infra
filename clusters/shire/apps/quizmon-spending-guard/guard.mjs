@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
 
 export function usageCost(rows) {
   if (!Array.isArray(rows)) throw new Error('Invalid billing response');
@@ -132,7 +133,7 @@ export function controller(config, request = fetch, now = Date.now) {
   return { check, pause, resume, setup };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   try {
     const guard = controller(configuration(process.env));
     const mode = process.argv[2] ?? 'check';
