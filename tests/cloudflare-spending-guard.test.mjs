@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { controller, usageCost } from '../clusters/shire/apps/quizmon-spending-guard/guard.mjs';
 
 const config = { account: 'a'.repeat(32), zone: 'b'.repeat(32), namespace: 'c'.repeat(32), hostname: 'game.example.test', token: 'test-token', budget: 1 };
@@ -84,4 +89,15 @@ test('restores both shutdown mechanisms when permission renewal fails during res
   await assert.rejects(guard.resume());
   assert.equal(state.lease.enabled, false);
   assert.equal(state.blocked, true);
+});
+
+
+test('runs the CLI through a Kubernetes-style symlink instead of exiting successfully', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'quizmon-guard-entrypoint-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const entrypoint = join(directory, 'guard.mjs');
+  symlinkSync(fileURLToPath(new URL('../clusters/shire/apps/quizmon-spending-guard/guard.mjs', import.meta.url)), entrypoint);
+  const result = spawnSync(process.execPath, [entrypoint, 'check'], { env: {}, encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Missing QUIZMON_HOSTNAME/);
 });
