@@ -25,12 +25,19 @@ For PIV connection failures, see [YubiKey troubleshooting](troubleshooting.md#th
 
 ### Age identity
 
-With the existing YubiKey plugged in, recover its slot-1 identity reference:
+With the existing YubiKey plugged in, list its public recipients:
+
+```bash
+age-plugin-yubikey --list
+```
+
+Find the recipient listed in [.sops.yaml](../.sops.yaml), then use its serial
+and slot to recover the identity reference:
 
 ```bash
 umask 077
 mkdir -p ~/.config/sops/age
-age-plugin-yubikey --identity --slot 1 >> ~/.config/sops/age/keys.txt
+age-plugin-yubikey --identity --serial '<SERIAL>' --slot '<SLOT>' >> ~/.config/sops/age/keys.txt
 chmod 600 ~/.config/sops/age/keys.txt
 ```
 

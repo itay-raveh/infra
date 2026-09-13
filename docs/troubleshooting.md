@@ -16,6 +16,12 @@ ykman piv info
 ([issue #766](https://github.com/Yubico/yubioath-flutter/issues/766)).
 Stop the competing service, reconnect the key and retry `ykman piv info`.
 
+If PIV works but SOPS reports `Failed to decrypt YubiKey stanza`, compare
+`age-plugin-yubikey --list` with the encrypted file's recipients and check the
+[registered identity](setup.md#age-identity). Touch the key when it flashes.
+With an `always` touch policy, each file requires a touch; `tofu plan` decrypts
+three files. [Plugin touch-failure report](https://github.com/str4d/age-plugin-yubikey/issues/150).
+
 ## A site is unavailable
 
 For Worker-hosted sites, check the application's deployment and
