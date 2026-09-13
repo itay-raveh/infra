@@ -7,6 +7,7 @@ Account and zone IDs are in [tofu/locals.tf](../tofu/locals.tf).
 | Resource | Configuration |
 |---|---|
 | Tunnel, ingress, apex/wildcard DNS and redirects | [cloudflare.tf](../tofu/cloudflare.tf) |
+| DNSSEC and minimum TLS version | [cloudflare.tf](../tofu/cloudflare.tf) |
 | Root Worker | [root.tf](../tofu/root.tf) |
 | Application Worker custom domains | [quizmon.tf](../tofu/quizmon.tf), [itay.tf](../tofu/itay.tf) |
 | Application code, bindings and logs | Wrangler configuration in each application repo |
@@ -16,18 +17,46 @@ Account and zone IDs are in [tofu/locals.tf](../tofu/locals.tf).
 After a Tunnel token change, run `mise run tunnel:refresh` and commit the
 resulting Secret. See [deployment commands](deploying.md#refresh-generated-credentials).
 
+## DNSSEC and TLS
+
+OpenTofu configures DNSSEC and a minimum TLS version of 1.2. Import blocks adopt
+the existing zone settings. The Cloudflare token needs `DNS Write` and
+`Zone Settings Write` for this zone.
+
+Cloudflare Registrar publishes the DNSSEC DS record at the registry. Publication
+can take one to two days. After applying, check the DNSSEC status and verify the
+DS record and DNS validation before treating activation as complete.
+[DNSSEC setup and rollback](https://developers.cloudflare.com/dns/dnssec/).
+
+For verification, replace `<DOMAIN>` with the zone name and `<HOSTNAME>` with a
+proxied application hostname:
+
+```bash
+dig @1.1.1.1 '<DOMAIN>' DS +dnssec
+dig @1.1.1.1 '<HOSTNAME>' A +dnssec
+curl --tlsv1.2 --tls-max 1.2 --head 'https://<HOSTNAME>'
+```
+
+The DNS responses should contain a DS record and the `ad` flag, respectively.
+TLS 1.2 should connect; clients restricted to TLS 1.0 or 1.1 should fail the
+handshake. Check that the test client itself supports those older versions.
+[TLS verification](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/minimum-tls/#test-supported-tls-versions).
+
+To roll back TLS, restore the previous `min_tls_version` value and apply.
+For DNSSEC rollback, disable it at Cloudflare Registrar and wait for the parent
+DS TTL to expire before removing zone signing. Do not delete the OpenTofu
+resource as the first rollback step.
+
 ## Managed in the dashboard
 
 | Setting | Location |
 |---|---|
 | Personal MFA and recovery codes | My Profile > Authentication |
-| TLS settings | Zone > SSL/TLS > Edge Certificates |
-| DNSSEC | Zone > DNS > Settings |
+| Other TLS settings | Zone > SSL/TLS > Edge Certificates |
 | Budget alerts | Manage account > Notifications |
 | Traffic overview | Analytics > Dashboards > Traffic overview |
 
-TLS and DNSSEC have provider support but no resources in
-`infra` yet. Provider 5.24.0 lacks the budget alert's dollar-spend fields and a
+Provider 5.24.0 lacks the budget alert's dollar-spend fields and a
 custom-dashboard resource. Recheck the [provider schema](https://github.com/cloudflare/terraform-provider-cloudflare/tree/v5.24.0/docs/resources)
 after a version change.
 

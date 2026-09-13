@@ -1,3 +1,24 @@
+resource "cloudflare_zone_dnssec" "raveh_dev" {
+  zone_id = local.cloudflare_zone_id
+  status  = "active"
+}
+
+import {
+  to = cloudflare_zone_dnssec.raveh_dev
+  id = local.cloudflare_zone_id
+}
+
+resource "cloudflare_zone_setting" "min_tls_version" {
+  zone_id    = local.cloudflare_zone_id
+  setting_id = "min_tls_version"
+  value      = "1.2"
+}
+
+import {
+  to = cloudflare_zone_setting.min_tls_version
+  id = "${local.cloudflare_zone_id}/min_tls_version"
+}
+
 resource "random_id" "tunnel_secret" {
   byte_length = 32
 }
