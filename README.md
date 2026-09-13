@@ -1,72 +1,64 @@
-# `raveh.dev` infrastructure
+# Infrastructure
 
-[![CI](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml/badge.svg)](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml)
-[![License](https://img.shields.io/github/license/itay-raveh/infra)](https://github.com/itay-raveh/infra/blob/main/LICENSE)
+OpenTofu configuration and Kubernetes manifests for `raveh.dev` and the
+`shire` cluster on Hetzner Cloud.
 
-Built to be as stateless and immutable as possible.
-Everything is IaC, data is backed up in S3, so all other infrastructure is essentially ephemeral (namely the VPS).
+## Guides
+
+- [Set up a workstation or rebuild the cluster](docs/setup.md).
+- [Deploy infrastructure and application changes](docs/deploying.md).
+- [Create and rotate secrets](docs/secrets.md).
+- [Diagnose an outage](docs/troubleshooting.md).
+- [Restore cluster and application data](docs/disaster-recovery.md).
+
+Run commands from the repository root unless a guide says otherwise.
+Tool versions and task definitions are in [mise.toml](mise.toml).
 
 ## Architecture
 
+`shire` runs Kubernetes on one Talos control-plane node, which also runs
+application workloads. Cloudflare Tunnel forwards public traffic to Traefik.
+Tailscale exposes private services; WireGuard connects operator workstations
+to the Kubernetes and Talos APIs.
+
+Cloudflare Workers serve the root domain and applications hosted outside
+Kubernetes. Application repositories deploy their own Workers; this repository
+manages their custom domains.
+
 ```mermaid
-flowchart
-    Cloudflare@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/cloudflare.svg?raw=true, label: Cloudflare, h: 30, constraint: on}
-    Cloudflared@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/cloudflared.svg?raw=true, label: Cloudflared, h: 50, constraint: on}
-    Tailscale@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/tailscale-light.svg?raw=true, label: Tailscale, h: 50, constraint: on}
-    TailscaleOperator@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/tailscale-light.svg?raw=true, label: Tailscale Operator, h: 50, constraint: on}
-    Traefik@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/traefik.svg?raw=true, label: Traefik, h: 40, constraint: on}
-    GitHubInfra@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/github-light.svg?raw=true, label: GitHub (infra), h: 50, constraint: on}
-    GitHubApp@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/github-light.svg?raw=true, label: GitHub (app), h: 50, constraint: on}
-    FluxCD@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/flux-cd.svg?raw=true, label: FluxCD, h: 50, constraint: on}
-    CNPG@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/cloud-native-pg-light.svg?raw=true, label: CloudNativePG, h: 50, constraint: on}
-    Headlamp@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/headlamp-dark.svg?raw=true, label: Headlamp, h: 50, constraint: on}
-    Restic@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/png/restic.png?raw=true, label: Restic, h: 50, constraint: on}
-
-    GitHubApp <-.-|reconciles| FluxCD
-    GitHubInfra <-.-|watches| FluxCD
-
-    Internet@{shape: cloud} -.- Cloudflare
-    Cloudflare -.- Cloudflared
-
-    MyDevices((My Devices)) -.- Tailscale
-    Tailscale -.- TailscaleOperator
-
-    subgraph Server["K3S on Talos (Hetzner)"]
-        FluxCD -->|deploys| App
-
-        subgraph Public["Public (Traefik)"]
-            Cloudflared --- Traefik
-            Traefik --- App
-        end
-
-        subgraph Private["Private (Tailnet)"]
-            TailscaleOperator --- Headlamp
-        end
-
-        App --- CNPG
-        CNPG -->|backup| Barman
-
-        App --- PVC[(PVC)]
-        PVC -->|backup| Restic
-        
+flowchart LR
+    Internet --> Cloudflare
+    Cloudflare --> Workers[Cloudflare Workers]
+    Cloudflare --> Tunnel[Cloudflare Tunnel]
+    Operator --> WireGuard
+    Operator --> Tailscale
+    Git[Infrastructure repository] --> Flux
+    subgraph Shire[shire: Talos on Hetzner]
+        Tunnel --> Traefik --> App[Applications]
+        Tailscale --> Private[Private services]
+        WireGuard --> APIs[Kubernetes and Talos APIs]
+        Flux --> App
+        App --> PostgreSQL
+        App --> PVC[Persistent volumes]
     end
-
-    Barman -.-> S3[("S3 (Hetnzer)")]
-    Restic -.-> S3
+    PostgreSQL --> Barman --> S3[Hetzner Object Storage]
+    PVC --> Restic --> S3
 ```
 
-## Stack
+## Repository layout
 
-|   |   |
+| Path | Contents |
 |---|---|
-| [Talos Linux](https://talos.dev) | Immutable Kubernetes OS |
-| [Flux CD](https://fluxcd.io) | GitOps reconciliation |
-| [OpenTofu](https://opentofu.org) | Infrastructure provisioning |
-| [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/) | Static hosting for `itay.raveh.dev` and `quizmon.raveh.dev` |
-| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public ingress without exposing an origin HTTP port |
-| [Traefik](https://traefik.io) | Reverse proxy |
-| [Tailscale](https://tailscale.com) | Private ingress |
-| [Headlamp](https://headlamp.dev) | Flux-aware admin dashboard (Tailnet-only) |
-| [CNPG](https://cloudnative-pg.io) | PostgreSQL |
-| [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Backups, [Wanderbound](https://github.com/itay-raveh/wanderbound) user uploads (presigned S3 PUTs avoid uploading through the Cloudflare tunnel) |
-| [SOPS](https://github.com/getsops/sops) | Secret encryption |
+| [tofu/](tofu/) | Cloud resources, Talos configuration, DNS and provider configuration |
+| [clusters/shire/infrastructure/controllers/](clusters/shire/infrastructure/controllers/) | Cluster controllers and their credentials |
+| [clusters/shire/infrastructure/configs/](clusters/shire/infrastructure/configs/) | Resources that depend on those controllers |
+| [clusters/shire/apps/](clusters/shire/apps/) | Application releases, databases and backup jobs |
+| [clusters/shire/flux-system/](clusters/shire/flux-system/) | Flux installation and Git synchronization |
+| [bootstrap/](bootstrap/) | Encrypted recovery keys and initial provisioning script |
+| [scripts/](scripts/) | Operator tasks and validation scripts |
+| [tests/](tests/) | Bats tests for repository scripts |
+
+OpenTofu changes require an operator apply. Flux reconciles Kubernetes
+configuration from Git. Database, volume and etcd backups have separate
+[restore procedures](docs/disaster-recovery.md); rebuilding infrastructure
+does not restore application data.

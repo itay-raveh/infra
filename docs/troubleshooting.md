@@ -1,205 +1,181 @@
 # Troubleshooting
 
-Symptoms-first guide for the shire cluster. Find your symptom, run the
-commands.
+Run commands from the repository root with the tools and client configuration
+from [workstation setup](setup.md#set-up-a-workstation).
 
----
+## A site is unavailable
 
-## Site is down
+First identify where the request fails. A Worker-hosted site does not pass
+through the Kubernetes cluster; check its application deployment and the
+Cloudflare dashboard.
 
-Work through this top-to-bottom. Stop at the first failure.
+For a site served through the Tunnel, inspect the cluster and ingress:
 
-```
-# 1. Is the node alive?
-talosctl health
-
-# 2. Is Kubernetes running?
-mise run nodes
-
-# 3. Is Flux healthy?
-flux get kustomizations
-
-# 4. Any pods in a bad state?
-mise run unhealthy
-
-# 5. Check the failing layer (tunnel, traefik, or app)
-mise run klogs -- -n cloudflared deploy/cloudflared-cloudflared
-mise run klogs -- -n traefik deploy/traefik
-mise run klogs -- -n <namespace> deploy/<name>
+```bash
+kubectl get nodes
+flux get kustomizations -A
+kubectl get pods -A
+kubectl -n cloudflared logs deploy/cloudflared-cloudflared --tail=100
+kubectl -n traefik logs deploy/traefik --tail=100
 ```
 
-If the node itself is unreachable, check the management tunnel first:
+If `kubectl` cannot connect, check [management access](#management-apis-are-unreachable).
+If the Tunnel logs show authentication failures, see
+[Tunnel credentials](#cloudflare-tunnel-authentication-fails). Otherwise inspect
+the application's pod status and logs. `mise run unhealthy` omits pods whose
+phase is `Running`, which can include containers in `CrashLoopBackOff`; use the
+full pod list above when diagnosing restarts.
 
-```
+## Management APIs are unreachable
+
+Check the workstation tunnel and the Talos endpoint:
+
+```bash
 sudo wg show shire
-mise run wireguard:configure
 ping -c 3 10.200.0.1
+talosctl version
 ```
 
-A recent handshake with no private API response points to the node or
-Talos. No handshake points to the UDP 51820 firewall rule, server
-endpoint, or peer keys. If the server was deleted or replaced, follow
-the rebuild path in `setup.md`. If its WireGuard machine configuration
-was lost, follow the break-glass procedure in `disaster-recovery.md`.
+No recent handshake points to the endpoint, UDP 51820 connectivity or peer
+configuration. Restore the workstation configuration with
+`mise run wireguard:configure`. If the server's WireGuard configuration is
+missing, use [WireGuard recovery](disaster-recovery.md#recover-wireguard-access).
 
-The Hetzner module configures the physical links as `eth0` and `eth1`.
-If `talosctl get links` instead shows predictable names such as
-`enp1s0`, verify that `talosctl get cmdline` contains `net.ifnames=0`.
-The repository pins that argument in `tofu/main.tf`. Apply the active
-machine configuration and perform a normal Talos upgrade to repair an
-older boot that was installed with the wrong platform defaults.
+A handshake without API access needs further checks of routing, firewall and
+node health. If Talos is reachable, inspect `talosctl get links` and
+`talosctl get cmdline`. The installer configuration in
+[tofu/main.tf](../tofu/main.tf) sets `net.ifnames=0`, and the module expects
+physical links named `eth0` and `eth1`. Compare a differing live configuration
+with the desired machine configuration before applying a repair.
 
----
+## Flux is not reconciling
 
-## Flux not reconciling
+Find the failing resource and source:
 
-```
-# What's stuck?
+```bash
 mise run flux:unhealthy
-
-# Force a full sync from git
-mise run reconcile
-
-# Suspend + resume a stuck resource
-flux suspend kustomization infrastructure
-flux resume kustomization infrastructure
-
-# If a HelmRelease is stuck in "upgrade retries exhausted"
-flux suspend hr <name> -n flux-system
-flux resume hr <name> -n flux-system
-
-# Or force-sync a single resource
-mise run flux:sync-hr -- -n flux-system <name>
-mise run flux:sync-ks -- infrastructure
-```
-
-Check the source is reachable:
-
-```
 flux get sources git -A
 flux get sources helm -A
+flux get sources oci -A
+flux get helmreleases -A
 ```
 
-If Flux can't decrypt SOPS secrets, the `sops-age` Secret may be
-missing or stale. Re-seed it:
+Read the reported condition before retrying. After fixing the source or
+manifest, run `mise run reconcile`. For an exhausted Wanderbound Helm upgrade,
+reset its retry count and reconcile its source:
 
+```bash
+flux reconcile helmrelease wanderbound -n wanderbound --with-source --reset
 ```
-sops --decrypt bootstrap/cluster-age-key.sops.txt \
+
+Use the namespace reported by `flux get helmreleases -A` for other releases.
+See [Flux Helm reconciliation](https://fluxcd.io/flux/cmd/flux_reconcile_helmrelease/)
+for the reset behavior.
+
+### SOPS decryption fails
+
+Check the error for the encrypted filename and recipient. If
+`flux-system/sops-age` is missing or contains the wrong key, reseed it from
+the encrypted bootstrap file:
+
+```bash
+set -o pipefail
+sops decrypt bootstrap/cluster-age-key.sops.txt \
   | kubectl create secret generic sops-age \
-      -n flux-system \
-      --from-file=age.agekey=/dev/stdin \
-      --dry-run=client -o yaml | kubectl apply -f -
+      -n flux-system --from-file=age.agekey=/dev/stdin \
+      --dry-run=client -o yaml \
+  | kubectl apply -f -
+mise run reconcile
 ```
 
----
+If decryption still fails, compare the file's recipients with
+[.sops.yaml](../.sops.yaml). Reseeding a key cannot repair a file encrypted to
+the wrong recipient. See [secret creation](secrets.md#create-a-cluster-secret).
 
-## Pod stuck in CrashLoopBackOff
+## A container restarts or cannot pull its image
 
-```
-kubectl -n <ns> describe pod <pod>
-kubectl -n <ns> logs <pod> --previous
-```
+Substitute the namespace and pod from `kubectl get pods -A`:
 
----
-
-## Image pull errors
-
-```
-kubectl -n <ns> describe pod <pod> | grep -A5 Events
+```bash
+kubectl -n '<NAMESPACE>' describe pod '<POD>'
+kubectl -n '<NAMESPACE>' logs '<POD>' --previous
 ```
 
-Verify the image name, tag, and any registry credentials in the pod
-events. Retry after correcting the cause:
+For restarts, inspect the exit reason and previous container logs. For pull
+failures, read the pod events for the image name, registry response and
+credential errors. Correct the manifest or credentials in Git before
+reconciling. If an automated chart update caused the failure, use
+[application rollback](disaster-recovery.md#roll-back-an-application-release).
 
-```
-kubectl -n <ns> rollout restart deploy/<name>
-```
+## PostgreSQL is unhealthy
 
-If Flux image automation selected an unexpected release, inspect the
-policy and suspend the automation before changing the manifest:
+Inspect the cluster, storage and backup conditions:
 
-```
-flux get image policy -A
-flux suspend image update-automation <name> -n flux-system
-```
-
----
-
-## CNPG database issues
-
-```
-# Cluster health
-kubectl cnpg status -n <namespace> <cluster> --verbose
-
-# Postgres logs (structured JSON, filter with jq)
-kubectl -n <namespace> logs <postgres-pod> | jq 'select(.logger=="postgres") | .record.message'
-
-# Fatal errors only
-kubectl -n <namespace> logs <postgres-pod> | jq -r '.record | select(.error_severity == "FATAL")'
-
-# Backup status
-kubectl -n <namespace> get backup -l cnpg.io/cluster=<cluster>
-kubectl -n <namespace> wait --for=condition=LastBackupSucceeded cluster/<cluster>
-
-# WAL archiving status
-kubectl -n <namespace> wait --for=condition=ContinuousArchiving cluster/<cluster>
+```bash
+kubectl cnpg status -n wanderbound wanderbound-db --verbose
+kubectl -n wanderbound get pvc
+kubectl -n wanderbound get backups -l cnpg.io/cluster=wanderbound-db
+kubectl -n wanderbound describe cluster wanderbound-db
 ```
 
-If the PG pod is stuck pending, check if the PVC is bound:
+A pending database pod may be waiting for its PVC. Check the PVC events and
+storage provisioner before changing the database. For database errors, read
+the affected pod's logs:
 
+```bash
+kubectl -n wanderbound logs '<POSTGRES_POD>' \
+  | jq -r 'select(.logger == "postgres") | .record.message'
 ```
-kubectl -n <namespace> get pvc
-```
 
-If the pod's storage is full, increase the storage size in the matching
-CNPG `Cluster` manifest, commit, and push. CNPG handles the resize.
+Inspect `ContinuousArchiving` and `LastBackupSucceeded` conditions separately
+from database readiness. A healthy database can still have failing backups.
+Use [PostgreSQL recovery](disaster-recovery.md#restore-postgresql) if the data
+needs restoration.
 
-If the database is corrupted or unrecoverable, restore from backup
-using the CNPG PITR procedure in `disaster-recovery.md`.
+## etcd reports an alarm
 
----
+Inspect the database and membership:
 
-## etcd maintenance
-
-The talos-backup CronJob snapshots etcd every 6 hours to S3. Use
-these for day-2 etcd health.
-
-```
-# Status (DB size, leader, raft index)
+```bash
 talosctl etcd status
-
-# Membership (should show exactly one member)
 talosctl etcd members
-
-# Check for alarms (NOSPACE = DB exceeded 2 GiB)
 talosctl etcd alarm list
-
-# If NOSPACE: disarm the alarm (talosctl has no defrag command;
-# compaction happens automatically, or snapshot+restore to force it)
-talosctl etcd alarm disarm
 ```
 
-If etcd is unrecoverable, restore from a snapshot using the etcd
-restore procedure in `disaster-recovery.md`.
+The current configuration has one control-plane member. A `NOSPACE` alarm
+means the backend quota has been reached. Compare database size with space
+in use and follow [Talos etcd maintenance](https://docs.siderolabs.com/talos/v1.12/build-and-extend-talos/cluster-operations-and-maintenance/etcd-maintenance)
+to address the cause. `talosctl etcd defrag` is available, but blocks reads
+and writes on the member while it runs. On this cluster that interrupts the
+only etcd member.
 
----
+Disarm an alarm only after resolving its cause, then recheck status. For an
+unrecoverable database, use [etcd recovery](disaster-recovery.md#restore-etcd).
 
-## Cloudflare tunnel not connecting
+## Cloudflare Tunnel authentication fails
 
-The tunnel runs as a Helm-managed pod in the `cloudflared` namespace.
+Check the connector logs and its status in the Cloudflare Tunnel dashboard:
 
-```
+```bash
 kubectl -n cloudflared get pods
 kubectl -n cloudflared logs deploy/cloudflared-cloudflared --tail=100
 ```
 
-If the pod is running but the site is unreachable, check the tunnel
-status in the Cloudflare Zero Trust dashboard under Networks > Tunnels.
+If the token no longer matches the OpenTofu-managed tunnel, regenerate it:
 
-If the tunnel token is stale after a rebuild, `mise run rebuild`
-regenerates and commits it. To refresh the token without a full
-rebuild:
-
-```
+```bash
 mise run tunnel:refresh
 ```
+
+Review and merge the encrypted manifest change, then reconcile Flux.
+The refresh task only changes the working tree; it does not update the running
+connector by itself. See [credential refresh](deploying.md#refresh-generated-credentials).
+
+## OpenTofu version mismatch
+
+Compare `mise exec -- tofu version`, the `opentofu` pin in
+[mise.toml](../mise.toml), and `required_version` in
+[tofu/versions.tf](../tofu/versions.tf). The installed CLI must satisfy the
+configuration constraint. Resolve inconsistent pins before running `doctor`,
+OpenTofu validation or a rebuild; removing the constraint does not establish
+compatibility.
