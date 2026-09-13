@@ -13,7 +13,7 @@ Account and zone IDs are in [tofu/locals.tf](../tofu/locals.tf).
 | Application code, bindings and logs | Wrangler configuration in each application repo |
 | Web Analytics | [web_analytics.tf](../tofu/web_analytics.tf) |
 | Account MFA enforcement and admin memberships | [cloudflare_account.tf](../tofu/cloudflare_account.tf) |
-| Tunnel health and Universal SSL alerts | [cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) |
+| Tunnel health, Universal SSL and Certificate Transparency alerts | [cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) |
 
 After a Tunnel token change, run `mise run tunnel:refresh` and commit the
 resulting Secret. See [deployment commands](deploying.md#refresh-generated-credentials).
@@ -68,6 +68,16 @@ that cannot renew.
 After applying, check **Manage account > Notifications** for both enabled
 policies, the recipient, and the Tunnel filter. To pause an alert, set its
 `enabled` field to `false` and apply.
+
+Certificate Transparency monitoring sends alerts for certificates issued outside
+Cloudflare to the same recovery address. Check the issuer and hostnames against
+the services you use. It uses the default zone provider with `SSL and
+Certificates Write` permission. Verify the recipient under **SSL/TLS > Edge
+Certificates > Certificate Transparency Monitoring**.
+[Certificate Transparency alerts](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/certificate-transparency-monitoring/).
+
+To stop CT alerts, set `enabled = false` and apply. Removing the resource from
+code does not disable the subscription in provider 5.24.0.
 
 ## Managed in the dashboard
 

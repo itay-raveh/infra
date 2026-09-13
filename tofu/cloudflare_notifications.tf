@@ -25,3 +25,14 @@ resource "cloudflare_notification_policy" "universal_ssl" {
     email = [{ id = var.cloudflare_proton_email }]
   }
 }
+
+resource "cloudflare_ct_alerting" "raveh_dev" {
+  zone_id = local.cloudflare_zone_id
+  enabled = true
+  emails  = [var.cloudflare_proton_email]
+}
+
+import {
+  to = cloudflare_ct_alerting.raveh_dev
+  id = local.cloudflare_zone_id
+}
