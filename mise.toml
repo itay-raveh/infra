@@ -30,12 +30,6 @@ talosctl = "1.14.0"
 yq = "4.53.6"
 
 # -- Tofu ---------------------------------------------------------
-# All secrets live in tofu/secrets.sops.yaml and are injected as env
-# vars via scripts/tofu-wrapper.sh
-#
-# When rops gains age-plugin support (gibbz00/rops#17), replace the
-# wrapper with a single line in [env]:
-#   _.file = "tofu/secrets.sops.yaml"
 
 [tasks."tofu:init"]
 description = "tofu init with secrets unwrapped from SOPS"
@@ -156,47 +150,31 @@ run = "kubectl debug -it --image=alpine \"node/$1\" -- sh"
 raw = true
 
 # -- SOPS-encrypted Secrets sourced from tofu ---------------------
-# Each task: pull a token, pipe to scripts/refresh-sops-secret.sh which
-# renders + encrypts the target file in place. Commit yourself.
 
 [tasks."tunnel:refresh"]
 description = "Regenerate cloudflared tunnel-token Secret from tofu output"
 dir = "{{config_root}}"
 run = """
-bash scripts/tofu-wrapper.sh output -raw tunnel_token \
-  | bash scripts/refresh-sops-secret.sh \
-      clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml \
-      cloudflared cloudflared-tunnel-token cf-tunnel-token
+bash scripts/refresh-sops-secret.sh \
+  clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml \
+  cloudflared cloudflared-tunnel-token cf-tunnel-token -- \
+  bash scripts/tofu-wrapper.sh output -raw tunnel_token
 """
 
 [tasks."hcloud-csi:refresh-token"]
-description = "Regenerate hcloud-csi Secret from tofu secrets.sops.yaml"
+description = "Regenerate hcloud-csi Secret from the provisioning token"
 dir = "{{config_root}}"
 run = """
-set -a
-eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
-set +a
-printf '%s' "$TF_VAR_hcloud_token" \
-  | bash scripts/refresh-sops-secret.sh \
-      clusters/shire/infrastructure/controllers/hcloud-csi-token.sops.yaml \
-      kube-system hcloud token
+bash scripts/refresh-sops-secret.sh \
+  clusters/shire/infrastructure/controllers/hcloud-csi-token.sops.yaml \
+  kube-system hcloud token -- \
+  sops decrypt --extract '["TF_VAR_hcloud_token"]' secrets/tofu.sops.yaml
 """
 
 [tasks."tailscale-operator:refresh-oauth"]
 description = "Regenerate tailscale-operator OAuth Secret from tofu output (re-run after -replace on the oauth_client)"
 dir = "{{config_root}}"
-run = """
-target=clusters/shire/infrastructure/controllers/tailscale-operator-oauth.sops.yaml
-client_id=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_id)
-client_secret=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_secret)
-kubectl create secret generic operator-oauth \
-  --namespace=tailscale \
-  --from-literal=client_id="$client_id" \
-  --from-literal=client_secret="$client_secret" \
-  --dry-run=client -o yaml > "$target"
-sops --encrypt --in-place "$target"
-echo "wrote $target - review, commit, and push when ready" >&2
-"""
+run = "bash scripts/refresh-tailscale-secret.sh"
 
 # -- Rebuild ------------------------------------------------------
 

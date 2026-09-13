@@ -1,42 +1,29 @@
-# Set up access and rebuild the cluster
+# Setup
 
-Use the workstation procedure to access the existing environment. A cluster
-rebuild is a separate operation that can replace infrastructure and does not
-restore application data.
+These instructions use the existing YubiKeys and encrypted files in the repo.
+For a new environment, start with the [bootstrap script's outstanding work](../bootstrap/README.md#bootstrapsh).
 
 ## Set up a workstation
 
-You need an existing repository clone, a configured YubiKey, access to the
-Hetzner state bucket, and a GitHub session with repository access. Initial
-account provisioning is described under [external prerequisites](#external-prerequisites).
+### Tools
 
-### Install tools
-
-On Debian or Ubuntu, install the WireGuard tools and dependencies needed by
-the YubiKey tools:
+On Debian or Ubuntu:
 
 ```bash
 sudo apt-get install -y pcscd libpcsclite-dev build-essential swig python3-dev wireguard-tools
 sudo systemctl enable --now pcscd.socket
 ```
 
-With [mise installed](https://mise.jdx.dev/getting-started.html), run from
-the repository root:
+Install and activate [mise](https://mise.jdx.dev/getting-started.html), then:
 
 ```bash
 mise install
 prek install
 ```
 
-Activate mise in your shell so the pinned tools are on `PATH`. Compare
-`tofu version` with `required_version` in
-[tofu/versions.tf](../tofu/versions.tf) before running OpenTofu tasks.
-If the pins disagree, follow [version troubleshooting](troubleshooting.md#opentofu-version-mismatch).
+### Age identity
 
-### Restore the age identity reference
-
-On a new workstation, reconstruct the reference to the existing YubiKey key.
-The bootstrap script uses slot 1. Plug in that YubiKey and run:
+With the existing YubiKey plugged in, recover its slot-1 identity reference:
 
 ```bash
 mkdir -p ~/.config/sops/age
@@ -44,15 +31,13 @@ umask 077
 age-plugin-yubikey --identity --slot 1 >> ~/.config/sops/age/keys.txt
 ```
 
-This writes an identity reference, not the private key stored on the hardware.
-Skip this step if the matching reference is already present. See the
-[plugin's identity recovery instructions](https://github.com/str4d/age-plugin-yubikey#configuration).
+Skip this if the reference is already in `keys.txt`. The private key stays on
+the YubiKey. [Plugin documentation](https://github.com/str4d/age-plugin-yubikey#configuration).
 
-### Restore Git signing
+### Git signing
 
-Download the resident SSH key handle into `~/.ssh`. `ssh-keygen -K` writes to
-the current directory. Replace `<DOWNLOADED_KEY>` below with the downloaded
-private-key handle's filename, and avoid overwriting an existing key:
+Download the resident SSH key into `~/.ssh`. Replace `<DOWNLOADED_KEY>` with
+the handle written by `ssh-keygen -K`:
 
 ```bash
 mkdir -p ~/.ssh
@@ -66,8 +51,6 @@ chmod 644 id_ed25519_sk.pub
 cd -
 ```
 
-Configure signing and HTTPS authentication:
-
 ```bash
 git config --global user.name '<YOUR_NAME>'
 git config --global user.email '<YOUR_EMAIL>'
@@ -78,17 +61,15 @@ gh auth login
 gh auth setup-git
 ```
 
-For rebuilds, the `origin` push URL must match the HTTPS URL in
-[gotk-sync.yaml](../clusters/shire/flux-system/gotk-sync.yaml). The SSH public-key
-path must also match `TF_VAR_ssh_public_key_path` in [mise.toml](../mise.toml).
-If a signing operation fails, repair access to the signing key before retrying.
+`origin` must use the HTTPS URL in
+[gotk-sync.yaml](../clusters/shire/flux-system/gotk-sync.yaml) for rebuilds.
+The SSH public-key path is also set in [mise.toml](../mise.toml).
 
-### Connect to the existing cluster
+## Connect to the existing cluster
 
-The following tasks decrypt credentials from `tofu/secrets.sops.yaml`.
-`wireguard:configure` installs `/etc/wireguard/shire.conf` and activates it.
-`configs:refresh` overwrites `~/.kube/config` and `~/.talos/config`; preserve any
-other contexts stored in those files first.
+`wireguard:configure` installs and activates `/etc/wireguard/shire.conf`.
+`configs:refresh` overwrites `~/.kube/config` and `~/.talos/config`; save any
+existing contexts first.
 
 ```bash
 mise run wireguard:configure
@@ -98,45 +79,34 @@ kubectl get nodes
 talosctl health
 ```
 
-Expect a recent WireGuard handshake, a Kubernetes node with status `Ready`,
-and successful Talos health checks. If access fails, use
-[management connection troubleshooting](troubleshooting.md#management-apis-are-unreachable).
+The WireGuard peer should have a recent handshake and the node should be
+`Ready`. See [connection failures](troubleshooting.md#management-apis-are-unreachable).
 
 ## Rebuild the cluster
 
-Before replacing a server, inspect the plan and confirm which data must be
-[restored from backup](disaster-recovery.md). An etcd snapshot recovery needs
-an unbootstrapped control plane; do not run this rebuild procedure first.
+Requires a clean `main` checkout tracking `origin/main`, the YubiKey, sudo,
+and GitHub admin access with the existing ruleset's push bypass.
 
-The rebuild requires a clean checkout of the branch watched by Flux, tracking
-its `origin` branch. It also requires GitHub admin push access permitted by
-the repository's existing ruleset.
-
-Run the preflight separately to find missing prerequisites:
+For an etcd snapshot restore, start with [recovery](disaster-recovery.md#restore-etcd)
+before running `rebuild`.
 
 ```bash
 mise run doctor
 ```
 
-[doctor.sh](../scripts/doctor.sh) checks tools, Git configuration, repository
-permissions, encrypted files, hardware access and the state backend. It tests
-SSH signing, decrypts secrets, requests sudo authentication and initializes
-the backend. It does not apply infrastructure.
+The preflight tests signing and decryption, requests sudo, and opens the state
+backend.
 
-**The next command applies OpenTofu plans with automatic approval and can
-replace the server. It also rebases the checkout and commits and pushes the
-regenerated Cloudflare Tunnel token.**
+`rebuild` applies OpenTofu with `-auto-approve`, can replace the server, and
+commits and pushes the regenerated Tunnel token:
 
 ```bash
 mise run rebuild
 ```
 
-[rebuild.sh](../scripts/rebuild.sh) runs the preflight, provisions the image
-and stable IP, configures workstation WireGuard, applies the remaining
-infrastructure, writes local client configurations, publishes the Tunnel
-token, and seeds Flux with its decryption key and GitHub App credentials.
-
-Check reconciliation and public routing after it completes:
+It provisions the image and server, configures WireGuard, writes the local
+client configs, and installs Flux with its GitHub App credentials and SOPS key.
+The steps are in [rebuild.sh](../scripts/rebuild.sh).
 
 ```bash
 flux get kustomizations --watch
@@ -145,23 +115,18 @@ curl -sSI https://raveh.dev
 curl -sSI https://unconfigured.raveh.dev
 ```
 
-Flux resources should become ready. The apex should redirect to
-`https://itay.raveh.dev/`; an unconfigured wildcard hostname should return 404.
-Restore and verify application data separately.
+Expect ready Flux resources, an apex redirect to `https://itay.raveh.dev/`,
+and a 404 for the unconfigured hostname.
 
-## External prerequisites
+Application data needs [a separate restore](disaster-recovery.md).
 
-The existing environment depends on these resources and credentials:
+## Account prerequisites
 
-| Dependency | Configuration |
+| Dependency | Reference |
 |---|---|
-| Hetzner Cloud project and API access | [tofu/providers.tf](../tofu/providers.tf), encrypted provider variables |
-| Object Storage state bucket `shire-tfstate` | [tofu/backend.tf](../tofu/backend.tf); the bucket must exist before backend initialization |
-| Cloudflare account, zone and API tokens | Provider aliases in [tofu/providers.tf](../tofu/providers.tf) |
-| Tailscale tailnet and provider OAuth client | [tofu/tailscale.tf](../tofu/tailscale.tf) |
-| Flux GitHub App and repository access | `clusters/shire/flux-system/flux-github-app.sops.yaml`; workflow secrets `FLUX_APP_ID` and `FLUX_APP_PRIVATE_KEY` |
-| Software recovery keys | [bootstrap artifacts](../bootstrap/README.md) |
-
-[bootstrap/bootstrap.sh](../bootstrap/bootstrap.sh) does not currently create
-all of these prerequisites. Read its [limitations](../bootstrap/README.md#initial-provisioning-script)
-before using it for a new environment.
+| Hetzner project and provider credentials | [providers.tf](../tofu/providers.tf), `secrets/tofu.sops.yaml`, `secrets/state.sops.yaml` |
+| Existing `shire-tfstate` Object Storage bucket | [backend.tf](../tofu/backend.tf) |
+| Cloudflare account, zone and API tokens | [Cloudflare](cloudflare.md) |
+| Tailscale tailnet and OAuth client | [tailscale.tf](../tofu/tailscale.tf) |
+| Flux GitHub App | `flux-github-app.sops.yaml` in `clusters/shire/flux-system/`; GitHub Actions secrets `FLUX_APP_ID` and `FLUX_APP_PRIVATE_KEY` |
+| Flux and etcd backup keys | [bootstrap/](../bootstrap/README.md) |

@@ -99,7 +99,10 @@ if ((available[gh])); then
 fi
 
 required_files=(
-    tofu/secrets.sops.yaml
+    secrets/state.sops.yaml
+    secrets/tofu.sops.yaml
+    secrets/wireguard.sops.yaml
+    secrets/workstation.sops.yaml
     bootstrap/cluster-age-key.sops.txt
     clusters/shire/flux-system/flux-github-app.sops.yaml
     clusters/shire/flux-system/gotk-sync.yaml
@@ -146,22 +149,15 @@ if ((available[ykman])); then
     fi
 fi
 
-tofu_dotenv=
 if ((available[sops])); then
     for file in \
-        tofu/secrets.sops.yaml \
+        secrets/tofu.sops.yaml \
+        secrets/wireguard.sops.yaml \
+        secrets/workstation.sops.yaml \
         bootstrap/cluster-age-key.sops.txt \
         clusters/shire/flux-system/flux-github-app.sops.yaml; do
         printf 'check: decrypting %s\n' "$file"
-        if [[ "$file" == "tofu/secrets.sops.yaml" ]]; then
-            tofu_dotenv=$(sops decrypt --output-type dotenv "$file")
-            decrypted=$?
-        else
-            sops decrypt "$file" >/dev/null
-            decrypted=$?
-        fi
-
-        if ((decrypted == 0)); then
+        if sops decrypt "$file" >/dev/null; then
             pass "can decrypt $file"
         else
             fail "cannot decrypt $file"
@@ -177,22 +173,17 @@ if ((available[sudo])); then
     fi
 fi
 
-if ((available[sops] && available[tofu])) && [[ -n "$tofu_dotenv" ]]; then
-    if (
-        set -a
-        eval "$tofu_dotenv"
-        set +a
-        printf 'check: initializing OpenTofu backend\n'
-        tofu -chdir=tofu init -input=false >/dev/null &&
-            printf 'check: reading OpenTofu state\n' &&
-            tofu -chdir=tofu state pull >/dev/null
-    ); then
+if ((available[sops] && available[tofu])); then
+    if bash scripts/sops-exec.sh secrets/state.sops.yaml -- sh -ec '
+        printf "check: initializing OpenTofu backend\n"
+        tofu -chdir=tofu init -input=false >/dev/null
+        printf "check: reading OpenTofu state\n"
+        tofu -chdir=tofu state pull >/dev/null
+    '; then
         pass "OpenTofu state backend is accessible"
     else
         fail "cannot access the OpenTofu state backend"
     fi
-elif ((available[sops] && available[tofu])); then
-    fail "cannot load OpenTofu credentials from tofu/secrets.sops.yaml"
 fi
 
 if ((failures > 0)); then

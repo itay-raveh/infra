@@ -345,6 +345,7 @@ provider "registry.opentofu.org/jianyuan/sentry" {
     "h1:Ye/1Id4IxluL9jAP/v0B0qauo7Sccn75bhEr4ZDxVXY=",
     "h1:igCxn61izk7y36ZrScN0RypscDBDrdgCZDKZ64DdGEY=",
     "zh:04de519f7e36c8a6d3c83e70d3aeec706a34594620df9bb8d598ba6020666f9b",
+    "zh:0dde99e7b343fa01f8eefc378171fb8621bedb20f59157d6cc8e3d46c738105f",
     "zh:11789c053d38b73b7bb250a412ce76ef7e73bb27863586f0d98d5e66434a18e5",
     "zh:2c765ee097f7e84117330970bbff2fb36f28b34feff8a8986fe89892480c5768",
     "zh:2ccc782287d1addf5e70ed63cf32ef7291fd4f83395b16e13f36d6f9ffc3c19b",

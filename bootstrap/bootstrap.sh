@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 cd "$(dirname "$0")/.."
 
 cluster_key=bootstrap/cluster-age-key.sops.txt
-secrets_file=tofu/secrets.sops.yaml
+secrets_dir=secrets
 
-for f in .sops.yaml "$cluster_key" "$secrets_file"; do
+for f in .sops.yaml "$cluster_key" "$secrets_dir"; do
     if [[ -e "$f" ]]; then
         echo "error: $f already exists  - rotate via docs/secrets.md" >&2
         exit 1
@@ -14,16 +15,6 @@ for f in .sops.yaml "$cluster_key" "$secrets_file"; do
 done
 
 step() { printf '\n==> %s\n' "$*" >&2; }
-
-# Write stdin atomically to $1, encrypted via sops with the rules in
-# .sops.yaml. Temp-then-rename so a failure leaves no partial artifact
-# that the preflight guard would trip on next run.
-sops_encrypt_to() {
-    local dest=$1
-    sops --encrypt --input-type binary --filename-override "$dest" /dev/stdin \
-        > "$dest.tmp"
-    mv "$dest.tmp" "$dest"
-}
 
 gh auth status >/dev/null
 
@@ -96,7 +87,7 @@ creation_rules:
       $BACKUP_AGE,
       $CLUSTER_AGE
 
-  - path_regex: tofu/secrets\.sops\.yaml\$
+  - path_regex: secrets/.*\.sops\.yaml\$
     age: *yubis_only
 
   # The cluster software key cannot decrypt itself.
@@ -106,10 +97,12 @@ EOF
 mv .sops.yaml.tmp .sops.yaml
 
 step "encrypting cluster key to $cluster_key"
-printf '%s\n' "$CLUSTER_IDENTITY" | sops_encrypt_to "$cluster_key"
+export CLUSTER_IDENTITY
+bash scripts/encrypt-sops.sh "$cluster_key" binary -- \
+    sh -c 'printf "%s\n" "$CLUSTER_IDENTITY"'
 unset CLUSTER_IDENTITY
 
-step "collecting secrets for $secrets_file"
+step "collecting secrets for $secrets_dir"
 
 # --- state encryption passphrase (generated) ---
 STATE_PASSPHRASE=$(openssl rand -base64 48)
@@ -142,23 +135,26 @@ read -rs -p "    Cloudflare API token: " CF_TOKEN; printf '\n' >&2
 read -rs -p "    Tailscale OAuth client ID: " TS_OAUTH_ID; printf '\n' >&2
 read -rs -p "    Tailscale OAuth client secret: " TS_OAUTH_SECRET; printf '\n' >&2
 
-step "encrypting secrets to $secrets_file"
-
-# Build plaintext YAML, encrypt in one shot, then scrub variables.
-cat > "$secrets_file.tmp" <<EOF
-TF_VAR_encryption_passphrase: $STATE_PASSPHRASE
-AWS_ACCESS_KEY_ID: $S3_AK
-AWS_SECRET_ACCESS_KEY: $S3_SK
-TF_VAR_hcloud_token: $HCLOUD_TOKEN
-TF_VAR_cloudflare_api_token: $CF_TOKEN
-TAILSCALE_OAUTH_CLIENT_ID: $TS_OAUTH_ID
-TAILSCALE_OAUTH_CLIENT_SECRET: $TS_OAUTH_SECRET
-TF_VAR_wireguard_server_private_key: $WIREGUARD_SERVER_PRIVATE_KEY
-TF_VAR_wireguard_workstation_public_key: $WIREGUARD_WORKSTATION_PUBLIC_KEY
-WIREGUARD_WORKSTATION_PRIVATE_KEY: $WIREGUARD_WORKSTATION_PRIVATE_KEY
-EOF
-sops --encrypt --in-place "$secrets_file.tmp"
-mv "$secrets_file.tmp" "$secrets_file"
+step "encrypting secrets to $secrets_dir"
+mkdir -p "$secrets_dir"
+export STATE_PASSPHRASE S3_AK S3_SK HCLOUD_TOKEN CF_TOKEN TS_OAUTH_ID TS_OAUTH_SECRET
+export WIREGUARD_SERVER_PRIVATE_KEY WIREGUARD_WORKSTATION_PUBLIC_KEY WIREGUARD_WORKSTATION_PRIVATE_KEY
+bash scripts/encrypt-sops.sh "$secrets_dir/state.sops.yaml" json -- jq -n '{
+    TF_VAR_encryption_passphrase: env.STATE_PASSPHRASE,
+    AWS_ACCESS_KEY_ID: env.S3_AK, AWS_SECRET_ACCESS_KEY: env.S3_SK
+}'
+bash scripts/encrypt-sops.sh "$secrets_dir/tofu.sops.yaml" json -- jq -n '{
+    TF_VAR_hcloud_token: env.HCLOUD_TOKEN, TF_VAR_cloudflare_api_token: env.CF_TOKEN,
+    TF_VAR_s3_access_key_id: env.S3_AK, TF_VAR_s3_secret_access_key: env.S3_SK,
+    TAILSCALE_OAUTH_CLIENT_ID: env.TS_OAUTH_ID, TAILSCALE_OAUTH_CLIENT_SECRET: env.TS_OAUTH_SECRET
+}'
+bash scripts/encrypt-sops.sh "$secrets_dir/wireguard.sops.yaml" json -- jq -n '{
+    TF_VAR_wireguard_server_private_key: env.WIREGUARD_SERVER_PRIVATE_KEY,
+    TF_VAR_wireguard_workstation_public_key: env.WIREGUARD_WORKSTATION_PUBLIC_KEY
+}'
+bash scripts/encrypt-sops.sh "$secrets_dir/workstation.sops.yaml" json -- jq -n '{
+    WIREGUARD_WORKSTATION_PRIVATE_KEY: env.WIREGUARD_WORKSTATION_PRIVATE_KEY
+}'
 
 unset STATE_PASSPHRASE HCLOUD_TOKEN S3_AK S3_SK CF_TOKEN TS_OAUTH_ID TS_OAUTH_SECRET
 unset WIREGUARD_SERVER_PRIVATE_KEY WIREGUARD_WORKSTATION_PRIVATE_KEY WIREGUARD_WORKSTATION_PUBLIC_KEY

@@ -11,6 +11,11 @@ provider "cloudflare" {
   api_token = var.cloudflare_web_analytics_api_token
 }
 
+provider "cloudflare" {
+  alias     = "account"
+  api_token = var.cloudflare_web_analytics_api_token
+}
+
 provider "imager" {
   token = var.hcloud_token
 }
@@ -39,7 +44,7 @@ provider "aws" {
   }
 }
 
-# Auth via TAILSCALE_OAUTH_CLIENT_ID/SECRET env vars (tofu/secrets.sops.yaml, unwrapped by tofu-wrapper.sh).
+# OAuth credentials come from secrets/tofu.sops.yaml via tofu-wrapper.sh.
 provider "tailscale" {
   tailnet = "-"
   scopes = [
@@ -52,5 +57,5 @@ provider "tailscale" {
   ]
 }
 
-# SENTRY_AUTH_TOKEN is injected from tofu/secrets.sops.yaml by tofu-wrapper.sh.
+# SENTRY_AUTH_TOKEN comes from secrets/tofu.sops.yaml via tofu-wrapper.sh.
 provider "sentry" {}
