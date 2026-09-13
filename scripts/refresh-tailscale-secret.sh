@@ -19,5 +19,5 @@ if [[ "${1:-}" == --render ]]; then
 fi
 
 target=clusters/shire/infrastructure/controllers/tailscale-operator-oauth.sops.yaml
-bash scripts/encrypt-sops.sh "$target" json -- bash "$0" --render
+bash scripts/encrypt-sops.sh "$target" json -- bash scripts/refresh-tailscale-secret.sh --render
 printf 'wrote %s\n' "$target" >&2

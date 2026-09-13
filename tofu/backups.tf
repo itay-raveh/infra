@@ -17,8 +17,8 @@ resource "minio_ilm_policy" "backups" {
     id     = "cnpg-expire"
     filter = "cnpg/"
 
-    expiration = "30d"
-
+    # Barman retains the base backup preceding the 30-day recovery window.
+    # https://cloudnative-pg.io/plugin-barman-cloud/docs/retention/
     noncurrent_expiration {
       days = "60d"
     }

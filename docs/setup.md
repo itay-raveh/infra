@@ -1,7 +1,7 @@
 # Setup
 
-Set up a workstation with the YubiKeys and encrypted files already used by this
-cluster. To create the initial keys and credentials, use [bootstrap](../bootstrap/README.md).
+Use the existing YubiKeys and encrypted files. For initial key creation,
+see [bootstrap](../bootstrap/README.md).
 
 ## Set up a workstation
 
@@ -21,18 +21,20 @@ mise install
 prek install
 ```
 
+For PIV connection failures, see [YubiKey troubleshooting](troubleshooting.md#the-workstation-cannot-access-the-yubikey).
+
 ### Age identity
 
 With the existing YubiKey plugged in, recover its slot-1 identity reference:
 
 ```bash
-mkdir -p ~/.config/sops/age
 umask 077
+mkdir -p ~/.config/sops/age
 age-plugin-yubikey --identity --slot 1 >> ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
 ```
 
-Skip this if the reference is already in `keys.txt`. The private key stays on
-the YubiKey. [Plugin documentation](https://github.com/str4d/age-plugin-yubikey#configuration).
+Skip existing references. Private keys stay on the YubiKey. [Plugin documentation](https://github.com/str4d/age-plugin-yubikey#configuration).
 
 ### Git signing
 
@@ -61,17 +63,18 @@ gh auth login
 gh auth setup-git
 ```
 
-`origin` must use the HTTPS URL in
-[gotk-sync.yaml](../clusters/shire/flux-system/gotk-sync.yaml) for rebuilds.
-The SSH public-key path is also set in [mise.toml](../mise.toml).
+Rebuilds require `origin` to match [gotk-sync.yaml](../clusters/shire/flux-system/gotk-sync.yaml),
+using SSH or HTTPS. `gh auth setup-git` configures HTTPS credentials.
+[mise.toml](../mise.toml) also sets the SSH public-key path.
 
 ## Connect to the existing cluster
 
-`wireguard:configure` installs and activates `/etc/wireguard/shire.conf`.
-`configs:refresh` overwrites `~/.kube/config` and `~/.talos/config`; save any
-existing contexts first.
+`wireguard:configure` activates `/etc/wireguard/shire.conf`.
+`configs:refresh` overwrites `~/.kube/config` and `~/.talos/config` with mode
+`600` after validating both outputs. Save existing contexts first.
 
 ```bash
+mise run tofu:init
 mise run wireguard:configure
 mise run configs:refresh
 sudo wg show shire
@@ -90,23 +93,17 @@ and GitHub admin access with the existing ruleset's push bypass.
 For an etcd snapshot restore, start with [recovery](disaster-recovery.md#restore-etcd)
 before running `rebuild`.
 
-```bash
-mise run doctor
-```
-
-The preflight tests signing and decryption, requests sudo, and opens the state
-backend.
-
-`rebuild` applies OpenTofu with `-auto-approve`, can replace the server, and
-commits and pushes the regenerated Tunnel token:
+`mise run doctor` tests signing, decryption, sudo and state access. `rebuild`
+runs that preflight, applies OpenTofu with `-auto-approve`, and commits and
+pushes the regenerated Tunnel token. It can replace the server:
 
 ```bash
 mise run rebuild
 ```
 
-It provisions the image and server, configures WireGuard, writes the local
-client configs, and installs Flux with its GitHub App credentials and SOPS key.
-The steps are in [rebuild.sh](../scripts/rebuild.sh).
+[rebuild.sh](../scripts/rebuild.sh) provisions the image and server, configures
+WireGuard and local clients, and installs Flux with its GitHub App credentials
+and SOPS key.
 
 ```bash
 flux get kustomizations --watch

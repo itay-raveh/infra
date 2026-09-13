@@ -13,7 +13,7 @@ fail() {
     failures=$((failures + 1))
 }
 
-for command in git gh mise sops ykman tofu kubectl flux yq wg wg-quick sudo install systemctl ssh-keygen; do
+for command in git gh mise sops ykman tofu kubectl talosctl flux jq yq wg wg-quick sudo install systemctl ssh-keygen; do
     if command -v "$command" >/dev/null 2>&1; then
         available[$command]=1
         pass "$command is available"
@@ -60,10 +60,13 @@ if ((available[git])); then
     fi
 
     origin_push_url=$(git remote get-url --push origin 2>/dev/null || true)
-    if [[ -n "$flux_repository" && "$origin_push_url" == "$flux_repository" ]]; then
-        pass "origin push uses the Flux HTTPS repository"
-    elif [[ -n "$flux_repository" ]]; then
-        fail "origin push URL does not use the Flux HTTPS repository"
+    if ((available[gh])) && [[ -n "$flux_repository" ]]; then
+        origin_repository=$(gh repo view "$origin_push_url" --json url --jq .url 2>/dev/null || true)
+        if [[ -n "$origin_push_url" && "$origin_repository" == "${flux_repository%.git}" ]]; then
+            pass "origin push targets the Flux repository"
+        else
+            fail "origin push targets a different repository from Flux"
+        fi
     fi
 
 fi

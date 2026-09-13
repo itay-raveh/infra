@@ -22,7 +22,7 @@ output "talosconfig" {
 }
 
 output "talos_installer_image" {
-  value = "factory.talos.dev/installer/${talos_image_factory_schematic.shire.id}:${local.talos_version}"
+  value = "factory.talos.dev/hcloud-installer/${talos_image_factory_schematic.shire.id}:${local.talos_version}"
 }
 
 output "tailscale_operator_oauth_client_id" {

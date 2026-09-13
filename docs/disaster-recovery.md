@@ -3,14 +3,28 @@
 | Backup | Location in `shire-backups` | Schedule and retention |
 |---|---|---|
 | [etcd](../clusters/shire/infrastructure/controllers/talos-backup.yaml) | `etcd/` | Every six hours; age-encrypted Zstandard snapshots |
-| [PostgreSQL](../clusters/shire/apps/wanderbound/objectstore.yaml) | `cnpg/wanderbound/` | Daily base backups, continuous WAL; 30-day retention |
+| [PostgreSQL](../clusters/shire/apps/wanderbound/objectstore.yaml) | `cnpg/wanderbound/` | Daily base backups, continuous WAL; 30-day recovery window |
 | [Wanderbound files](../clusters/shire/apps/wanderbound/data-backup.yaml) | `app-data/wanderbound` | Daily restic snapshots; seven daily, four weekly, three monthly |
 
-Bucket expiration rules are in [backups.tf](../tofu/backups.tf). The separate
-[uploads bucket](../tofu/wanderbound_uploads.tf) is outside the PVC backup.
+[Bucket rules](../tofu/backups.tf) expire noncurrent CNPG objects after 60 days
+and etcd snapshots after seven. Barman retains the pre-window base backup and
+required WAL. The [uploads bucket](../tofu/wanderbound_uploads.tf) is outside
+the PVC backup.
 
 Cluster recovery also needs the encrypted repo files, a YubiKey, and OpenTofu
 state at `shire-tfstate/shire/terraform.tfstate`, which holds the Talos credentials.
+
+## Recovery dependencies
+
+| Dependency lost | Recovery |
+|---|---|
+| OpenTofu state bucket | Restore an independent state copy or import surviving cloud resources. Importing does not reconstruct generated Talos credentials. The backend bucket is an [account prerequisite](setup.md#account-prerequisites), managed outside this configuration. |
+| Backup bucket | Recover from another backup copy or the running data. Bucket versioning cannot recover a deleted bucket. |
+| GitHub repository | Recover from a local clone or offline mirror, including encrypted files and history. Re-create repository access and settings before resuming Flux. |
+| One or both YubiKeys | See [key-loss limits](secrets.md#protection-and-limits) and [key replacement](secrets.md#replace-a-hardware-key). |
+
+Keep independent state, backup and Git copies and an offsite YubiKey. This repo
+does not schedule external copies; bucket versioning stays within Hetzner.
 
 ## Restore etcd
 
@@ -25,6 +39,7 @@ Replace `<SNAPSHOT_OBJECT>` with its path under `etcd/`:
 
 ```bash
 set -o pipefail
+umask 077
 snapshot_dir=$(mktemp -d)
 mc cp 'hetzner/shire-backups/etcd/<SNAPSHOT_OBJECT>' "$snapshot_dir/snapshot.age"
 age --decrypt \
@@ -46,13 +61,15 @@ kubectl get nodes
 flux get kustomizations -A
 ```
 
-The backup restores Kubernetes state. PostgreSQL and volume contents have
-separate backups, described below.
+This restores Kubernetes state. Restore databases and files separately below,
+then remove the plaintext snapshot.
 
 ## Restore PostgreSQL
 
 Requires the CNPG operator, Barman plugin, `wanderbound-backup` ObjectStore and
-`cnpg-s3-creds` Secret. Create a new cluster from the existing archive:
+`cnpg-s3-creds` Secret. Create a new cluster from the existing archive. Replace
+`<POSTGRES_IMAGE_MATCHING_BACKUP>` with an image using the backup's PostgreSQL
+major version:
 
 ```yaml
 apiVersion: postgresql.cnpg.io/v1
@@ -61,6 +78,7 @@ metadata:
   name: wanderbound-db-restore
   namespace: wanderbound
 spec:
+  imageName: <POSTGRES_IMAGE_MATCHING_BACKUP>
   instances: 1
   storage:
     size: 5Gi
@@ -94,8 +112,8 @@ Use a distinct backup server name before enabling WAL archiving on the restored 
 ## Recover files from restic
 
 Install [restic](https://restic.readthedocs.io/en/stable/020_installation.html)
-at the version in [data-backup.yaml](../clusters/shire/apps/wanderbound/data-backup.yaml).
-This restores a selected snapshot to a new directory on the workstation:
+at the [backup job's version](../clusters/shire/apps/wanderbound/data-backup.yaml).
+Restore a snapshot into a new workstation directory:
 
 ```bash
 (
@@ -124,6 +142,21 @@ This restores a selected snapshot to a new directory on the workstation:
 Files appear under `<restore_dir>/data/`. Stop application writes and the
 backup CronJob before copying them to the PVC, preserving file ownership.
 The repo has no automated PVC cutover task.
+
+### Initialize an empty restic repository
+
+For a new, empty repository, run `restic init` once using the backup job's
+credentials. Do not run this to repair authentication or network failures:
+
+```bash
+set -o pipefail
+kubectl -n wanderbound create job restic-init \
+  --from=cronjob/wanderbound-data-backup --dry-run=client -o yaml |
+  yq '.spec.template.spec.containers[0].command = ["restic", "init"]' |
+  kubectl apply -f -
+kubectl -n wanderbound wait --for=condition=complete job/restic-init --timeout=5m &&
+  kubectl -n wanderbound delete job restic-init
+```
 
 ## Roll back an application release
 

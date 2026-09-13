@@ -1,5 +1,21 @@
 # Troubleshooting
 
+## The workstation cannot access the YubiKey
+
+On Linux, the [age plugin requires `pcscd`](https://github.com/str4d/age-plugin-yubikey#linux-bsd-etc).
+Check the service and PIV access:
+
+```bash
+systemctl status pcscd.socket pcscd.service
+journalctl -u pcscd.service -n 50 --no-pager
+ykman piv info
+```
+
+`LIBUSB_ERROR_BUSY` or `RFInitializeReader() Open Port` can indicate competing
+`pcscd` processes, including one bundled with older Yubico Authenticator Snaps
+([issue #766](https://github.com/Yubico/yubioath-flutter/issues/766)).
+Stop the competing service, reconnect the key and retry `ykman piv info`.
+
 ## A site is unavailable
 
 For Worker-hosted sites, check the application's deployment and
@@ -8,7 +24,7 @@ For Worker-hosted sites, check the application's deployment and
 ```bash
 kubectl get nodes
 flux get kustomizations -A
-kubectl get pods -A
+mise run unhealthy
 kubectl -n cloudflared logs deploy/cloudflared-cloudflared --tail=100
 kubectl -n traefik logs deploy/traefik --tail=100
 ```
@@ -17,8 +33,8 @@ kubectl -n traefik logs deploy/traefik --tail=100
 - Tunnel authentication error: [refresh the token](#cloudflare-tunnel-authentication-fails).
 - Application restarts: [previous container logs](#a-container-restarts-or-cannot-pull-its-image).
 
-`mise run unhealthy` filters by pod phase and can miss `CrashLoopBackOff`.
-Use `kubectl get pods -A` to include those pods.
+`unhealthy` includes running pods whose readiness condition is false or missing,
+including `CrashLoopBackOff`.
 
 ## Management APIs are unreachable
 
@@ -40,9 +56,7 @@ and `talosctl get cmdline` with [main.tf](../tofu/main.tf). The module expects
 
 ```bash
 mise run flux:unhealthy
-flux get sources git -A
-flux get sources helm -A
-flux get sources oci -A
+flux get sources all -A
 flux get helmreleases -A
 ```
 
@@ -53,6 +67,19 @@ flux reconcile helmrelease wanderbound -n wanderbound --with-source --reset
 ```
 
 For other releases, use the namespace from `flux get helmreleases -A`.
+
+To pause reconciliation while investigating a resource:
+
+```bash
+flux suspend kustomization infrastructure -n flux-system
+```
+
+After correcting the manifest, resume and reconcile it:
+
+```bash
+flux resume kustomization infrastructure -n flux-system
+mise run reconcile
+```
 
 ### SOPS decryption fails
 
@@ -78,9 +105,19 @@ kubectl -n '<NAMESPACE>' describe pod '<POD>'
 kubectl -n '<NAMESPACE>' logs '<POD>' --previous
 ```
 
-`describe` shows exit reasons and image-pull errors in the pod events.
-`--previous` reads the last terminated container's logs.
-For a bad chart update, use [release rollback](disaster-recovery.md#roll-back-an-application-release).
+`describe` shows exit reasons and image-pull errors; `--previous` reads the last
+terminated container's logs. For pull failures, check image names, tags and
+registry credentials. After fixing the cause, retry:
+
+```bash
+kubectl -n '<NAMESPACE>' rollout restart deploy/'<DEPLOYMENT>'
+```
+
+For a bad chart, inspect its policy before [rolling back](disaster-recovery.md#roll-back-an-application-release):
+
+```bash
+flux get image policy -A
+```
 
 ## PostgreSQL is unhealthy
 
@@ -100,6 +137,18 @@ kubectl -n wanderbound logs '<POSTGRES_POD>' \
 
 Backup failures appear in `ContinuousArchiving` and `LastBackupSucceeded`,
 even when the database is ready. See [database recovery](disaster-recovery.md#restore-postgresql).
+
+To wait for those conditions:
+
+```bash
+kubectl -n wanderbound wait --for=condition=LastBackupSucceeded cluster/wanderbound-db --timeout=5m
+kubectl -n wanderbound wait --for=condition=ContinuousArchiving cluster/wanderbound-db --timeout=5m
+```
+
+For a full volume, check its storage class before increasing `spec.storage.size`
+in [wanderbound-db.yaml](../clusters/shire/apps/wanderbound/wanderbound-db.yaml).
+The default local-path storage uses the node's disk; it does not provision a
+larger Hetzner Volume when the PVC size changes.
 
 ## etcd reports an alarm
 
@@ -123,11 +172,12 @@ If the connector has a stale token after a rebuild:
 mise run tunnel:refresh
 ```
 
-The refresh reads the token from OpenTofu state and writes an encrypted
-manifest. Commit and merge it, then run `mise run reconcile`.
+Commit and merge the encrypted manifest, then run `mise run reconcile`.
 
 ## OpenTofu version mismatch
 
 Compare `mise exec -- tofu version` with the pins in
-[mise.toml](../mise.toml) and [versions.tf](../tofu/versions.tf).
-Resolve differing pins before retrying the OpenTofu command.
+[mise.toml](../mise.toml) and [versions.tofu](../tofu/versions.tofu).
+Run `mise install opentofu` to install the pinned version. If the shell still
+selects another executable, use `mise exec -- tofu version` and check mise's
+shell activation.

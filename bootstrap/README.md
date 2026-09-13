@@ -1,9 +1,7 @@
 # Bootstrap
 
-Use [bootstrap.sh](bootstrap.sh) when creating the initial keys and credentials.
-To use this infrastructure from another workstation, follow
-[workstation setup](../docs/setup.md#set-up-a-workstation). Keep the committed
-keys and credentials for cluster rebuilds.
+Run [bootstrap.sh](bootstrap.sh) once to create keys and credentials. Keep them
+for rebuilds. For another workstation, use [setup](../docs/setup.md#set-up-a-workstation).
 
 ## Prerequisites
 
@@ -21,6 +19,8 @@ keys and credentials for cluster rebuilds.
 Bootstrap refuses to overwrite `.sops.yaml`, `secrets/`, either encrypted backup
 key, the Flux App secret, or its SSH key files. Use [key rotation](../docs/secrets.md)
 to replace credentials in an initialized repository.
+
+See [trust roots](../docs/secrets.md#trust-roots) for key roles and touch policies.
 
 ## Run
 
@@ -67,7 +67,6 @@ sops decrypt bootstrap/etcd-backup-age-key.sops.txt | age-keygen -y
 gh secret list
 ```
 
-The key commands print public recipients. Match them against `.sops.yaml` and
-`talos-backup.yaml`, respectively. Confirm both `FLUX_APP_*` secret names in
-GitHub, review the diff, and commit the generated files before
-[rebuilding the cluster](../docs/setup.md#rebuild-the-cluster).
+Match the printed recipients to `.sops.yaml` and `talos-backup.yaml`, respectively.
+Confirm both `FLUX_APP_*` names in GitHub. Review and commit the files before
+[rebuilding](../docs/setup.md#rebuild-the-cluster); store the backup YubiKey offsite.

@@ -193,3 +193,11 @@ EOF
     refute_file_contains "$BOOTSTRAP_CALLS" 'gh ssh-key add'
     [ ! -e .sops.yaml ]
 }
+
+@test "bootstrap stops before generating hardware keys if the readiness prompt reaches EOF" {
+    head -n -2 "$BATS_TEST_TMPDIR/input" > "$BATS_TEST_TMPDIR/no-confirmation"
+    run bash bootstrap/bootstrap.sh < "$BATS_TEST_TMPDIR/no-confirmation"
+    [ "$status" -ne 0 ]
+    refute_file_contains "$BOOTSTRAP_CALLS" 'age-plugin-yubikey '
+    [ ! -e .sops.yaml ]
+}

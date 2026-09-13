@@ -73,7 +73,7 @@ gen_yubikey() {
     [[ "$label" == backup ]] && ssh_file="${ssh_file}_backup"
 
     step "plug in the $label YubiKey (unplug any other)"
-    read -r -p "    press Enter when ready... " _ >&2
+    read -r -p "    press Enter when ready... " _ >&2 || return
 
     if [[ -e "$ssh_file" ]]; then
         echo "error: $ssh_file already exists; refusing to overwrite" >&2
@@ -83,7 +83,7 @@ gen_yubikey() {
     local identity age_pub
     identity=$(age-plugin-yubikey --generate --slot 1 \
         --touch-policy always --pin-policy never) || return
-    printf '%s\n' "$identity" >> "$identity_file"
+    printf '%s\n' "$identity" >> "$identity_file" || return
     age_pub=$(age-plugin-yubikey --list --slot 1 | awk '/^age1/ {print; exit}') || return
     if [[ -z "$age_pub" ]]; then
         echo "error: could not parse age pubkey from age-plugin-yubikey" >&2

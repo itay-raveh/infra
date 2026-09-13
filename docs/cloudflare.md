@@ -1,36 +1,31 @@
 # Cloudflare
 
-Account and zone IDs are in [tofu/locals.tf](../tofu/locals.tf).
+Account and zone IDs: [tofu/locals.tf](../tofu/locals.tf).
 
 ## Managed in code
 
 | Resource | Configuration |
 |---|---|
-| Tunnel, ingress, apex/wildcard DNS and redirects | [cloudflare.tf](../tofu/cloudflare.tf) |
-| DNSSEC and minimum TLS version | [cloudflare.tf](../tofu/cloudflare.tf) |
+| Tunnel, ingress, apex/wildcard DNS, redirects, DNSSEC and minimum TLS | [cloudflare.tf](../tofu/cloudflare.tf) |
 | Root Worker | [root.tf](../tofu/root.tf) |
-| Application Worker custom domains | [quizmon.tf](../tofu/quizmon.tf), [itay.tf](../tofu/itay.tf) |
-| Application code, bindings and logs | Wrangler configuration in each application repo |
+| Application Worker domains | [quizmon.tf](../tofu/quizmon.tf), [itay.tf](../tofu/itay.tf) |
+| Application code, bindings and logs | Each application's Wrangler config |
 | Web Analytics | [web_analytics.tf](../tofu/web_analytics.tf) |
-| Account MFA enforcement and admin memberships | [cloudflare_account.tf](../tofu/cloudflare_account.tf) |
-| Tunnel health, Universal SSL and Certificate Transparency alerts | [cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) |
+| MFA enforcement and memberships | [cloudflare_account.tf](../tofu/cloudflare_account.tf) |
+| Tunnel, Universal SSL and Certificate Transparency alerts | [cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) |
 
-After a Tunnel token change, run `mise run tunnel:refresh` and commit the
-resulting Secret. See [deployment commands](deploying.md#refresh-generated-credentials).
+After changing a Tunnel token, [refresh and commit its Secret](deploying.md#refresh-generated-credentials).
+The default provider needs zone DNS, Zone Settings, SSL and Certificates,
+Single Redirect, and Workers Routes write access, plus account Workers Scripts
+and Zero Trust access. Administration and Web Analytics use a separate account
+[token in SOPS](secrets.md#token-inventory).
 
 ## DNSSEC and TLS
 
-OpenTofu configures DNSSEC and a minimum TLS version of 1.2. Import blocks adopt
-the existing zone settings. The Cloudflare token needs `DNS Write` and
-`Zone Settings Write` for this zone.
-
-Cloudflare Registrar publishes the DNSSEC DS record at the registry. Publication
-can take one to two days. After applying, check the DNSSEC status and verify the
-DS record and DNS validation before treating activation as complete.
-[DNSSEC setup and rollback](https://developers.cloudflare.com/dns/dnssec/).
-
-For verification, replace `<DOMAIN>` with the zone name and `<HOSTNAME>` with a
-proxied application hostname:
+OpenTofu adopts existing settings through imports and configures DNSSEC and TLS
+1.2 minimum. DNSSEC requires `DNS Write`; TLS requires `Zone Settings Write`.
+Cloudflare Registrar publishes the parent DS record, which can take one to two
+days. Verify publication and validation after applying:
 
 ```bash
 dig @1.1.1.1 '<DOMAIN>' DS +dnssec
@@ -38,46 +33,33 @@ dig @1.1.1.1 '<HOSTNAME>' A +dnssec
 curl --tlsv1.2 --tls-max 1.2 --head 'https://<HOSTNAME>'
 ```
 
-The DNS responses should contain a DS record and the `ad` flag, respectively.
-TLS 1.2 should connect; clients restricted to TLS 1.0 or 1.1 should fail the
-handshake. Check that the test client itself supports those older versions.
-[TLS verification](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/minimum-tls/#test-supported-tls-versions).
+Use the zone's domain and a proxied hostname. Expect a DS record, the `ad` flag
+on the A response, and a successful TLS 1.2 connection. TLS 1.0/1.1 handshakes
+should fail; first check that your test client supports them.
+[TLS testing](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/minimum-tls/#test-supported-tls-versions).
 
-To roll back TLS, restore the previous `min_tls_version` value and apply.
-For DNSSEC rollback, disable it at Cloudflare Registrar and wait for the parent
-DS TTL to expire before removing zone signing. Do not delete the OpenTofu
-resource as the first rollback step.
+Roll back TLS by restoring `min_tls_version` and applying. For [DNSSEC rollback](https://developers.cloudflare.com/dns/dnssec/),
+disable it at Registrar and wait for the parent DS TTL before removing zone
+signing. Do not delete the OpenTofu resource first.
 
 ## Notifications
 
-[cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) sends Tunnel
-health changes and Universal SSL certificate events to the native Proton
-recovery address in `TF_VAR_cloudflare_proton_email`. It uses the `account`
-provider. Its token needs `Notifications Write` or `Account Settings Write`.
+Alerts use `TF_VAR_cloudflare_proton_email`, the native Proton recovery address.
 
-The Tunnel alert covers `shire`. It reports connector health, so a healthy
-tunnel does not prove that an application is reachable. Check the application
-URL and connector logs when investigating an outage.
-[Tunnel monitoring](https://developers.cloudflare.com/tunnel/observability/).
+| Alert | Permission | Investigate |
+|---|---|---|
+| [Tunnel health](https://developers.cloudflare.com/tunnel/observability/) | Account `Notifications Write` or `Account Settings Write` | `shire` connector health; also check the application URL and connector logs |
+| [Universal SSL](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/alerts/) | Same account permission | Validation and renewal failures; routine issuance and renewals also generate alerts |
+| [Certificate Transparency](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/certificate-transparency-monitoring/) | Zone `SSL and Certificates Write` | Issuers and hostnames for certificates issued outside Cloudflare |
 
-The SSL alert covers the account's Universal SSL certificates, including routine
-issuance and renewal events. Investigate validation failures and certificates
-that cannot renew.
-[Certificate alerts](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/alerts/).
+Tunnel health does not establish application availability. The first two alerts
+use the `account` provider; CT uses the default zone provider.
 
-After applying, check **Manage account > Notifications** for both enabled
-policies, the recipient, and the Tunnel filter. To pause an alert, set its
-`enabled` field to `false` and apply.
-
-Certificate Transparency monitoring sends alerts for certificates issued outside
-Cloudflare to the same recovery address. Check the issuer and hostnames against
-the services you use. It uses the default zone provider with `SSL and
-Certificates Write` permission. Verify the recipient under **SSL/TLS > Edge
-Certificates > Certificate Transparency Monitoring**.
-[Certificate Transparency alerts](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/certificate-transparency-monitoring/).
-
-To stop CT alerts, set `enabled = false` and apply. Removing the resource from
-code does not disable the subscription in provider 5.24.0.
+After applying, verify enabled policies, recipients and the Tunnel filter under
+**Manage account > Notifications**. CT's recipient is under **SSL/TLS > Edge
+Certificates > Certificate Transparency Monitoring**. Pause any alert with
+`enabled = false` and apply. Deleting CT's resource does not unsubscribe it in
+provider 5.24.0.
 
 ## Managed in the dashboard
 
@@ -85,52 +67,41 @@ code does not disable the subscription in provider 5.24.0.
 |---|---|
 | Personal MFA and recovery codes | My Profile > Authentication |
 | Other TLS settings | Zone > SSL/TLS > Edge Certificates |
-| Budget alerts | Manage account > Notifications |
+| Budget alerts | Billing > Billable Usage to create; Notifications to edit |
 | Traffic overview | Analytics > Dashboards > Traffic overview |
 
-Provider 5.24.0 lacks the budget alert's dollar-spend fields and a
-custom-dashboard resource. Recheck the [provider schema](https://github.com/cloudflare/terraform-provider-cloudflare/tree/v5.24.0/docs/resources)
-after a version change.
+Provider 5.24.0 lacks dollar-spend fields for budget alerts and custom-dashboard
+resources. Recheck its [schema](https://github.com/cloudflare/terraform-provider-cloudflare/tree/v5.24.0/docs/resources)
+after upgrades.
 
 ### Budget alerts
 
-Create alerts under **Manage account > Billing > Billable Usage**; edit existing
-ones under **Manage account > Notifications**. Check the threshold in the edit
-form, not the alert name.
-
-Alerts cover account-wide usage-based spending, even if named “Quizmon.” They
-send notifications and do not stop spending. Keep the previous threshold and
-recipient list when editing a policy so the change can be reversed.
-[Budget alert documentation](https://developers.cloudflare.com/billing/manage/budget-alerts/).
+[Budget alerts](https://developers.cloudflare.com/billing/manage/budget-alerts/)
+cover account-wide usage-based spending, even when named “Quizmon.” They notify;
+they do not stop spending. Check thresholds in the edit form. Retain the previous
+threshold and recipients to reverse a change.
 
 ### Account access
 
-Use `cloudflare@raveh.dev` with the Administrator role for daily work. The Gmail
-and native Proton logins have Super Administrator access for membership changes,
-billing and recovery.
-Login addresses come from `TF_VAR_cloudflare_primary_email`,
-`TF_VAR_cloudflare_gmail_email` and `TF_VAR_cloudflare_proton_email` in
-`secrets/tofu.sops.yaml`.
+Use `cloudflare@raveh.dev` (Administrator) daily. Gmail and native Proton logins
+are Super Administrators for membership, billing and recovery. Their addresses
+are `TF_VAR_cloudflare_primary_email`, `TF_VAR_cloudflare_gmail_email` and
+`TF_VAR_cloudflare_proton_email` in `secrets/tofu.sops.yaml`.
 
-Sign in to each profile separately, enroll MFA under **My Profile >
-Authentication**, and save its recovery codes outside this repo. Test a fresh
-login before closing the working session. OpenTofu requires all three
-memberships to be accepted with MFA enabled before enforcing MFA for the account.
-[Cloudflare enrollment instructions](https://developers.cloudflare.com/fundamentals/user-profiles/2fa/).
+[Enroll MFA](https://developers.cloudflare.com/fundamentals/user-profiles/2fa/)
+separately in each profile under **My Profile > Authentication**. Save recovery
+codes outside this repo and test fresh logins before closing working sessions.
+OpenTofu requires all three accepted memberships with MFA before enforcing
+account MFA. `prevent_destroy` protects the account and memberships and blocks
+a full `tofu destroy`.
 
-The account and memberships use `prevent_destroy`. A full `tofu destroy` stops
-instead of removing them.
-
-If domain mail fails, sign in with Gmail or the native Proton address. If Proton
-is unavailable, use Gmail. In a private browser window, verify that the recovery
-login opens the account's **Members** and **Billing** pages.
-
+If domain mail fails, use Gmail or native Proton; if Proton fails, use Gmail.
+Test recovery in a private window by opening **Members** and **Billing**.
 Proton receives domain mail, including catch-all addresses. Manage sending
-addresses under Proton's **Identity and addresses**.
-[Proton addresses](https://proton.me/support/addresses-and-aliases).
+addresses under [Identity and addresses](https://proton.me/support/addresses-and-aliases).
 
 ### Traffic overview
 
-For each chart, retain the dataset, measure, dimensions, filters and time range
-before editing it. Compare results with source analytics over the same period.
-Those fields are also the information needed to recreate a dashboard manually.
+Record each chart's dataset, measure, dimensions, filters and time range before
+editing. These fields let you recreate it. Compare results with source analytics
+for the same period.

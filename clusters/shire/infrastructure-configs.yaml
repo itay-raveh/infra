@@ -1,7 +1,4 @@
-# Custom resources that depend on CRDs installed by the infrastructure
-# Kustomization's HelmReleases. Split out so the infrastructure
-# Kustomization's dry-run doesn't fail on CRs whose CRDs aren't yet
-# present.
+# Apply custom resources after infrastructure HelmReleases install their CRDs.
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

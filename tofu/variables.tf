@@ -13,12 +13,12 @@ variable "hcloud_token" {
 variable "cloudflare_api_token" {
   type        = string
   sensitive   = true
-  description = "Cloudflare API token - DNS, Single Redirect, and Workers Routes edit on the zone, plus Workers Scripts and Zero Trust edit on its account."
+  description = "Cloudflare zone and services token. Permissions are listed in docs/cloudflare.md."
 }
 
 variable "ssh_public_key_path" {
   type        = string
-  description = "Filesystem path to the primary YubiKey FIDO2-sk pubkey (from mise.toml [env]). Used only for Hetzner rescue-mode break-glass; Talos itself does not use SSH."
+  description = "SSH public key for Hetzner rescue access."
 }
 
 variable "wireguard_server_private_key" {
@@ -60,7 +60,7 @@ variable "wanderbound_upload_s3_access_key_id" {
 variable "cloudflare_web_analytics_api_token" {
   type        = string
   sensitive   = true
-  description = "Cloudflare API token with Account Settings read and write access for Web Analytics."
+  description = "Cloudflare account administration and Web Analytics token."
 }
 
 variable "cloudflare_primary_email" {
