@@ -34,7 +34,7 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
         with:
-          install_args: actionlint age bats betterleaks github:zizmorcore/zizmor jq opentofu pipx:yamllint prek shellcheck sops
+          install_args: actionlint age bats betterleaks github:zizmorcore/zizmor jq opentofu pipx:yamllint prek shellcheck sops yq
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}

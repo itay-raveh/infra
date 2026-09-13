@@ -1,7 +1,7 @@
 # Setup
 
-These instructions use the existing YubiKeys and encrypted files in the repo.
-For a new environment, start with the [bootstrap script's outstanding work](../bootstrap/README.md#bootstrapsh).
+Set up a workstation with the YubiKeys and encrypted files already used by this
+cluster. To create the initial keys and credentials, use [bootstrap](../bootstrap/README.md).
 
 ## Set up a workstation
 

@@ -104,6 +104,7 @@ required_files=(
     secrets/wireguard.sops.yaml
     secrets/workstation.sops.yaml
     bootstrap/cluster-age-key.sops.txt
+    bootstrap/etcd-backup-age-key.sops.txt
     clusters/shire/flux-system/flux-github-app.sops.yaml
     clusters/shire/flux-system/gotk-sync.yaml
 )
@@ -155,6 +156,7 @@ if ((available[sops])); then
         secrets/wireguard.sops.yaml \
         secrets/workstation.sops.yaml \
         bootstrap/cluster-age-key.sops.txt \
+        bootstrap/etcd-backup-age-key.sops.txt \
         clusters/shire/flux-system/flux-github-app.sops.yaml; do
         printf 'check: decrypting %s\n' "$file"
         if sops decrypt "$file" >/dev/null; then

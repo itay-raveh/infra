@@ -109,11 +109,6 @@ permissions, token IDs and expiration dates at the issuer before rotation.
 | Upload S3 credentials | `clusters/shire/apps/wanderbound/wanderbound-upload-s3-creds.sops.yaml` | Backend uploads; the project/access-key IDs in `tofu.sops.yaml` identify its bucket-policy principal |
 | Sentry sourcemap token | `clusters/shire/apps/wanderbound/wanderbound-sourcemaps-secrets.sops.yaml` | Sourcemap upload job |
 
-Two credentials still span unrelated consumers: the provisioning token also
-serves CSI, and the analytics token also serves account administration. Creating
-dedicated tokens requires a permissions review at Hetzner and Cloudflare.
-The file split preserves their existing permissions and values.
-
 Application signing keys, the Google OAuth client secret and Sentry DSN live in
 `clusters/shire/apps/wanderbound/wanderbound-secrets.sops.yaml`. The Restic
 password lives in `wanderbound-backup-secrets.sops.yaml` beside it. Keep backup
