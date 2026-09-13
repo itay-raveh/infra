@@ -13,6 +13,7 @@ Account and zone IDs are in [tofu/locals.tf](../tofu/locals.tf).
 | Application code, bindings and logs | Wrangler configuration in each application repo |
 | Web Analytics | [web_analytics.tf](../tofu/web_analytics.tf) |
 | Account MFA enforcement and admin memberships | [cloudflare_account.tf](../tofu/cloudflare_account.tf) |
+| Tunnel health and Universal SSL alerts | [cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) |
 
 After a Tunnel token change, run `mise run tunnel:refresh` and commit the
 resulting Secret. See [deployment commands](deploying.md#refresh-generated-credentials).
@@ -46,6 +47,27 @@ To roll back TLS, restore the previous `min_tls_version` value and apply.
 For DNSSEC rollback, disable it at Cloudflare Registrar and wait for the parent
 DS TTL to expire before removing zone signing. Do not delete the OpenTofu
 resource as the first rollback step.
+
+## Notifications
+
+[cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) sends Tunnel
+health changes and Universal SSL certificate events to the native Proton
+recovery address in `TF_VAR_cloudflare_proton_email`. It uses the `account`
+provider. Its token needs `Notifications Write` or `Account Settings Write`.
+
+The Tunnel alert covers `shire`. It reports connector health, so a healthy
+tunnel does not prove that an application is reachable. Check the application
+URL and connector logs when investigating an outage.
+[Tunnel monitoring](https://developers.cloudflare.com/tunnel/observability/).
+
+The SSL alert covers the account's Universal SSL certificates, including routine
+issuance and renewal events. Investigate validation failures and certificates
+that cannot renew.
+[Certificate alerts](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/alerts/).
+
+After applying, check **Manage account > Notifications** for both enabled
+policies, the recipient, and the Tunnel filter. To pause an alert, set its
+`enabled` field to `false` and apply.
 
 ## Managed in the dashboard
 
