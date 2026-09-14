@@ -17,10 +17,10 @@ secrets; local kubeconfig, talosconfig and WireGuard files hold plaintext creden
 
 ## Trust roots
 
-Each YubiKey has independent PIV age keys in slot 1 and a resident FIDO2 SSH
-signing key. [Bootstrap](../bootstrap/bootstrap.sh) requires a touch for both,
-with no PIN for age. [Workstation setup](setup.md#set-up-a-workstation)
-recovers their local identity references.
+Each YubiKey has independent PIV age keys and a resident FIDO2 SSH signing key.
+[Bootstrap](../bootstrap/bootstrap.sh) requires a touch for both and creates
+new age keys in slot 1 with no PIN. For existing keys, [match the recipient to its slot](setup.md#age-identity)
+before recovering the local identity reference.
 
 GitHub registers both signing keys. Hetzner uses the rescue key selected by
 `TF_VAR_ssh_public_key_path` in [mise.toml](../mise.toml); changing it requires
