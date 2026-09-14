@@ -67,6 +67,13 @@ Check that Proton's SPF and DKIM tabs show verified. Before tightening DMARC,
 check a delivered message from each sender for `dmarc=pass` in its
 `Authentication-Results` header and review the DMARC reports.
 
+If authenticated mail reaches Gmail's Spam folder, save the received original
+from the message's **More > Show original > Download original** menu.
+For a known legitimate message, choose **Report not spam**, then send a fresh
+test and check its folder. [Gmail's correction](https://support.google.com/mail/answer/1366858?hl=en)
+applies to that recipient's mailbox; it does not verify delivery to other recipients.
+Keep downloaded mail outside the repository.
+
 Email Routing adoption is blocked by provider bugs
 [#7301](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7301)
 and [#7352](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7352).
