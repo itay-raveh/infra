@@ -13,6 +13,7 @@ Account and zone IDs: [tofu/locals.tf](../tofu/locals.tf).
 | Web Analytics | [web_analytics.tf](../tofu/web_analytics.tf) |
 | MFA enforcement and memberships | [cloudflare_account.tf](../tofu/cloudflare_account.tf) |
 | Tunnel, Universal SSL and Certificate Transparency alerts | [cloudflare_notifications.tf](../tofu/cloudflare_notifications.tf) |
+| SPF, Proton DKIM and DMARC records | [cloudflare_mail.tf](../tofu/cloudflare_mail.tf) |
 
 After changing a Tunnel token, [refresh and commit its Secret](deploying.md#refresh-generated-credentials).
 The default provider needs zone DNS, Zone Settings, SSL and Certificates,
@@ -41,6 +42,35 @@ should fail; first check that your test client supports them.
 Roll back TLS by restoring `min_tls_version` and applying. For [DNSSEC rollback](https://developers.cloudflare.com/dns/dnssec/),
 disable it at Registrar and wait for the parent DS TTL before removing zone
 signing. Do not delete the OpenTofu resource first.
+
+## Mail
+
+Incoming mail reaches Proton through Cloudflare Email Routing's catch-all.
+Manage forwarding under **Email > Email Routing > Routing rules**. Cloudflare
+owns the MX and forwarding DKIM records marked read-only in its API.
+
+SPF, Proton DKIM and DMARC live in [cloudflare_mail.tf](../tofu/cloudflare_mail.tf).
+The single SPF record authorizes Cloudflare forwarding and Proton sending.
+Proton manages key rotation behind the three DNS-only DKIM CNAMEs. Get their
+values from **Proton Mail > Settings > All settings > Domain names > Review**;
+see [Proton's setup guide](https://proton.me/support/anti-spoofing-custom-domain).
+
+Check published values after applying:
+
+```bash
+dig +short TXT '<DOMAIN>'
+dig +short TXT '_dmarc.<DOMAIN>'
+dig +short CNAME '<DKIM_HOSTNAME>'
+```
+
+Check that Proton's SPF and DKIM tabs show verified. Before tightening DMARC,
+check a delivered message from each sender for `dmarc=pass` in its
+`Authentication-Results` header and review the DMARC reports.
+
+Email Routing adoption is blocked by provider bugs
+[#7301](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7301)
+and [#7352](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7352).
+The DNS resources do not use those affected resource types.
 
 ## Notifications
 
