@@ -78,6 +78,12 @@ The [provider resource](https://github.com/cloudflare/terraform-provider-cloudfl
 requires zone `Bot Management Read` for imports and `Bot Management Write` for
 changes. Its import adopts the existing zone settings.
 
+Leave `cf_robots_variant` unset: provider 5.24.0 returns `null` after setting
+`"off"`, causing [an inconsistent-result error](https://github.com/cloudflare/terraform-provider-cloudflare/issues/6727).
+After bot changes, verify `cf_robots_variant` remains `"off"` with
+[Get Zone Bot Management Config](https://developers.cloudflare.com/api/resources/bot_management/methods/get/).
+Recheck the issue before adding this field back.
+
 Under **Security > Settings > Block AI bots**, select **Mixed purpose crawlers
 will continue to be allowed**. This opts out of the [September 2026 migration](https://developers.cloudflare.com/bots/additional-configurations/block-ai-bots/)
 that extends training blocks to crawlers also used for search indexing.
