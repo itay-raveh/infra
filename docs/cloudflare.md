@@ -7,7 +7,7 @@ Account and zone IDs: [tofu/locals.tf](../tofu/locals.tf).
 | Resource | Configuration |
 |---|---|
 | Tunnel, ingress, apex/wildcard DNS, redirects, DNSSEC and minimum TLS | [cloudflare.tf](../tofu/cloudflare.tf) |
-| Full (strict), HTTPS redirects, HTTPS rewrites and Universal SSL | [cloudflare_tls.tf](../tofu/cloudflare_tls.tf) |
+| Full (strict), 0-RTT, HTTPS redirects, HTTPS rewrites and Universal SSL | [cloudflare_tls.tf](../tofu/cloudflare_tls.tf) |
 | Root Worker | [root.tf](../tofu/root.tf) |
 | Application Worker domains | [quizmon.tf](../tofu/quizmon.tf), [itay.tf](../tofu/itay.tf) |
 | Application code, bindings and logs | Each application's Wrangler config |
@@ -37,6 +37,14 @@ After applying, confirm **Full (strict)** under **SSL/TLS > Overview** and check
 the Worker sites and Tunnel-backed application health endpoints. A direct
 origin with an invalid certificate returns `526`. To roll back the mode, set
 `cloudflare_zone_setting.ssl.value` to `"full"` and apply.
+
+[0-RTT](https://developers.cloudflare.com/speed/optimization/protocol/0-rtt-connection-resumption/)
+stays off because Wanderbound's GET endpoints create exports and consume
+single-use download tokens. Early requests can be replayed. After applying,
+confirm **0-RTT Connection Resumption** is off under **Speed > Settings >
+Protocol Optimization**. TLS 1.3 and HTTP/3 should remain enabled. To re-enable
+it, first add application handling for [replayed early requests](https://www.rfc-editor.org/rfc/rfc8470.html#section-5.2),
+then set `cloudflare_zone_setting.zero_rtt.value` to `"on"` and apply.
 
 OpenTofu adopts existing settings through imports and configures DNSSEC and TLS
 1.2 minimum. DNSSEC requires `DNS Write`; TLS requires `Zone Settings Write`.

@@ -9,6 +9,17 @@ import {
   id = "${local.cloudflare_zone_id}/ssl"
 }
 
+resource "cloudflare_zone_setting" "zero_rtt" {
+  zone_id    = local.cloudflare_zone_id
+  setting_id = "0rtt"
+  value      = "off"
+}
+
+import {
+  to = cloudflare_zone_setting.zero_rtt
+  id = "${local.cloudflare_zone_id}/0rtt"
+}
+
 resource "cloudflare_zone_setting" "https" {
   for_each = toset(["always_use_https", "automatic_https_rewrites"])
 
