@@ -12,7 +12,7 @@ import {
 resource "cloudflare_zone_setting" "zero_rtt" {
   zone_id    = local.cloudflare_zone_id
   setting_id = "0rtt"
-  value      = "off"
+  value      = "on"
 }
 
 import {

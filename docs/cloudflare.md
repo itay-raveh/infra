@@ -38,13 +38,15 @@ the Worker sites and Tunnel-backed application health endpoints. A direct
 origin with an invalid certificate returns `526`. To roll back the mode, set
 `cloudflare_zone_setting.ssl.value` to `"full"` and apply.
 
+OpenTofu enables
 [0-RTT](https://developers.cloudflare.com/speed/optimization/protocol/0-rtt-connection-resumption/)
-stays off because Wanderbound's GET endpoints create exports and consume
-single-use download tokens. Early requests can be replayed. After applying,
-confirm **0-RTT Connection Resumption** is off under **Speed > Settings >
-Protocol Optimization**. TLS 1.3 and HTTP/3 should remain enabled. To re-enable
-it, first add application handling for [replayed early requests](https://www.rfc-editor.org/rfc/rfc8470.html#section-5.2),
-then set `cloudflare_zone_setting.zero_rtt.value` to `"on"` and apply.
+for the zone. Wanderbound 1.14.2 added an API guard that returns
+[`425 Too Early`](https://www.rfc-editor.org/rfc/rfc8470.html#section-5.2)
+before creating exports or consuming download tokens. Public pages accept
+early requests. Keep this guard when changing API routes. Before rolling back
+to an older release, set `cloudflare_zone_setting.zero_rtt.value` to `"off"`
+and apply. TLS 1.3 resumption was verified on 2026-09-15: early API requests
+returned `425`, public pages returned `200`, and the root redirect returned `301`.
 
 OpenTofu adopts existing settings through imports and configures DNSSEC and TLS
 1.2 minimum. DNSSEC requires `DNS Write`; TLS requires `Zone Settings Write`.
