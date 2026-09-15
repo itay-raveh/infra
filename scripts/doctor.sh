@@ -13,7 +13,7 @@ fail() {
     failures=$((failures + 1))
 }
 
-for command in git gh mise sops ykman tofu kubectl flux yq wg wg-quick sudo install systemctl ssh-keygen; do
+for command in git gh mise sops ykman tofu kubectl talosctl flux jq yq wg wg-quick sudo install systemctl ssh-keygen; do
     if command -v "$command" >/dev/null 2>&1; then
         available[$command]=1
         pass "$command is available"
@@ -60,10 +60,13 @@ if ((available[git])); then
     fi
 
     origin_push_url=$(git remote get-url --push origin 2>/dev/null || true)
-    if [[ -n "$flux_repository" && "$origin_push_url" == "$flux_repository" ]]; then
-        pass "origin push uses the Flux HTTPS repository"
-    elif [[ -n "$flux_repository" ]]; then
-        fail "origin push URL does not use the Flux HTTPS repository"
+    if ((available[gh])) && [[ -n "$flux_repository" ]]; then
+        origin_repository=$(gh repo view "$origin_push_url" --json url --jq .url 2>/dev/null || true)
+        if [[ -n "$origin_push_url" && "$origin_repository" == "${flux_repository%.git}" ]]; then
+            pass "origin push targets the Flux repository"
+        else
+            fail "origin push targets a different repository from Flux"
+        fi
     fi
 
 fi
@@ -99,8 +102,12 @@ if ((available[gh])); then
 fi
 
 required_files=(
-    tofu/secrets.sops.yaml
+    secrets/state.sops.yaml
+    secrets/tofu.sops.yaml
+    secrets/wireguard.sops.yaml
+    secrets/workstation.sops.yaml
     bootstrap/cluster-age-key.sops.txt
+    bootstrap/etcd-backup-age-key.sops.txt
     clusters/shire/flux-system/flux-github-app.sops.yaml
     clusters/shire/flux-system/gotk-sync.yaml
 )
@@ -146,22 +153,16 @@ if ((available[ykman])); then
     fi
 fi
 
-tofu_dotenv=
 if ((available[sops])); then
     for file in \
-        tofu/secrets.sops.yaml \
+        secrets/tofu.sops.yaml \
+        secrets/wireguard.sops.yaml \
+        secrets/workstation.sops.yaml \
         bootstrap/cluster-age-key.sops.txt \
+        bootstrap/etcd-backup-age-key.sops.txt \
         clusters/shire/flux-system/flux-github-app.sops.yaml; do
         printf 'check: decrypting %s\n' "$file"
-        if [[ "$file" == "tofu/secrets.sops.yaml" ]]; then
-            tofu_dotenv=$(sops decrypt --output-type dotenv "$file")
-            decrypted=$?
-        else
-            sops decrypt "$file" >/dev/null
-            decrypted=$?
-        fi
-
-        if ((decrypted == 0)); then
+        if sops decrypt "$file" >/dev/null; then
             pass "can decrypt $file"
         else
             fail "cannot decrypt $file"
@@ -177,22 +178,17 @@ if ((available[sudo])); then
     fi
 fi
 
-if ((available[sops] && available[tofu])) && [[ -n "$tofu_dotenv" ]]; then
-    if (
-        set -a
-        eval "$tofu_dotenv"
-        set +a
-        printf 'check: initializing OpenTofu backend\n'
-        tofu -chdir=tofu init -input=false >/dev/null &&
-            printf 'check: reading OpenTofu state\n' &&
-            tofu -chdir=tofu state pull >/dev/null
-    ); then
+if ((available[sops] && available[tofu])); then
+    if bash scripts/sops-exec.sh secrets/state.sops.yaml -- sh -ec '
+        printf "check: initializing OpenTofu backend\n"
+        tofu -chdir=tofu init -input=false >/dev/null
+        printf "check: reading OpenTofu state\n"
+        tofu -chdir=tofu state pull >/dev/null
+    '; then
         pass "OpenTofu state backend is accessible"
     else
         fail "cannot access the OpenTofu state backend"
     fi
-elif ((available[sops] && available[tofu])); then
-    fail "cannot load OpenTofu credentials from tofu/secrets.sops.yaml"
 fi
 
 if ((failures > 0)); then

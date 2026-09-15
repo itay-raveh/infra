@@ -3,7 +3,7 @@
 load test_helper/common
 
 setup() {
-    setup_repo
+    setup_script_repo
     setup_fakebin
 
     export TEST_SERVER_PRIVATE=server-private
@@ -15,8 +15,17 @@ setup() {
 
     cat > "$FAKEBIN/sops" <<'EOF'
 #!/usr/bin/env bash
-printf 'TF_VAR_wireguard_server_private_key=%q\n' "$TEST_SERVER_PRIVATE"
-printf 'TF_VAR_wireguard_workstation_public_key=%q\n' "$TEST_WORKSTATION_PUBLIC"
+case "$3" in
+    secrets/state.sops.yaml)
+        export TF_VAR_encryption_passphrase=test AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
+        ;;
+    secrets/wireguard.sops.yaml)
+        export TF_VAR_wireguard_server_private_key=$TEST_SERVER_PRIVATE
+        export TF_VAR_wireguard_workstation_public_key=$TEST_WORKSTATION_PUBLIC
+        ;;
+    *) exit 1 ;;
+esac
+exec /bin/sh -c "$4"
 EOF
 
     cat > "$FAKEBIN/tofu" <<'EOF'

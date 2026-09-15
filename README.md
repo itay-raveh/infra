@@ -3,8 +3,9 @@
 [![CI](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml/badge.svg)](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/github/license/itay-raveh/infra)](https://github.com/itay-raveh/infra/blob/main/LICENSE)
 
-Built to be as stateless and immutable as possible.
-Everything is IaC, data is backed up in S3, so all other infrastructure is essentially ephemeral (namely the VPS).
+OpenTofu and Flux manage `shire`, a single-node Talos Kubernetes cluster on
+Hetzner, and the Cloudflare resources for `raveh.dev`. The server can be rebuilt
+from the repository and encrypted state; database and file backups live in S3.
 
 ## Architecture
 
@@ -22,7 +23,7 @@ flowchart
     Headlamp@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/headlamp-dark.svg?raw=true, label: Headlamp, h: 50, constraint: on}
     Restic@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/png/restic.png?raw=true, label: Restic, h: 50, constraint: on}
 
-    GitHubApp <-.-|reconciles| FluxCD
+    GitHubApp <-.-|watches releases| FluxCD
     GitHubInfra <-.-|watches| FluxCD
 
     Internet@{shape: cloud} -.- Cloudflare
@@ -31,7 +32,7 @@ flowchart
     MyDevices((My Devices)) -.- Tailscale
     Tailscale -.- TailscaleOperator
 
-    subgraph Server["K3S on Talos (Hetzner)"]
+    subgraph Server["Kubernetes on Talos (Hetzner)"]
         FluxCD -->|deploys| App
 
         subgraph Public["Public (Traefik)"]
@@ -48,16 +49,16 @@ flowchart
 
         App --- PVC[(PVC)]
         PVC -->|backup| Restic
-        
+
     end
 
-    Barman -.-> S3[("S3 (Hetnzer)")]
+    Barman -.-> S3[("S3 (Hetzner)")]
     Restic -.-> S3
 ```
 
 ## Stack
 
-|   |   |
+| Tool | Role |
 |---|---|
 | [Talos Linux](https://talos.dev) | Immutable Kubernetes OS |
 | [Flux CD](https://fluxcd.io) | GitOps reconciliation |
@@ -65,8 +66,49 @@ flowchart
 | [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/) | Static hosting for `itay.raveh.dev` and `quizmon.raveh.dev` |
 | [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public ingress without exposing an origin HTTP port |
 | [Traefik](https://traefik.io) | Reverse proxy |
-| [Tailscale](https://tailscale.com) | Private ingress |
+| [WireGuard](https://www.wireguard.com/) | Private Kubernetes and Talos API access |
+| [Tailscale](https://tailscale.com) | Private ingress for Headlamp |
 | [Headlamp](https://headlamp.dev) | Flux-aware admin dashboard (Tailnet-only) |
-| [CNPG](https://cloudnative-pg.io) | PostgreSQL |
+| [CNPG](https://cloudnative-pg.io) | PostgreSQL operator |
 | [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Backups, [Wanderbound](https://github.com/itay-raveh/wanderbound) user uploads (presigned S3 PUTs avoid uploading through the Cloudflare tunnel) |
-| [SOPS](https://github.com/getsops/sops) | Secret encryption |
+| [SOPS](https://github.com/getsops/sops) | Secret encryption with age and YubiKeys |
+
+## Hardware and storage
+
+The cluster uses one Hetzner CX33 in `hel1`, configured in
+[tofu/locals.tf](tofu/locals.tf). There is no high availability.
+
+PostgreSQL uses the default local-path storage class. Wanderbound files use
+an `hcloud-volumes` PVC provisioned by
+[hcloud-csi](clusters/shire/infrastructure/controllers/hcloud-csi.yaml).
+[Barman](clusters/shire/apps/wanderbound/objectstore.yaml) backs up PostgreSQL;
+[restic](clusters/shire/apps/wanderbound/data-backup.yaml) backs up the file volume.
+Rebuilding the server requires a separate [data restore](docs/disaster-recovery.md).
+
+## Development
+
+[mise](https://mise.jdx.dev/) pins tools in `mise.toml` and exposes the operator
+commands. Run commands from the repository root with mise active:
+
+```bash
+mise install
+mise tasks
+mise run check
+```
+
+`mise run test` runs shell tests. `check` also validates OpenTofu, rendered
+Flux/Helm resources, docs and secret handling without cloud credentials.
+See [checks and recovery tests](docs/deploying.md#checks).
+
+- `tofu/`: cloud resources and machine configuration, applied with OpenTofu.
+- `clusters/shire/`: Kubernetes manifests, reconciled by Flux from `main`.
+- `.sops.yaml`: encryption recipients for committed secrets.
+
+## Documentation
+
+- [Setup](docs/setup.md): workstation access and cluster rebuilds.
+- [Deploying](docs/deploying.md): infrastructure, manifests, and application releases.
+- [Secrets](docs/secrets.md): credential inventory and key rotation.
+- [Cloudflare](docs/cloudflare.md): IaC ownership, dashboard settings, and verification.
+- [Troubleshooting](docs/troubleshooting.md): diagnostics by symptom.
+- [Recovery](docs/disaster-recovery.md): database, file, and cluster restores.

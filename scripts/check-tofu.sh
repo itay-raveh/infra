@@ -14,3 +14,4 @@ if [[ -n "${TF_PLUGIN_CACHE_DIR:-}" ]]; then
 fi
 tofu -chdir=tofu init -backend=false -lockfile=readonly
 tofu -chdir=tofu validate
+tofu -chdir=tofu test

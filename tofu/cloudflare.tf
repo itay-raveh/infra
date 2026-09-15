@@ -1,3 +1,24 @@
+resource "cloudflare_zone_dnssec" "raveh_dev" {
+  zone_id = local.cloudflare_zone_id
+  status  = "active"
+}
+
+import {
+  to = cloudflare_zone_dnssec.raveh_dev
+  id = local.cloudflare_zone_id
+}
+
+resource "cloudflare_zone_setting" "min_tls_version" {
+  zone_id    = local.cloudflare_zone_id
+  setting_id = "min_tls_version"
+  value      = "1.2"
+}
+
+import {
+  to = cloudflare_zone_setting.min_tls_version
+  id = "${local.cloudflare_zone_id}/min_tls_version"
+}
+
 resource "random_id" "tunnel_secret" {
   byte_length = 32
 }
@@ -15,10 +36,7 @@ data "cloudflare_zero_trust_tunnel_cloudflared_token" "shire" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.shire.id
 }
 
-# One dumb wildcard rule: every request goes to in-cluster Traefik, which
-# owns host-header routing. Adding a new app is then a pure in-cluster
-# change with no tofu run. The http_status:404 entry is the catch-all
-# Cloudflare requires as the final ingress rule.
+# Traefik routes application hostnames without per-app Tunnel rules.
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "shire" {
   account_id = local.cloudflare_account_id
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.shire.id
