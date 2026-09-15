@@ -29,7 +29,7 @@ resource "cloudflare_zone_setting" "https" {
 }
 
 import {
-  for_each = cloudflare_zone_setting.https
+  for_each = toset(["always_use_https", "automatic_https_rewrites"])
   to       = cloudflare_zone_setting.https[each.key]
   id       = "${local.cloudflare_zone_id}/${each.key}"
 }
