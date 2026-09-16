@@ -1,5 +1,5 @@
 resource "cloudflare_ruleset" "rate_limits" {
-  zone_id     = local.cloudflare_zone_id
+  zone_id     = var.zone_id
   name        = "default"
   description = ""
   kind        = "zone"
@@ -19,9 +19,4 @@ resource "cloudflare_ruleset" "rate_limits" {
       requests_to_origin  = false
     }
   }]
-}
-
-import {
-  to = cloudflare_ruleset.rate_limits
-  id = "zones/${local.cloudflare_zone_id}/9e6085b9e0b9444fad5e458ae87a8386"
 }

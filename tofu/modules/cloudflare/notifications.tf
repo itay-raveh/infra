@@ -1,12 +1,12 @@
 resource "cloudflare_notification_policy" "tunnel_health" {
   provider   = cloudflare.account
-  account_id = local.cloudflare_account_id
+  account_id = var.account_id
   name       = "Tunnel health"
   alert_type = "tunnel_health_event"
   enabled    = true
 
   mechanisms = {
-    email = [{ id = var.cloudflare_proton_email }]
+    email = [{ id = var.proton_email }]
   }
 
   filters = {
@@ -16,23 +16,18 @@ resource "cloudflare_notification_policy" "tunnel_health" {
 
 resource "cloudflare_notification_policy" "universal_ssl" {
   provider   = cloudflare.account
-  account_id = local.cloudflare_account_id
+  account_id = var.account_id
   name       = "Universal SSL certificates"
   alert_type = "universal_ssl_event_type"
   enabled    = true
 
   mechanisms = {
-    email = [{ id = var.cloudflare_proton_email }]
+    email = [{ id = var.proton_email }]
   }
 }
 
 resource "cloudflare_ct_alerting" "raveh_dev" {
-  zone_id = local.cloudflare_zone_id
+  zone_id = var.zone_id
   enabled = true
-  emails  = [var.cloudflare_proton_email]
-}
-
-import {
-  to = cloudflare_ct_alerting.raveh_dev
-  id = local.cloudflare_zone_id
+  emails  = [var.proton_email]
 }

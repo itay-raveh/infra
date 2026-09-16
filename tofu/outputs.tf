@@ -1,5 +1,5 @@
 output "tunnel_token" {
-  value     = data.cloudflare_zero_trust_tunnel_cloudflared_token.shire.token
+  value     = module.cloudflare.tunnel_token
   sensitive = true
 }
 
