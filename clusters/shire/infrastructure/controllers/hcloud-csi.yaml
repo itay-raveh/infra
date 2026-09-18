@@ -38,9 +38,7 @@ spec:
       - name: hcloud-volumes
         # local-path is the default; hcloud-volumes is opt-in per PVC.
         defaultStorageClass: false
-        # Retain so an accidental PVC delete doesn't take the Hetzner
-        # Volume with it  - operator must clean up by hand.
+        # Preserve the Hetzner volume when its PVC is deleted.
         reclaimPolicy: Retain
-        # xfs can grow online without a pod restart; ext4 needs one.
         extraParameters:
           csi.storage.k8s.io/fstype: xfs

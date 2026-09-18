@@ -18,8 +18,8 @@ hcloud = "1.67.0"
 helm = "4.3.0"
 jq = "1.8.2"
 k9s = "0.51.0"
-kubectl = "1.37.0"
-mc = "RELEASE.2025-08-13T08-35-41Z"
+kubectl = "1.35.8"
+"github:minio/mc" = { version = "RELEASE.2025-08-13T08-35-41Z", bin = "mc" }
 opentofu = "1.12.6"
 "pipx:yamllint" = "1.38.0"
 "pipx:yubikey-manager" = "5.9.2"
@@ -28,14 +28,12 @@ shellcheck = "0.11"
 sops = "3.13.3"
 talosctl = "1.14.0"
 yq = "4.53.6"
+"github:home-operations/flate" = "0.6.5"
+"github:fluxcd/flux-schema" = "0.13.0"
+kind = "0.33.0"
+lychee = "0.24.2"
 
 # -- Tofu ---------------------------------------------------------
-# All secrets live in tofu/secrets.sops.yaml and are injected as env
-# vars via scripts/tofu-wrapper.sh
-#
-# When rops gains age-plugin support (gibbz00/rops#17), replace the
-# wrapper with a single line in [env]:
-#   _.file = "tofu/secrets.sops.yaml"
 
 [tasks."tofu:init"]
 description = "tofu init with secrets unwrapped from SOPS"
@@ -64,32 +62,37 @@ dir = "{{config_root}}"
 run = "bash scripts/tofu-wrapper.sh output -raw \"$@\""
 
 [tasks."configs:refresh"]
-description = "Refresh ~/.kube/config and ~/.talos/config from tofu state"
+description = "Refresh Kubernetes and Talos client configs from state"
 dir = "{{config_root}}"
-run = """
-mkdir -p ~/.kube ~/.talos
-bash scripts/tofu-wrapper.sh output -raw kubeconfig > ~/.kube/config
-chmod 600 ~/.kube/config
-bash scripts/tofu-wrapper.sh output -raw talosconfig > ~/.talos/config
-chmod 600 ~/.talos/config
-private_ipv4=$(bash scripts/tofu-wrapper.sh output -raw private_ipv4)
-talosctl config node "$private_ipv4"
-"""
+file = "scripts/refresh-configs.sh"
 
 [tasks.test]
-description = "Run the repository test suite"
+description = "Run shell behavior tests"
 run = "bats tests"
 
 [tasks.check]
-description = "Run all repository checks without cloud credentials"
+description = "Run lint, shell tests, OpenTofu and manifest checks"
+depends = ["check:lint", "test", "check:tofu", "check:manifests"]
+
+[tasks."check:lint"]
+description = "Lint files, scan for secrets and check documentation"
 dir = "{{config_root}}"
 run = [
     "prek validate-config prek.toml",
-    "prek run --all-files",
+    "prek run --all-files --skip tofu-fmt",
     "betterleaks git --redact",
-    "bats tests",
-    "bash scripts/check-tofu.sh",
+    "python3 scripts/check-docs.py",
 ]
+
+[tasks."check:tofu"]
+description = "Check OpenTofu formatting, validation and mocked plans"
+dir = "{{config_root}}"
+run = "bash scripts/check-tofu.sh"
+
+[tasks."check:manifests"]
+description = "Render Flux manifests and validate schemas and CEL rules"
+dir = "{{config_root}}"
+run = "bash scripts/check-manifests.sh"
 
 [tasks."wireguard:configure"]
 description = "Install and activate the private management tunnel"
@@ -135,8 +138,8 @@ description = "List all pods across namespaces"
 run = "kubectl get pods -A"
 
 [tasks.unhealthy]
-description = "Show pods not in Running/Succeeded state"
-run = "kubectl get pods -A --field-selector status.phase!=Running,status.phase!=Succeeded"
+description = "Show failed, pending and unready pods"
+file = "scripts/unhealthy.sh"
 
 [tasks."prune:pods"]
 description = "Delete Failed/Succeeded pods"
@@ -156,47 +159,31 @@ run = "kubectl debug -it --image=alpine \"node/$1\" -- sh"
 raw = true
 
 # -- SOPS-encrypted Secrets sourced from tofu ---------------------
-# Each task: pull a token, pipe to scripts/refresh-sops-secret.sh which
-# renders + encrypts the target file in place. Commit yourself.
 
 [tasks."tunnel:refresh"]
 description = "Regenerate cloudflared tunnel-token Secret from tofu output"
 dir = "{{config_root}}"
 run = """
-bash scripts/tofu-wrapper.sh output -raw tunnel_token \
-  | bash scripts/refresh-sops-secret.sh \
-      clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml \
-      cloudflared cloudflared-tunnel-token cf-tunnel-token
+bash scripts/refresh-sops-secret.sh \
+  clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml \
+  cloudflared cloudflared-tunnel-token cf-tunnel-token -- \
+  bash scripts/tofu-wrapper.sh output -raw tunnel_token
 """
 
 [tasks."hcloud-csi:refresh-token"]
-description = "Regenerate hcloud-csi Secret from tofu secrets.sops.yaml"
+description = "Regenerate hcloud-csi Secret from the provisioning token"
 dir = "{{config_root}}"
 run = """
-set -a
-eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
-set +a
-printf '%s' "$TF_VAR_hcloud_token" \
-  | bash scripts/refresh-sops-secret.sh \
-      clusters/shire/infrastructure/controllers/hcloud-csi-token.sops.yaml \
-      kube-system hcloud token
+bash scripts/refresh-sops-secret.sh \
+  clusters/shire/infrastructure/controllers/hcloud-csi-token.sops.yaml \
+  kube-system hcloud token -- \
+  sops decrypt --extract '["TF_VAR_hcloud_token"]' secrets/tofu.sops.yaml
 """
 
 [tasks."tailscale-operator:refresh-oauth"]
 description = "Regenerate tailscale-operator OAuth Secret from tofu output (re-run after -replace on the oauth_client)"
 dir = "{{config_root}}"
-run = """
-target=clusters/shire/infrastructure/controllers/tailscale-operator-oauth.sops.yaml
-client_id=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_id)
-client_secret=$(bash scripts/tofu-wrapper.sh output -raw tailscale_operator_oauth_client_secret)
-kubectl create secret generic operator-oauth \
-  --namespace=tailscale \
-  --from-literal=client_id="$client_id" \
-  --from-literal=client_secret="$client_secret" \
-  --dry-run=client -o yaml > "$target"
-sops --encrypt --in-place "$target"
-echo "wrote $target - review, commit, and push when ready" >&2
-"""
+run = "bash scripts/refresh-tailscale-secret.sh"
 
 # -- Rebuild ------------------------------------------------------
 
@@ -210,3 +197,13 @@ description = "Full rebuild: image + infra + tunnel token + Flux + SOPS age key"
 dir = "{{config_root}}"
 confirm = "This will tear down and rebuild the entire cluster. Continue?"
 file = "scripts/rebuild.sh"
+
+[tasks."manifests:diff"]
+description = "Compare rendered Flux and Helm resources with a Git ref"
+dir = "{{config_root}}"
+run = 'bash scripts/diff-manifests.sh "$@"'
+
+[tasks."test:integration"]
+description = "Test Flux decryption and backup recovery in a disposable Docker cluster"
+dir = "{{config_root}}"
+run = "bash tests/integration/run.sh"

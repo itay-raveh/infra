@@ -1,3 +1,29 @@
+resource "cloudflare_ruleset" "redirect_apex_to_itay" {
+  depends_on = [cloudflare_workers_route.root]
+
+  zone_id     = local.cloudflare_zone_id
+  name        = "default"
+  description = "Canonical hostname redirects"
+  kind        = "zone"
+  phase       = "http_request_dynamic_redirect"
+
+  rules = [{
+    ref         = "redirect_apex_to_itay"
+    description = "Redirect raveh.dev to itay.raveh.dev"
+    expression  = "http.host eq \"raveh.dev\" and not http.request.uri.path in {\"/privacy\" \"/privacy/\" \"/privacy.html\" \"/ads.txt\"}"
+    action      = "redirect"
+    action_parameters = {
+      from_value = {
+        target_url = {
+          expression = "concat(\"https://itay.raveh.dev\", http.request.uri.path)"
+        }
+        status_code           = 301
+        preserve_query_string = true
+      }
+    }
+  }]
+}
+
 resource "cloudflare_worker" "root" {
   account_id = local.cloudflare_account_id
   name       = "raveh-root"

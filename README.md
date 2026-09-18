@@ -3,8 +3,12 @@
 [![CI](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml/badge.svg)](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/github/license/itay-raveh/infra)](https://github.com/itay-raveh/infra/blob/main/LICENSE)
 
-Built to be as stateless and immutable as possible.
-Everything is IaC, data is backed up in S3, so all other infrastructure is essentially ephemeral (namely the VPS).
+OpenTofu and Flux configuration for Cloudflare and
+[`shire`](tofu/locals.tf), a single-node Talos Kubernetes cluster on Hetzner.
+
+[Setup](docs/setup.md) · [Deploying](docs/deploying.md) ·
+[Secrets](docs/secrets.md) · [Cloudflare](docs/cloudflare.md) ·
+[Troubleshooting](docs/troubleshooting.md) · [Recovery](docs/disaster-recovery.md)
 
 ## Architecture
 
@@ -22,7 +26,7 @@ flowchart
     Headlamp@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/svg/headlamp-dark.svg?raw=true, label: Headlamp, h: 50, constraint: on}
     Restic@{img: https://github.com/homarr-labs/dashboard-icons/blob/main/png/restic.png?raw=true, label: Restic, h: 50, constraint: on}
 
-    GitHubApp <-.-|reconciles| FluxCD
+    GitHubApp <-.-|watches releases| FluxCD
     GitHubInfra <-.-|watches| FluxCD
 
     Internet@{shape: cloud} -.- Cloudflare
@@ -31,7 +35,7 @@ flowchart
     MyDevices((My Devices)) -.- Tailscale
     Tailscale -.- TailscaleOperator
 
-    subgraph Server["K3S on Talos (Hetzner)"]
+    subgraph Server["Kubernetes on Talos (Hetzner)"]
         FluxCD -->|deploys| App
 
         subgraph Public["Public (Traefik)"]
@@ -48,25 +52,19 @@ flowchart
 
         App --- PVC[(PVC)]
         PVC -->|backup| Restic
-        
+
     end
 
-    Barman -.-> S3[("S3 (Hetnzer)")]
+    Barman -.-> S3[("S3 (Hetzner)")]
     Restic -.-> S3
 ```
 
 ## Stack
 
-|   |   |
+| Component | Tools |
 |---|---|
-| [Talos Linux](https://talos.dev) | Immutable Kubernetes OS |
-| [Flux CD](https://fluxcd.io) | GitOps reconciliation |
-| [OpenTofu](https://opentofu.org) | Infrastructure provisioning |
-| [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/) | Static hosting for `itay.raveh.dev` and `quizmon.raveh.dev` |
-| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public ingress without exposing an origin HTTP port |
-| [Traefik](https://traefik.io) | Reverse proxy |
-| [Tailscale](https://tailscale.com) | Private ingress |
-| [Headlamp](https://headlamp.dev) | Flux-aware admin dashboard (Tailnet-only) |
-| [CNPG](https://cloudnative-pg.io) | PostgreSQL |
-| [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Backups, [Wanderbound](https://github.com/itay-raveh/wanderbound) user uploads (presigned S3 PUTs avoid uploading through the Cloudflare tunnel) |
-| [SOPS](https://github.com/getsops/sops) | Secret encryption |
+| Cluster | [Talos Linux](https://talos.dev), [OpenTofu](https://opentofu.org), [Flux CD](https://fluxcd.io) |
+| Public sites | [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/), [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), [Traefik](https://traefik.io) |
+| Management | [WireGuard](https://www.wireguard.com/) for cluster APIs; [Tailscale](https://tailscale.com) for [Headlamp](https://headlamp.dev) |
+| Data | [CNPG](https://cloudnative-pg.io), [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) for backups and direct [Wanderbound](https://github.com/itay-raveh/wanderbound) uploads |
+| Secrets | [SOPS](https://github.com/getsops/sops) with age and YubiKeys |

@@ -1,188 +1,200 @@
-# Disaster recovery
+# Recovery
 
-DR is not a separate procedure. The every-rebuild path in `setup.md`
-is the DR path. Every time you rebuild shire for any reason, you're
-drilling DR.
-
-The node is cattle. All infrastructure rebuilds from git. Stateful
-data lives in S3 backups (CNPG PITR, persistent-volume tarballs, and
-etcd snapshots). Full recovery: rebuild from git and restore from S3.
-
----
-
-## Single points of failure
-
-| SPOF | Mitigation | If you lose it |
+| Backup | Location in `shire-backups` | Schedule and retention |
 |---|---|---|
-| **Tofu state bucket** (`shire-tfstate`) | Object Storage versioning. Quarterly `aws s3 sync` to a sibling bucket. | `tofu import` against live cloud resources. Painful afternoon. |
-| **S3 backup bucket** (`shire-backups`) | Object Storage versioning + lifecycle rules. | Lose backup history. Running data unaffected. Re-create bucket and backups resume. |
-| **Both YubiKeys** | Primary on keyring, backup offsite. Never travel with both. | **Permanent cryptographic loss.** Every `.sops.*` file becomes unrecoverable ciphertext. No recovery path - start over with new roots via `bootstrap/bootstrap.sh`. |
-| **GitHub repo** | Monthly `git clone --mirror` to offline drive. | Source of truth gone. Same outcome as losing both YubiKeys if no mirror exists. |
+| [etcd](../clusters/shire/infrastructure/controllers/talos-backup.yaml) | `etcd/` | Every six hours; age-encrypted Zstandard snapshots |
+| [PostgreSQL](../clusters/shire/apps/wanderbound/objectstore.yaml) | `cnpg/wanderbound/` | Daily base backups, continuous WAL; 30-day recovery window |
+| [Wanderbound files](../clusters/shire/apps/wanderbound/data-backup.yaml) | `app-data/wanderbound` | Daily restic snapshots; seven daily, four weekly, three monthly |
 
-Loss order: state bucket = painful afternoon. Repo = painful week.
-Both YubiKeys = start from scratch.
+[Bucket rules](../tofu/backups.tf) expire noncurrent CNPG objects after 60 days
+and etcd snapshots after seven. Barman retains the pre-window base backup and
+required WAL. The [uploads bucket](../tofu/wanderbound_uploads.tf) is outside
+the PVC backup.
 
----
+Cluster recovery also needs the encrypted repo files, a YubiKey, and OpenTofu
+state at `shire-tfstate/shire/terraform.tfstate`, which holds the Talos credentials.
 
-## Restore procedures
+## Recovery dependencies
 
-When rebuilding after data loss, restore in this order: etcd first
-(cluster state), then Postgres, then persistent-volume files. Each
-section is self-contained.
+| Dependency lost | Recovery |
+|---|---|
+| OpenTofu state bucket | Restore an independent state copy or import surviving cloud resources. Importing does not reconstruct generated Talos credentials. The backend bucket is an [account prerequisite](setup.md#account-prerequisites), managed outside this configuration. |
+| Backup bucket | Recover from another backup copy or the running data. Bucket versioning cannot recover a deleted bucket. |
+| GitHub repository | Recover from a local clone or offline mirror, including encrypted files and history. Re-create repository access and settings before resuming Flux. |
+| One or both YubiKeys | See [key-loss limits](secrets.md#protection-and-limits) and [key replacement](secrets.md#replace-a-hardware-key). |
 
-### 1. etcd restore
+Keep independent state, backup and Git copies and an offsite YubiKey. This repo
+does not schedule external copies; bucket versioning stays within Hetzner.
 
-Download the latest snapshot from S3 and bootstrap from it:
+## Restore etcd
 
-```
-mc alias set hetzner https://fsn1.your-objectstorage.com ACCESS_KEY SECRET_KEY
-mc ls hetzner/shire-backups/etcd/
-mc cp hetzner/shire-backups/etcd/<latest>.snapshot ./db.snapshot
-```
+Install `zstd` and configure an authenticated `mc` alias named `hetzner` for
+`https://fsn1.your-objectstorage.com`. Select a snapshot:
 
-Snapshots are age-encrypted (public key in `talos-backup.yaml`).
-Decrypt before restoring:
-
-```
-age --decrypt -i <(sops --decrypt bootstrap/cluster-age-key.sops.txt) \
-  -o db.snapshot.dec db.snapshot
-```
-
-Then bootstrap the new node from the snapshot:
-
-```
-talosctl bootstrap --recover-from=./db.snapshot.dec
+```bash
+mc ls --recursive hetzner/shire-backups/etcd/
 ```
 
-If the snapshot was copied raw from a crashed node rather than taken
-via `talos-backup`, add `--recover-skip-hash-check`.
+Replace `<SNAPSHOT_OBJECT>` with its path under `etcd/`:
 
-### 2. Postgres (CNPG PITR)
+```bash
+set -o pipefail
+umask 077
+snapshot_dir=$(mktemp -d)
+mc cp 'hetzner/shire-backups/etcd/<SNAPSHOT_OBJECT>' "$snapshot_dir/snapshot.age"
+age --decrypt \
+  -i <(sops decrypt bootstrap/etcd-backup-age-key.sops.txt) \
+  "$snapshot_dir/snapshot.age" \
+  | zstd --decompress > "$snapshot_dir/db.snapshot"
+```
 
-CNPG recovery always creates a **new** cluster. Apply a recovery
-Cluster CR that references the Barman backup in S3:
+Finish decryption before resetting the node. Prepare the control plane with
+its original machine credentials using the [Talos recovery procedure](https://docs.siderolabs.com/talos/v1.12/build-and-extend-talos/cluster-operations-and-maintenance/disaster-recovery).
+Do not run `mise run rebuild`: it bootstraps an empty cluster.
+
+Once `talosctl service etcd` reports `Preparing`:
+
+```bash
+talosctl bootstrap --recover-from="$snapshot_dir/db.snapshot"
+talosctl etcd status
+kubectl get nodes
+flux get kustomizations -A
+```
+
+This restores Kubernetes state. Restore databases and files separately below,
+then remove the plaintext snapshot.
+
+## Restore PostgreSQL
+
+Requires the CNPG operator, Barman plugin, `wanderbound-backup` ObjectStore and
+`cnpg-s3-creds` Secret. Create a new cluster from the existing archive. Replace
+`<POSTGRES_IMAGE_MATCHING_BACKUP>` with an image using the backup's PostgreSQL
+major version:
 
 ```yaml
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: <restored-cluster>
-  namespace: <namespace>
+  name: wanderbound-db-restore
+  namespace: wanderbound
 spec:
+  imageName: <POSTGRES_IMAGE_MATCHING_BACKUP>
   instances: 1
   storage:
     size: 5Gi
   bootstrap:
     recovery:
-      source: <object-store>
-      # recoveryTarget:
-      #   targetTime: "2026-04-14T12:00:00Z"  # optional PITR
-  plugins:
-    - name: barman-cloud.cloudnative-pg.io
+      source: original
   externalClusters:
-    - name: <object-store>
+    - name: original
       plugin:
         name: barman-cloud.cloudnative-pg.io
         parameters:
-          barmanObjectName: <object-store>
-          serverName: <source-cluster>
+          barmanObjectName: wanderbound-backup
+          serverName: wanderbound-db
 ```
 
-Apply and watch the restore:
+For point-in-time recovery, set `bootstrap.recovery.recoveryTarget` before
+creating the cluster. See [CNPG recovery targets](https://cloudnative-pg.io/docs/current/recovery/)
+and the [Barman source fields](https://cloudnative-pg.io/plugin-barman-cloud/docs/concepts/).
 
-```
-kubectl apply -f <restore-manifest>
-kubectl -n <namespace> get cluster <restored-cluster> --watch
-kubectl cnpg status -n <namespace> <restored-cluster>
-```
-
-After the restore cluster reports healthy, update the application
-manifests to reference it, commit, and push.
-
-### 3. Persistent-volume files
-
-Download the latest tarball and pipe it into a temporary pod that
-mounts the PVC:
-
-```
-mc cp hetzner/shire-backups/app-data/<application>/<latest>.tar.gz /tmp/
-
-kubectl -n <namespace> run restore --rm -i \
-  --image=alpine --restart=Never \
-  --overrides='{
-    "spec": {
-      "containers": [{
-        "name": "restore",
-        "image": "alpine",
-        "command": ["sh", "-c", "tar xzf - -C /data"],
-        "stdin": true,
-        "volumeMounts": [{
-          "name": "data",
-          "mountPath": "/data"
-        }]
-      }],
-      "volumes": [{
-        "name": "data",
-        "persistentVolumeClaim": {
-          "claimName": "<claim>"
-        }
-      }]
-    }
-  }' < /tmp/<latest>.tar.gz
+```bash
+kubectl apply -f '<RECOVERY_MANIFEST>'
+kubectl cnpg status -n wanderbound wanderbound-db-restore
+kubectl cnpg psql -n wanderbound wanderbound-db-restore -- wanderbound
 ```
 
-### 4. Application rollback
+Inspect the recovered data before switching the application. Its HelmRelease
+currently reads `SQLALCHEMY_DATABASE_URI` from `wanderbound-db-app`; cutover
+requires updating that reference and configuring the restored role's credentials.
+Use a distinct backup server name before enabling WAL archiving on the restored cluster.
 
-If a bad image was auto-deployed by Flux image automation:
+## Recover files from restic
 
+Install [restic](https://restic.readthedocs.io/en/stable/020_installation.html)
+at the [backup job's version](../clusters/shire/apps/wanderbound/data-backup.yaml).
+Restore a snapshot into a new workstation directory:
+
+```bash
+(
+  set -euo pipefail
+  umask 077
+  export RESTIC_REPOSITORY=s3:https://fsn1.your-objectstorage.com/shire-backups/app-data/wanderbound
+  AWS_ACCESS_KEY_ID=$(sops decrypt --extract '["data"]["ACCESS_KEY_ID"]' \
+    clusters/shire/apps/wanderbound/cnpg-s3-creds.sops.yaml | base64 --decode)
+  AWS_SECRET_ACCESS_KEY=$(sops decrypt --extract '["data"]["ACCESS_SECRET_KEY"]' \
+    clusters/shire/apps/wanderbound/cnpg-s3-creds.sops.yaml | base64 --decode)
+  RESTIC_PASSWORD=$(sops decrypt --extract '["data"]["RESTIC_PASSWORD"]' \
+    clusters/shire/apps/wanderbound/wanderbound-backup-secrets.sops.yaml | base64 --decode)
+  export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTIC_PASSWORD
+  restic snapshots
+  read -r -p 'Snapshot ID: ' snapshot_id
+  test -n "$snapshot_id"
+  restic ls "$snapshot_id"
+  read -r -p 'Parent directory for restored files: ' restore_parent
+  test -d "$restore_parent"
+  restore_dir=$(mktemp -d "$restore_parent/wanderbound-restore.XXXXXX")
+  restic restore "$snapshot_id" --target "$restore_dir" --verify
+  printf 'Restored files: %s/data\n' "$restore_dir"
+)
 ```
-# 1. Stop image automation from pushing more updates
-flux suspend image update-automation <automation> -n flux-system
 
-# 2. Find the previous working digest
-flux get image policy <policy> -n flux-system
-kubectl -n <namespace> get deploy <deployment> -o jsonpath='{.spec.template.spec.containers[0].image}'
+Files appear under `<restore_dir>/data/`. Stop application writes and the
+backup CronJob before copying them to the PVC, preserving file ownership.
+The repo has no automated PVC cutover task.
 
-# 3. Pin the manifest to the known-good release, commit, and push.
-#    Flux will reconcile the pinned version.
+### Initialize an empty restic repository
 
-# 4. After fixing the root cause, resume automation
-flux resume image update-automation <automation> -n flux-system
+For a new, empty repository, run `restic init` once using the backup job's
+credentials. Do not run this to repair authentication or network failures:
+
+```bash
+set -o pipefail
+kubectl -n wanderbound create job restic-init \
+  --from=cronjob/wanderbound-data-backup --dry-run=client -o yaml |
+  yq '.spec.template.spec.containers[0].command = ["restic", "init"]' |
+  kubectl apply -f -
+kubectl -n wanderbound wait --for=condition=complete job/restic-init --timeout=5m &&
+  kubectl -n wanderbound delete job restic-init
 ```
 
----
+## Roll back an application release
 
-## WireGuard management is unavailable
+Pause Wanderbound updates and find the last working chart version:
 
-First restore the workstation side from the encrypted source of truth:
-
+```bash
+flux suspend image update-automation wanderbound -n flux-system
+git log -p -- clusters/shire/apps/wanderbound/app-chart.yaml
 ```
+
+A pending PR from `flux-image-automation` can still merge while the controller
+is paused. Check it before changing the version in `app-chart.yaml`.
+Merge the rollback and run `mise run reconcile`. Chart rollback does not undo
+database migrations.
+
+Resume updates after fixing the release:
+
+```bash
+flux resume image update-automation wanderbound -n flux-system
+```
+
+## Recover WireGuard access
+
+Restore the workstation peer and compare its endpoint with the server IP:
+
+```bash
 mise run wireguard:configure
 sudo wg show shire
+mise run tofu:output -- public_ipv4
 ```
 
-If there is still no handshake, confirm that the Hetzner firewall has
-the repository-managed UDP 51820 rule and that the server's stable
-primary IP matches `mise run tofu:output -- public_ipv4`.
+If UDP 51820 is allowed and the node's WireGuard configuration is missing:
 
-If the node lost its `WireguardConfig`, use this break-glass sequence:
+1. Temporarily allow TCP 50000 from the workstation's public IP in Hetzner.
+2. Run `mise run wireguard:recover` with the existing Talos client credentials.
+3. Remove the temporary firewall rule after `talosctl health` and
+   `kubectl get nodes` work over WireGuard.
 
-1. In the Hetzner console, temporarily allow TCP 50000 to the server.
-   Talos still requires its client certificate, so this exposes no
-   password login or anonymous administration.
-2. Run `mise run wireguard:recover`. It applies the repository's
-   `WireguardConfig` through the public endpoint in try mode, activates
-   the workstation peer, and makes the patch persistent only after the
-   private Talos endpoint responds.
-3. Remove the temporary TCP 50000 rule immediately. The steady-state
-   firewall exposes only UDP 51820 for management.
-
-Do not open TCP 6443 for this recovery. Once the Talos API is reachable
-over WireGuard, Kubernetes is reachable through the same private route.
-
-## One YubiKey lost
-
-You are one hardware failure from total loss. Replace immediately:
-buy a new YubiKey, generate keys on it, `sops updatekeys` every
-`.sops.*` file, commit and push. See `age-plugin-yubikey` and `sops`
-docs for the exact commands.
+The [script](../scripts/recover-wireguard.sh) persists the patch only after
+the private endpoint responds. A failed attempt rolls back the Talos patch.
+Public access to Kubernetes port 6443 is unnecessary.

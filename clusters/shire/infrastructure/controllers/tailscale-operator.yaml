@@ -5,7 +5,6 @@ kind: Namespace
 metadata:
   name: tailscale
   labels:
-    # Proxy pods need NET_ADMIN + NET_RAW for userspace WireGuard.
     pod-security.kubernetes.io/enforce: privileged
 ---
 apiVersion: source.toolkit.fluxcd.io/v1

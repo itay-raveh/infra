@@ -40,8 +40,7 @@ spec:
   values:
     storageClass:
       defaultClass: true
-      # Retain so a stuck PVC delete never silently nukes data on the
-      # local disk  - operator must clean up by hand.
+      # Preserve local data when its PVC is deleted.
       reclaimPolicy: Retain
     nodePathMap:
       - node: DEFAULT_PATH_FOR_NON_LISTED_NODES
