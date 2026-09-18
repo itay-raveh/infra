@@ -17,11 +17,32 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  checks:
-    timeout-minutes: 15
+  changes:
     runs-on: ubuntu-24.04
-    env:
-      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      shell: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.shell == 'true' }}
+      tofu: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.tofu == 'true' }}
+      manifests: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.manifests == 'true' }}
+      recovery: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.recovery == 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: .github/ci-paths.yaml
+          base: ${{ github.event_name == 'push' && github.event.before || '' }}
+          ref: ${{ github.event_name == 'push' && github.sha || '' }}
+
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -29,17 +50,87 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
         with:
-          install_args: >-
-            actionlint age bats betterleaks github:zizmorcore/zizmor jq opentofu
-            pipx:yamllint prek shellcheck sops yq kubectl talosctl flux2
-            github:home-operations/flate github:fluxcd/flux-schema lychee
+          install_args: actionlint betterleaks github:zizmorcore/zizmor pipx:yamllint prek shellcheck lychee
+      - run: mise run --skip-tools check:lint
+
+  shell:
+    needs: changes
+    if: needs.changes.outputs.shell == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
+        with:
+          install_args: age bats jq kubectl sops talosctl yq
+      - run: mise run --skip-tools test
+
+  tofu:
+    needs: changes
+    if: needs.changes.outputs.tofu == 'true'
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
+        with:
+          install_args: opentofu
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: tofu-plugins-${{ hashFiles('tofu/.terraform.lock.hcl', 'tofu/providers.tf') }}
-      - run: mise run --skip-tools check
+      - run: mise run --skip-tools check:tofu
+
+  manifests:
+    needs: changes
+    if: needs.changes.outputs.manifests == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4
+        with:
+          install_args: kubectl flux2 github:home-operations/flate github:fluxcd/flux-schema
+      - run: mise run --skip-tools check:manifests
       - name: Rendered manifest diff
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: mise run --skip-tools manifests:diff -- "$BASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+  recovery:
+    needs: changes
+    if: needs.changes.outputs.recovery == 'true'
+    uses: $/.github/workflows/recovery-test.yaml
+
+  checks:
+    needs: [changes, lint, shell, tofu, manifests, recovery]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every selected job to pass
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq 'map_values(.result)' <<< "$NEEDS"
+          jq -e '
+            . as $jobs |
+            .changes.result == "success" and .lint.result == "success" and
+            ((.changes.outputs | keys) == (del(.changes, .lint) | keys)) and
+            (.changes.outputs | to_entries | all(.[];
+              if .value == "true" then $jobs[.key].result == "success"
+              elif .value == "false" then $jobs[.key].result == "skipped"
+              else false end
+            ))
+          ' <<< "$NEEDS"

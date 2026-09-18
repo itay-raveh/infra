@@ -7,7 +7,8 @@ kubernetes_version=$(sed -n 's/.*kubernetes_version *= "v\([^"]*\)"/\1/p' tofu/l
 talos_version=$(sed -n 's/.*talos_version *= "\([^"]*\)"/\1/p' tofu/locals.tf)
 : "${kubernetes_version:?Missing Kubernetes version}" "${talos_version:?Missing Talos version}"
 
-flate build all --path clusters/shire --kube-version "$kubernetes_version" \
+# Avoid the parallel-render hang: https://github.com/home-operations/flate/issues/828
+flate build all --concurrency 1 --path clusters/shire --kube-version "$kubernetes_version" \
   --skip-secrets=false --skip-crds=false --no-progress -o yaml > "$validation_dir/rendered.yaml"
 kubectl kustomize clusters/shire > "$validation_dir/root.yaml"
 flux install --export --components-extra=image-reflector-controller,image-automation-controller > "$validation_dir/flux.yaml"

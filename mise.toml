@@ -71,17 +71,28 @@ description = "Run shell behavior tests"
 run = "bats tests"
 
 [tasks.check]
-description = "Run all repository checks without cloud credentials"
+description = "Run lint, shell tests, OpenTofu and manifest checks"
+depends = ["check:lint", "test", "check:tofu", "check:manifests"]
+
+[tasks."check:lint"]
+description = "Lint files, scan for secrets and check documentation"
 dir = "{{config_root}}"
 run = [
     "prek validate-config prek.toml",
-    "prek run --all-files",
+    "prek run --all-files --skip tofu-fmt",
     "betterleaks git --redact",
-    "bats tests",
-    "bash scripts/check-tofu.sh",
-    "bash scripts/check-manifests.sh",
     "python3 scripts/check-docs.py",
 ]
+
+[tasks."check:tofu"]
+description = "Check OpenTofu formatting, validation and mocked plans"
+dir = "{{config_root}}"
+run = "bash scripts/check-tofu.sh"
+
+[tasks."check:manifests"]
+description = "Render Flux manifests and validate schemas and CEL rules"
+dir = "{{config_root}}"
+run = "bash scripts/check-manifests.sh"
 
 [tasks."wireguard:configure"]
 description = "Install and activate the private management tunnel"

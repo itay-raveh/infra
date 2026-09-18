@@ -88,9 +88,11 @@ fails. See [secret storage and rotation](secrets.md).
 mise run check
 ```
 
-[CI](../.github/workflows/ci.yaml) runs the same command on every PR, including docs.
-It needs network access for tools, providers, charts and schemas, but no cloud
-credentials or YubiKey.
+[CI](../.github/workflows/ci.yaml) runs lint, secret scans and docs checks on every
+PR and push to `main`. [Changed paths](../.github/ci-paths.yaml) select shell,
+OpenTofu, manifest and recovery jobs. CI or shared tool changes run all jobs.
+The required `checks` job fails if any selected job fails or is skipped.
+No cloud credentials or YubiKey are needed.
 
 | Check | What it verifies |
 |---|---|
@@ -116,8 +118,9 @@ Kind cluster, kubeconfig, age keys and S3 fixture. Flux must reject a wrong age 
 then decrypt after the correct key is restored. CNPG/Barman must restore fixture
 rows. Restic runs backup and retention commands, then restores deleted files.
 Operator charts, the Barman manifest and backup commands come from
-`clusters/shire/`. [Run in CI](../.github/workflows/recovery-test.yaml) with a
-manual workflow dispatch.
+`clusters/shire/`. Changes to these inputs or the test suite run
+[recovery in CI](../.github/workflows/recovery-test.yaml) automatically.
+Manual dispatch remains available.
 
 Kind uses Kubernetes 1.35.8, the same minor as production. Local S3 and storage
 replace Hetzner; a Bucket source replaces GitHub App authentication. These tests

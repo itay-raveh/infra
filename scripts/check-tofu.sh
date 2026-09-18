@@ -12,6 +12,7 @@ export TF_VAR_encryption_passphrase=ci
 if [[ -n "${TF_PLUGIN_CACHE_DIR:-}" ]]; then
   mkdir -p "$TF_PLUGIN_CACHE_DIR"
 fi
+tofu -chdir=tofu fmt -check -recursive
 tofu -chdir=tofu init -backend=false -lockfile=readonly
 tofu -chdir=tofu validate
 tofu -chdir=tofu test
