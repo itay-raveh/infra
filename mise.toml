@@ -19,7 +19,7 @@ helm = "4.3.0"
 jq = "1.8.2"
 k9s = "0.51.0"
 kubectl = "1.35.8"
-mc = "RELEASE.2025-08-13T08-35-41Z"
+"github:minio/mc" = { version = "RELEASE.2025-08-13T08-35-41Z", bin = "mc" }
 opentofu = "1.12.6"
 "pipx:yamllint" = "1.38.0"
 "pipx:yubikey-manager" = "5.9.2"

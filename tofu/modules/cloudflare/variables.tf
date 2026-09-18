@@ -25,6 +25,19 @@ variable "proton_email" {
   sensitive = true
 }
 
-variable "root_worker_source_dir" {
-  type = string
+variable "rate_limit_rules" {
+  type = list(object({
+    ref         = string
+    description = string
+    expression  = string
+    action      = string
+    enabled     = bool
+    ratelimit = object({
+      characteristics     = list(string)
+      period              = number
+      requests_per_period = number
+      mitigation_timeout  = number
+      requests_to_origin  = bool
+    })
+  }))
 }

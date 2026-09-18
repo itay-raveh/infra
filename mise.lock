@@ -460,6 +460,45 @@ checksum = "sha256:3fd13fa65907312ee77ebf96bb76554558cd8f63ab65c3026b643be2e7003
 url = "https://github.com/home-operations/flate/releases/download/v0.6.5/flate_0.6.5_windows_amd64.zip"
 url_api = "https://api.github.com/repos/home-operations/flate/releases/assets/541337344"
 
+[[tools."github:minio/mc"]]
+version = "RELEASE.2025-08-13T08-35-41Z"
+backend = "github:minio/mc"
+
+[tools."github:minio/mc"."platforms.linux-arm64"]
+checksum = "sha256:14c8c9616cfce4636add161304353244e8de383b2e2752c0e9dad01d4c27c12c"
+url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-arm64.RELEASE.2025-08-13T08-35-41Z"
+url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741340"
+
+[tools."github:minio/mc"."platforms.linux-arm64-musl"]
+checksum = "sha256:14c8c9616cfce4636add161304353244e8de383b2e2752c0e9dad01d4c27c12c"
+url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-arm64.RELEASE.2025-08-13T08-35-41Z"
+url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741340"
+
+[tools."github:minio/mc"."platforms.linux-x64"]
+checksum = "sha256:01f866e9c5f9b87c2b09116fa5d7c06695b106242d829a8bb32990c00312e891"
+url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z"
+url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741332"
+
+[tools."github:minio/mc"."platforms.linux-x64-musl"]
+checksum = "sha256:01f866e9c5f9b87c2b09116fa5d7c06695b106242d829a8bb32990c00312e891"
+url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z"
+url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741332"
+
+[tools."github:minio/mc"."platforms.macos-arm64"]
+checksum = "sha256:a877fd0c183409da9f20f9d6e1811987298bbbca1aa03428eebdffba79fb9445"
+url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.darwin-arm64.RELEASE.2025-08-13T08-35-41Z"
+url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741324"
+
+[tools."github:minio/mc"."platforms.macos-x64"]
+checksum = "sha256:2862c79cce11b09be9a8911a279b2e9465bebf74b9f01abca9c348a0d795f0cb"
+url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.darwin-amd64.RELEASE.2025-08-13T08-35-41Z"
+url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741317"
+
+[tools."github:minio/mc"."platforms.windows-x64"]
+checksum = "sha256:c8db13ebeda31497f354c0e950809db0ae9b2a2a69b8afee68c128c37300c157"
+url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.windows-amd64.RELEASE.2025-08-13T08-35-41Z.exe"
+url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741359"
+
 [[tools."github:zizmorcore/zizmor"]]
 version = "1.30.1"
 backend = "github:zizmorcore/zizmor"
@@ -771,38 +810,6 @@ url_api = "https://api.github.com/repos/lycheeverse/lychee/releases/assets/40995
 checksum = "sha256:32975d1493ee1a975d6bb41e4fb56fe419cb442ded628bb772ba2e614acfacad"
 url = "https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-pc-windows-msvc.zip"
 url_api = "https://api.github.com/repos/lycheeverse/lychee/releases/assets/409959491"
-
-[[tools.mc]]
-version = "RELEASE.2025-08-13T08-35-41Z"
-backend = "aqua:minio/mc"
-
-[tools.mc."platforms.linux-arm64"]
-checksum = "sha256:14c8c9616cfce4636add161304353244e8de383b2e2752c0e9dad01d4c27c12c"
-url = "https://dl.min.io/client/mc/release/linux-arm64/archive/mc.RELEASE.2025-08-13T08-35-41Z"
-
-[tools.mc."platforms.linux-arm64-musl"]
-checksum = "sha256:14c8c9616cfce4636add161304353244e8de383b2e2752c0e9dad01d4c27c12c"
-url = "https://dl.min.io/client/mc/release/linux-arm64/archive/mc.RELEASE.2025-08-13T08-35-41Z"
-
-[tools.mc."platforms.linux-x64"]
-checksum = "sha256:01f866e9c5f9b87c2b09116fa5d7c06695b106242d829a8bb32990c00312e891"
-url = "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.RELEASE.2025-08-13T08-35-41Z"
-
-[tools.mc."platforms.linux-x64-musl"]
-checksum = "sha256:01f866e9c5f9b87c2b09116fa5d7c06695b106242d829a8bb32990c00312e891"
-url = "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.RELEASE.2025-08-13T08-35-41Z"
-
-[tools.mc."platforms.macos-arm64"]
-checksum = "sha256:a877fd0c183409da9f20f9d6e1811987298bbbca1aa03428eebdffba79fb9445"
-url = "https://dl.min.io/client/mc/release/darwin-arm64/archive/mc.RELEASE.2025-08-13T08-35-41Z"
-
-[tools.mc."platforms.macos-x64"]
-checksum = "sha256:2862c79cce11b09be9a8911a279b2e9465bebf74b9f01abca9c348a0d795f0cb"
-url = "https://dl.min.io/client/mc/release/darwin-amd64/archive/mc.RELEASE.2025-08-13T08-35-41Z"
-
-[tools.mc."platforms.windows-x64"]
-checksum = "sha256:c8db13ebeda31497f354c0e950809db0ae9b2a2a69b8afee68c128c37300c157"
-url = "https://dl.min.io/client/mc/release/windows-amd64/archive/mc.RELEASE.2025-08-13T08-35-41Z"
 
 [[tools.opentofu]]
 version = "1.12.6"

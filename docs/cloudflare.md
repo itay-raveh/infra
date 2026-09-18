@@ -1,6 +1,7 @@
 # Cloudflare
 
-Configuration lives in [tofu/modules/cloudflare](../tofu/modules/cloudflare/).
+Shared configuration lives in [tofu/modules/cloudflare](../tofu/modules/cloudflare/).
+Application policies, domains and the [root-site Worker](../tofu/root_site.tf) live in `tofu/`.
 Use the [deployment workflow](deploying.md#change-cloud-infrastructure) and
 [token inventory](secrets.md#token-inventory). Application Worker code, bindings
 and logs belong to each application's Wrangler config.
@@ -24,8 +25,9 @@ The separate account token handles administration, Web Analytics and notificatio
   [can break DNS resolution](https://developers.cloudflare.com/dns/dnssec/#roll-back-dnssec).
 - **Tunnel:** Traefik receives HTTP inside the cluster even with Full (strict).
   After token rotation, [refresh its Kubernetes Secret](deploying.md#refresh-generated-credentials).
-- **Login rate limiting:** [counters](../tofu/modules/cloudflare/rate_limits.tf)
-  are per IP and Cloudflare data center. Users behind one NAT share a quota.
+- **Login rate limiting:** [Wanderbound's rule](../tofu/wanderbound.tf) matches
+  paths across the zone. Counters are per IP and Cloudflare data center.
+  Users behind one NAT share a quota.
 - **Alerts** go to the native Proton recovery address. Tunnel alerts cover
   connectors, not application availability. Universal SSL includes routine renewals.
   To stop Certificate Transparency alerts, apply `enabled = false` before removing the

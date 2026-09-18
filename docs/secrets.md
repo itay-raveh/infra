@@ -116,7 +116,7 @@ Verify permissions, token IDs and expiry at the issuer before rotation.
 | Cloudflare zone and services | `tofu.sops.yaml`: `TF_VAR_cloudflare_api_token` | Default Cloudflare provider |
 | Cloudflare analytics and account administration | `tofu.sops.yaml`: `TF_VAR_cloudflare_web_analytics_api_token` | Both `web_analytics` and `account` provider aliases |
 | Tailscale provisioning OAuth client | `tofu.sops.yaml`: `TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_CLIENT_SECRET` | Tailscale provider; requested scopes are in [providers.tf](../tofu/providers.tf) |
-| Sentry administration | `tofu.sops.yaml`: `SENTRY_AUTH_TOKEN` | Monitors in [sentry.tf](../tofu/sentry.tf) |
+| Sentry administration | `tofu.sops.yaml`: `SENTRY_AUTH_TOKEN` | Monitors in [wanderbound_monitoring.tf](../tofu/wanderbound_monitoring.tf) |
 | Cloudflare Tunnel token | OpenTofu state; generated `cloudflared-tunnel-token.sops.yaml` | cloudflared; update with `mise run tunnel:refresh` |
 | Tailscale operator OAuth client | OpenTofu state; generated `tailscale-operator-oauth.sops.yaml` | Kubernetes operator; update with `mise run tailscale-operator:refresh-oauth` |
 | Flux GitHub App private key | `clusters/shire/flux-system/flux-github-app.sops.yaml`; GitHub Actions `FLUX_APP_PRIVATE_KEY` | Flux Git access and the image-update PR workflow |
