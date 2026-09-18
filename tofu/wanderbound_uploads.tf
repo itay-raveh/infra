@@ -1,3 +1,15 @@
+variable "wanderbound_upload_s3_credential_project_id" {
+  type        = string
+  sensitive   = true
+  description = "Hetzner project ID for the dedicated Wanderbound upload credential."
+}
+
+variable "wanderbound_upload_s3_access_key_id" {
+  type        = string
+  sensitive   = true
+  description = "Hetzner Object Storage access key for the dedicated Wanderbound upload credential."
+}
+
 resource "minio_s3_bucket" "wanderbound_uploads" {
   bucket        = "wanderbound-uploads-raveh-dev"
   acl           = "private"

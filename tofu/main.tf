@@ -43,9 +43,7 @@ module "talos" {
     yamlencode({
       machine = {
         install = {
-          # The platform-specific installer pins the hcloud UKI. The generic
-          # installer variant picks the currently running platform, which
-          # once metal is active traps us in metal forever.
+          # Keep the Hetzner platform when upgrading the boot image.
           image             = "factory.talos.dev/hcloud-installer/${talos_image_factory_schematic.shire.id}:${local.talos_version}"
           extraKernelArgs   = ["talos.platform=hcloud", "net.ifnames=0"]
           grubUseUKICmdline = false
@@ -67,8 +65,6 @@ module "talos" {
         }
       }
     }),
-    # Hetzner platform metadata hostname doesn't survive talosctl upgrade
-    # on UKI installs (siderolabs/talos#11145), so pin it here.
     yamlencode({
       apiVersion = "v1alpha1"
       kind       = "HostnameConfig"

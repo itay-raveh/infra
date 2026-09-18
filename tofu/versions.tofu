@@ -1,5 +1,5 @@
 terraform {
-  required_version = "1.16.2"
+  required_version = "1.12.6"
 
   required_providers {
     hcloud = {

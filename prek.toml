@@ -22,7 +22,7 @@ always_run = true
 id = "yamllint"
 name = "yamllint"
 language = "system"
-entry = "bash scripts/lint-yaml.sh"
+entry = "yamllint"
 types = ["yaml"]
 exclude = '\.sops\.(yaml|yml)$|^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$'
 

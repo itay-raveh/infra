@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Two checks that together protect against committing plaintext secrets:
-#   1. Every file named *.sops.* must actually be SOPS-encrypted (contain ENC[).
-#   2. No plaintext k8s Secret (kind: Secret) in clusters/ outside *.sops.*.
 set -euo pipefail
 
 fail=0

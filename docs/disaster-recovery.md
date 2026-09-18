@@ -1,188 +1,102 @@
-# Disaster recovery
+# Recovery
 
-DR is not a separate procedure. The every-rebuild path in `setup.md`
-is the DR path. Every time you rebuild shire for any reason, you're
-drilling DR.
+## Backup locations
 
-The node is cattle. All infrastructure rebuilds from git. Stateful
-data lives in S3 backups (CNPG PITR, persistent-volume tarballs, and
-etcd snapshots). Full recovery: rebuild from git and restore from S3.
-
----
-
-## Single points of failure
-
-| SPOF | Mitigation | If you lose it |
+| Data | Configuration | Storage |
 |---|---|---|
-| **Tofu state bucket** (`shire-tfstate`) | Object Storage versioning. Quarterly `aws s3 sync` to a sibling bucket. | `tofu import` against live cloud resources. Painful afternoon. |
-| **S3 backup bucket** (`shire-backups`) | Object Storage versioning + lifecycle rules. | Lose backup history. Running data unaffected. Re-create bucket and backups resume. |
-| **Both YubiKeys** | Primary on keyring, backup offsite. Never travel with both. | **Permanent cryptographic loss.** Every `.sops.*` file becomes unrecoverable ciphertext. No recovery path - start over with new roots via `bootstrap/bootstrap.sh`. |
-| **GitHub repo** | Monthly `git clone --mirror` to offline drive. | Source of truth gone. Same outcome as losing both YubiKeys if no mirror exists. |
+| etcd | [talos-backup.yaml](../clusters/shire/infrastructure/controllers/talos-backup.yaml) | `shire-backups/etcd/`, age-encrypted snapshots |
+| PostgreSQL | Application `ObjectStore` and `ScheduledBackup` resources | Per-cluster prefix in `shire-backups/cnpg/` |
+| Persistent files | Application backup CronJob | Its `RESTIC_REPOSITORY` |
 
-Loss order: state bucket = painful afternoon. Repo = painful week.
-Both YubiKeys = start from scratch.
+Schedules and retention live in those manifests. [Bucket lifecycle rules](../tofu/backups.tf) preserve current CNPG objects for Barman to manage. Upload buckets may be separate from volume backups.
 
----
+Recovery requires the encrypted repository, a YubiKey and OpenTofu state. Keep independent copies of state, backups and Git; this repo does not schedule offsite copies. Bucket versioning does not protect against bucket deletion. See [key recovery](secrets.md#rotation).
 
-## Restore procedures
+## Restore etcd
 
-When rebuilding after data loss, restore in this order: etcd first
-(cluster state), then Postgres, then persistent-volume files. Each
-section is self-contained.
+Install `zstd` and configure an authenticated `mc` alias named `hetzner`. Choose a snapshot:
 
-### 1. etcd restore
-
-Download the latest snapshot from S3 and bootstrap from it:
-
-```
-mc alias set hetzner https://fsn1.your-objectstorage.com ACCESS_KEY SECRET_KEY
-mc ls hetzner/shire-backups/etcd/
-mc cp hetzner/shire-backups/etcd/<latest>.snapshot ./db.snapshot
+```bash
+mc ls --recursive hetzner/shire-backups/etcd/
+set -o pipefail
+umask 077
+snapshot_dir=$(mktemp -d)
+mc cp 'hetzner/shire-backups/etcd/<SNAPSHOT_OBJECT>' "$snapshot_dir/snapshot.age"
+age --decrypt -i <(sops decrypt bootstrap/etcd-backup-age-key.sops.txt) "$snapshot_dir/snapshot.age" | zstd --decompress > "$snapshot_dir/db.snapshot"
 ```
 
-Snapshots are age-encrypted (public key in `talos-backup.yaml`).
-Decrypt before restoring:
+Follow [Talos recovery](https://docs.siderolabs.com/talos/v1.14/build-and-extend-talos/cluster-operations-and-maintenance/disaster-recovery) using the original machine credentials. Do not run `rebuild`, which creates an empty cluster. Once etcd reports `Preparing`:
 
-```
-age --decrypt -i <(sops --decrypt bootstrap/cluster-age-key.sops.txt) \
-  -o db.snapshot.dec db.snapshot
-```
-
-Then bootstrap the new node from the snapshot:
-
-```
-talosctl bootstrap --recover-from=./db.snapshot.dec
+```bash
+talosctl bootstrap --recover-from="$snapshot_dir/db.snapshot"
+talosctl etcd status
+kubectl get nodes
+flux get kustomizations -A
 ```
 
-If the snapshot was copied raw from a crashed node rather than taken
-via `talos-backup`, add `--recover-skip-hash-check`.
+Remove the plaintext snapshot after verification. Database and file contents require separate restores.
 
-### 2. Postgres (CNPG PITR)
+## Restore PostgreSQL
 
-CNPG recovery always creates a **new** cluster. Apply a recovery
-Cluster CR that references the Barman backup in S3:
+Keep the source `ObjectStore` and its credential Secret available. Create a new CNPG cluster using the backup's PostgreSQL major version and archive server name:
 
 ```yaml
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: <restored-cluster>
-  namespace: <namespace>
+  name: <RESTORE_CLUSTER>
+  namespace: <NAMESPACE>
 spec:
+  imageName: <POSTGRES_IMAGE_MATCHING_BACKUP>
   instances: 1
   storage:
-    size: 5Gi
+    size: <RESTORE_SIZE>
   bootstrap:
     recovery:
-      source: <object-store>
-      # recoveryTarget:
-      #   targetTime: "2026-04-14T12:00:00Z"  # optional PITR
-  plugins:
-    - name: barman-cloud.cloudnative-pg.io
+      source: original
   externalClusters:
-    - name: <object-store>
+    - name: original
       plugin:
         name: barman-cloud.cloudnative-pg.io
         parameters:
-          barmanObjectName: <object-store>
-          serverName: <source-cluster>
+          barmanObjectName: <OBJECT_STORE>
+          serverName: <SOURCE_CLUSTER>
 ```
 
-Apply and watch the restore:
+For PITR, set `bootstrap.recovery.recoveryTarget` before creation. [Recovery targets](https://cloudnative-pg.io/docs/current/recovery/) and [Barman fields](https://cloudnative-pg.io/plugin-barman-cloud/docs/concepts/).
 
-```
-kubectl apply -f <restore-manifest>
-kubectl -n <namespace> get cluster <restored-cluster> --watch
-kubectl cnpg status -n <namespace> <restored-cluster>
-```
-
-After the restore cluster reports healthy, update the application
-manifests to reference it, commit, and push.
-
-### 3. Persistent-volume files
-
-Download the latest tarball and pipe it into a temporary pod that
-mounts the PVC:
-
-```
-mc cp hetzner/shire-backups/app-data/<application>/<latest>.tar.gz /tmp/
-
-kubectl -n <namespace> run restore --rm -i \
-  --image=alpine --restart=Never \
-  --overrides='{
-    "spec": {
-      "containers": [{
-        "name": "restore",
-        "image": "alpine",
-        "command": ["sh", "-c", "tar xzf - -C /data"],
-        "stdin": true,
-        "volumeMounts": [{
-          "name": "data",
-          "mountPath": "/data"
-        }]
-      }],
-      "volumes": [{
-        "name": "data",
-        "persistentVolumeClaim": {
-          "claimName": "<claim>"
-        }
-      }]
-    }
-  }' < /tmp/<latest>.tar.gz
+```bash
+kubectl apply -f '<RECOVERY_MANIFEST>'
+kubectl cnpg status -n '<NAMESPACE>' '<RESTORE_CLUSTER>'
+kubectl cnpg psql -n '<NAMESPACE>' '<RESTORE_CLUSTER>' -- '<DATABASE>'
 ```
 
-### 4. Application rollback
+Inspect recovered data before updating application connection references. Configure the restored roles' credentials and TLS. Use a distinct backup server name before enabling WAL archiving on the restored cluster.
 
-If a bad image was auto-deployed by Flux image automation:
+## Restore files
 
-```
-# 1. Stop image automation from pushing more updates
-flux suspend image update-automation <automation> -n flux-system
+Read `RESTIC_REPOSITORY`, `RESTIC_PASSWORD` and S3 credentials from the selected backup job's configuration and Secret references. Export them in a private shell; use the job's restic version.
 
-# 2. Find the previous working digest
-flux get image policy <policy> -n flux-system
-kubectl -n <namespace> get deploy <deployment> -o jsonpath='{.spec.template.spec.containers[0].image}'
-
-# 3. Pin the manifest to the known-good release, commit, and push.
-#    Flux will reconcile the pinned version.
-
-# 4. After fixing the root cause, resume automation
-flux resume image update-automation <automation> -n flux-system
+```bash
+restic snapshots
+restic ls '<SNAPSHOT_ID>'
+restic restore '<SNAPSHOT_ID>' --target '<NEW_DIRECTORY>' --verify
 ```
 
----
+Stop application writes and the backup job before copying restored files to the volume, preserving ownership. Run `restic init` only for a new, empty repository; it does not repair access errors.
 
-## WireGuard management is unavailable
+## Recover WireGuard access
 
-First restore the workstation side from the encrypted source of truth:
-
-```
+```bash
 mise run wireguard:configure
 sudo wg show shire
+mise run tofu:output -- public_ipv4
 ```
 
-If there is still no handshake, confirm that the Hetzner firewall has
-the repository-managed UDP 51820 rule and that the server's stable
-primary IP matches `mise run tofu:output -- public_ipv4`.
+If the server-side tunnel configuration is missing:
 
-If the node lost its `WireguardConfig`, use this break-glass sequence:
+1. Temporarily permit TCP 50000 from the workstation's public IP in Hetzner.
+2. Run `mise run wireguard:recover` with the existing Talos credentials.
+3. Verify `talosctl health` and `kubectl get nodes` over WireGuard, then remove the temporary rule.
 
-1. In the Hetzner console, temporarily allow TCP 50000 to the server.
-   Talos still requires its client certificate, so this exposes no
-   password login or anonymous administration.
-2. Run `mise run wireguard:recover`. It applies the repository's
-   `WireguardConfig` through the public endpoint in try mode, activates
-   the workstation peer, and makes the patch persistent only after the
-   private Talos endpoint responds.
-3. Remove the temporary TCP 50000 rule immediately. The steady-state
-   firewall exposes only UDP 51820 for management.
-
-Do not open TCP 6443 for this recovery. Once the Talos API is reachable
-over WireGuard, Kubernetes is reachable through the same private route.
-
-## One YubiKey lost
-
-You are one hardware failure from total loss. Replace immediately:
-buy a new YubiKey, generate keys on it, `sops updatekeys` every
-`.sops.*` file, commit and push. See `age-plugin-yubikey` and `sops`
-docs for the exact commands.
+The script persists its patch only after the private endpoint responds; failed attempts roll it back. Public Kubernetes access on port 6443 is unnecessary.

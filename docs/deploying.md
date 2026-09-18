@@ -1,131 +1,71 @@
 # Deploying
 
-Day-to-day workflows for changing what's running on the cluster. Three
-classes of change, each with its own loop:
+Kubernetes commands require [WireGuard](setup.md#connect-to-the-existing-cluster). OpenTofu requires a YubiKey.
 
-1. **Cluster state changes** (Helm releases, Kubernetes manifests,
-   secrets)  - Flux pulls them on its own.
-2. **Infrastructure changes** (server type, DNS, tunnel config)  -
-   `mise run tofu:apply` from your laptop.
-3. **Talos / Kubernetes upgrades**  - bump the locals in `tofu/locals.tf`,
-   then `tofu:apply`.
+## Kubernetes resources
 
-Everything below assumes you've completed the one-time setup in
-`setup.md`, have a YubiKey plugged in, and have the `shire` WireGuard
-interface active. Run `mise run wireguard:configure` if needed.
+| Resource | Location |
+|---|---|
+| Controllers and operators | `clusters/shire/infrastructure/controllers/` |
+| Shared resources requiring those CRDs | `clusters/shire/infrastructure/configs/` |
+| Application resources and environment values | `clusters/shire/apps/<APP>/` |
 
----
+Register manifests in the owning `kustomization.yaml`. Review and merge a PR to `main`; Flux reconciles dependencies before their consumers.
 
-## 1. Cluster state changes (the common case)
-
-The Flux loop is: edit → commit → push → wait. Flux polls this repo
-every minute and reconciles infrastructure controllers, dependent
-infrastructure configuration, and applications against the live cluster.
-
-Cluster-wide controllers and their Secrets live in
-`clusters/shire/infrastructure/controllers/`. Configuration that depends
-on their CRDs lives in `clusters/shire/infrastructure/configs/`.
-Application releases and Secrets live under `clusters/shire/apps/`.
-Add each resource to the `kustomization.yaml` in the matching directory.
-
-SOPS files must use the `.sops.yaml` suffix. The pre-commit hook
-refuses to commit without `ENC[` markers. Edit existing ones with
-`sops <file>` (decrypts in `$EDITOR`, re-encrypts on save).
-
-Rollback: `git revert <bad-commit> && git push`. To pause Flux while
-debugging: `flux suspend kustomization infrastructure`.
-
----
-
-## 2. Infrastructure changes (rarer)
-
-Anything in `tofu/` is operator-driven, not Flux-driven.
-
-### Changing server, DNS, tunnel config
-
-1. Edit the relevant `.tf` file.
-2. `mise run tofu:plan`  - review the diff. The task unwraps the state
-   passphrase and provider credentials from the single SOPS file with
-   one YubiKey touch during its cached authorization window.
-3. `mise run tofu:apply`  - decrypts the same file, then applies.
-   Targeted changes (firewall rules, DNS records, Cloudflare tunnel config) are
-   non-disruptive. If the plan replaces the server, do not apply it here.
-   Follow "Replacing the server" below so preflight runs before destruction.
-4. Commit and push the `.tf` change.
-
-### Replacing the server (server type bump, image swap, etc.)
-
-The node is cattle. Live data uses node-local or Hetzner volumes, while
-recoverable copies live in S3 backups (CNPG PITR for Postgres, tarballs
-for app data, and etcd snapshots for cluster state).
-
-1. Edit the relevant OpenTofu configuration and run `mise run tofu:plan`.
-2. Commit the desired state, merge it to `main`, and update the local
-   `main` branch. The rebuild preflight requires a clean `main` tracking
-   `origin/main`, because Flux reconciles that branch.
-3. Run `mise run rebuild`. Its doctor preflight completes before any apply.
-   The hcloud-talos module then replaces the server and delivers the
-   WireGuard machine configuration before private API bootstrap begins.
-4. Expect about 15 minutes of downtime. The cluster PKI lives in OpenTofu
-   state, so the replacement boots into the same Kubernetes identity.
-5. Restore stateful data from S3 if needed (see `disaster-recovery.md`).
-
----
-
-## 3. Talos / Kubernetes upgrades
-
-Both versions are pinned in `tofu/locals.tf`:
-
-```hcl
-talos_version      = "v1.12.8"
-kubernetes_version = "v1.35.2"
+```bash
+mise run reconcile
+flux get kustomizations -A
+flux get helmreleases -A
 ```
 
-To upgrade:
+Expected: `Ready=True` for active resources. See [troubleshooting](troubleshooting.md#flux-is-not-reconciling) for failures.
 
-1. Pick a target version. Read the Talos release notes and the matching
-   Kubernetes upgrade notes.
-2. Bump the local. For Talos minor bumps, also re-render the schematic -
-   `tofu:apply` re-fetches the Image Factory schematic for the new
-   version automatically because `data.talos_image_factory_extensions_versions.this`
-   is keyed off `local.talos_version`.
-3. `mise run tofu:plan`. Review what gets replaced. Talos minor upgrades
-   typically replace the snapshot and reboot the node (~5 minutes
-   downtime). Patch upgrades do an in-place reconfigure with no reboot.
-4. `mise run tofu:apply`.
-5. Verify with `kubectl get nodes` and `talosctl version`.
+## Cloud resources
 
----
+```bash
+mise run tofu:plan
+mise run tofu:apply
+```
 
-## Pre-commit and CI
+`apply` presents a fresh plan for approval. Merging a PR does not run OpenTofu. For server replacement, merge first and follow [rebuild](setup.md#rebuild-the-cluster).
 
-Run `mise run check` before pushing. It runs the hooks, a full-history
-Betterleaks scan, the tests, and OpenTofu validation. Hooks use tools pinned
-in `mise.toml` and `mise.lock`, including actionlint and zizmor for workflows.
-The checks do not rewrite files. Use `tofu -chdir=tofu fmt -recursive` to fix
-OpenTofu formatting.
+Talos and Kubernetes versions live in [locals.tf](../tofu/locals.tf). Check the target [Talos upgrade instructions](https://docs.siderolabs.com/talos/v1.14/configure-your-talos-cluster/lifecycle-management/upgrading-talos); keep `kubectl` within [one minor version](https://kubernetes.io/releases/version-skew-policy/#kubectl) of the API server.
 
-CI runs the same check with locked installs of only the required tools.
-OpenTofu validation uses a temporary data directory and placeholder credentials.
-It does not read the remote backend or decrypt secrets. `tofu plan` needs the
-state encryption passphrase and live cloud credentials, so it remains local.
+## Application releases
 
-YAML linting accepts Flux's generated sequence indentation only in
-`clusters/shire/flux-system/gotk-components.yaml`. Other YAML rules still apply
-to that file. See `prek.toml` for the encrypted and vendored file exclusions.
+Each application's manifests select its artifact and supply environment values and Secret references. Image automation writes updates to `flux-image-automation`; the [shared workflow](../.github/workflows/flux-image-auto-pr.yaml) opens a PR and enables automatic squash merge.
 
----
+To pin or roll back a release:
 
-## Common gotchas
+1. Suspend its `ImageUpdateAutomation` and check for an already-open update PR.
+2. Change the selected version or digest in the application's manifests.
+3. Review and merge the change. Check the application's health after reconciliation.
 
-- **Editing a `.sops.yaml` file with a regular editor.** Don't -
-  `sops <file>` opens it decrypted in `$EDITOR`. Saving with vim/code
-  directly will produce encrypted-looking gibberish that won't decrypt.
-- **Tunnel token after rebuild.** `mise run rebuild` handles the
-  commit+push automatically. If you're doing a partial rebuild, the
-  tunnel token must land in git before Flux can reconcile cloudflared.
-- **Touching `clusters/shire/flux-system/`.** Flux owns that directory.
-  If `flux bootstrap` regenerates it, hand-edits get clobbered.
-- **YubiKey touch timeouts.** Touch policy is `cached` (~15s window),
-  so multiple decryptions in quick succession only need one touch.
-  If you're slow, you'll get a second prompt.
+```bash
+flux suspend image update '<AUTOMATION>' -n flux-system
+flux resume image update '<AUTOMATION>' -n flux-system
+```
+
+Manifest rollback does not undo database migrations. Follow the application's migration compatibility requirements.
+
+## Validation
+
+```bash
+mise run check
+mise run manifests:diff -- origin/main
+mise run test:integration
+```
+
+| Check | Coverage |
+|---|---|
+| Lint | Formatting, shell/workflow syntax, secret scanning and documentation links |
+| Bats | Credential handling, file replacement and infrastructure scripts |
+| OpenTofu | Backend-free validation and mocked plans |
+| Manifest rendering | Flux/Helm output and CRD schemas; not live authentication or custom health-expression evaluation |
+| Integration | Flux/SOPS decryption, CNPG/Barman restore and restic restore in a disposable Kind cluster |
+
+Integration tests require Docker and OpenSSL. They use fixture data and local S3, not production credentials, Hetzner CSI or Talos recovery. [CI path filters](../.github/ci-paths.yaml) select affected checks; its required `checks` job rejects selected jobs that fail or skip.
+
+## Vendored manifests
+
+For [Barman](../clusters/shire/infrastructure/controllers/barman-cloud-plugin/), update both `manifest.yaml` and the upstream source URL in `kustomization.yaml`.

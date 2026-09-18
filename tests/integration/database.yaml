@@ -1,0 +1,37 @@
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: backup
+  namespace: fixture
+spec:
+  configuration:
+    destinationPath: s3://backups/cnpg/
+    endpointURL: http://minio.fixture.svc.cluster.local:9000
+    s3Credentials:
+      accessKeyId:
+        name: cnpg-s3-creds
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: cnpg-s3-creds
+        key: ACCESS_SECRET_KEY
+  retentionPolicy: 30d
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: database
+  namespace: fixture
+spec:
+  instances: 1
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+  storage:
+    size: 1Gi
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: backup
