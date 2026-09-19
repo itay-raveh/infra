@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    namespace: quizmon
+    name: quizmon-dns
+stringData:
+    token: ENC[AES256_GCM,data:B0Y4WR3M5lv7ggZTnEpoIEiVZ3QbasQtPG4PIy4pNyjY5+KrPk4xbeEYzuGdevca5Y2lDyQ=,iv:GR7t9Yf7STUI/3KqrRM3TtFd8NPr1pwyzTX2zCuu1iI=,tag:gxLCZhH0uW6uYh5xov6Umg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHBpdi1wMjU2IDJDM2Y5ZyBBaUlGQTN1
+            Nm1DY0lBUkJyUG9icGhqK2pXTmlSQks0T2QvV1crVVNZVkEzZwo1a2J3YUZxbU4w
+            Y0h6TzhmV1M0Y3R4dmJyNXNacE10aERCTUhhZDVBWGRnCi0tLSBEN1RWc2tLWVJ0
+            ZnFTRXE2dU5zL2VpbERPbkc1NGxDeUhrRllEZ1ZmVk5FCs0A1cWo+mxJ9NWNNhJH
+            r2E69jRsBqPy7QnO75W/oh6CZgXKZGQ8sJtb8KYPW0GGxHc1RabrfJcmq+tHMGNE
+            Zpk=
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1yubikey1qghympnz70sye3tx2a9yvudmmnvrq3ms7yd3gns8wz76r7k46hx0upwcu33
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHBpdi1wMjU2IDUyTHkxZyBBLy8veVVu
+            THFWOW02QWkxb2ZKUDZ2SU1GUDAwdHptMU8ydWtyTGFiM1RFOApoZFV1Tmx3cm10
+            WVAxdmRuYzVoWG9KQzU0TG5JVm9qTEh1NEJTR1pUSCswCi0tLSBaU2dDKzdjMjlR
+            clRrc1RCMStpbjVTaTl6Q01IR09zc1E2eXFWZ1g2RDdVCvw2kPEY615/3aIUJHvR
+            c1dJNZy0VEB0EZZHYqfbwLQ7mXjJraJD+bjhhDwcBcs5nRQNLEjVfJc/vMKikHHq
+            t8g=
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1yubikey1qvcujpaxamuraf4neev9xcxgj40e5x54n5a8kz0xvg3fpcnl6p48xsgkyg4
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA5eFhXWmp3c2ptT0ZzVGdY
+            KzJ4UUlwVXdtbUpDanp6VGRDRlBxSk42Yng4CkhDUVlLZTZ3b2dQdTAzalRWa015
+            QksxbUU5L01EN0NpaDlYQnVwOHhsWHcKLS0tIDBKRzV2Mmc1SHNxZGdWbkFkU3py
+            SGpSU2Y1YkdkbVRXU1JCZTlzdDQ2ZmsK/3h12quergZHsoZO6lgn+tci+t3wYB8e
+            3NuMKK/j/jOa/EPFwOrQ3C6VqrmzqAI11IKj6QyatU++fUMFY/VVOA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1dhztnm2nhdpcwsuv8uz6ss05tdx4jyfhm22dltu9l4u4fu8v3a4qs5asa7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-19T22:37:08Z"
+    mac: ENC[AES256_GCM,data:UFASW0VMTxSBH39Jj1z52RSqs4rGn/++jBD4YLNx51zZ97VJ+tp6SBDPtII/o0QTS14w4axk4PfqZz6ynWkvRPWWQqtTC1un6esyDHAWx9cEmh07Hm7OmfAfu+zl+Q099HCu0+O8JZnuSmLpNi+Yi5x7HgGxYw0NNLU5ZSSt2jw=,iv:gitZi69MH1h+M2gFqviCZmtEl/Cdxzq77eBGpSlixJY=,tag:0w8LAf16eW6h1NL1oxpy9g==,type:str]
+    version: 3.13.3

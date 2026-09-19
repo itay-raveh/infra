@@ -1,0 +1,61 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: quizmon
+  namespace: quizmon
+spec:
+  interval: 5m
+  url: https://github.com/itay-raveh/quizmon.git
+  ref:
+    branch: main
+  ignore: |
+    /*
+    !/charts/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: quizmon
+  namespace: quizmon
+spec:
+  interval: 5m
+  releaseName: online
+  timeout: 10m
+  chart:
+    spec:
+      chart: ./charts/quizmon
+      sourceRef:
+        kind: GitRepository
+        name: quizmon
+      reconcileStrategy: Revision
+  install:
+    remediation:
+      retries: 0
+  upgrade:
+    remediation:
+      retries: 0
+  valuesFrom:
+    - kind: ConfigMap
+      name: quizmon-runtime
+      valuesKey: values.yaml
+  values:
+    releaseImage:
+      repository: ghcr.io/itay-raveh/quizmon/release
+      digest: "" # {"$imagepolicy": "flux-system:quizmon:digest"}
+    runtimeConfig:
+      version: 1
+      workerName: quizmon
+      origin: https://quizmon.raveh.dev
+      sync:
+        version: 1
+        endpoint: https://quizmon-sync.raveh.dev
+        audience: quizmon
+      mailFrom: quizmon@raveh.dev
+      analyticsDataset: quizmon_events
+      authRateLimitNamespace: "1011"
+      apiRateLimitNamespace: "1012"
+    release:
+      mode: preflight
+    powersync:
+      enabled: false
