@@ -1,0 +1,15 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: quizmon-sync
+  namespace: quizmon
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`quizmon-sync.raveh.dev`) && (PathPrefix(`/sync/`) || Path(`/probes/liveness`))
+      kind: Rule
+      services:
+        - name: online-quizmon-sync
+          port: 8080

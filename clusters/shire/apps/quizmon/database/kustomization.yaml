@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - certificates.yaml
+  - cluster.yaml
+  - backup.yaml
+  - inputs/
+secretGenerator:
+  - name: quizmon-db-ca
+    namespace: quizmon
+    files:
+      - ca.crt=letsencrypt.pem
+    options:
+      disableNameSuffixHash: true
+      labels:
+        cnpg.io/reload: "true"

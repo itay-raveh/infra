@@ -6,6 +6,8 @@ Use the [deployment workflow](deploying.md#change-cloud-infrastructure) and
 [token inventory](secrets.md#token-inventory). Application Worker code, bindings
 and logs belong to each application's Wrangler config.
 
+[quizmon.tf](../tofu/quizmon.tf) owns Quizmon's private database DNS, VPC service, Hyperdrive and service tokens. See [first deployment](deploying.md#quizmon-first-deployment) for database and release ordering.
+
 ## Token permissions
 
 The default provider needs zone DNS, Zone Settings, SSL and Certificates,
