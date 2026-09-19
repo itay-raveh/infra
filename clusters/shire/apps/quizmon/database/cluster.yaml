@@ -1,0 +1,88 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: quizmon-db
+  namespace: quizmon
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-system-trixie
+  bootstrap:
+    initdb:
+      database: quizmon
+      owner: quizmon
+      secret:
+        name: quizmon-db-app
+  certificates:
+    serverTLSSecret: quizmon-db-tls
+    serverCASecret: quizmon-db-ca
+  managed:
+    roles:
+      - name: quizmon
+        ensure: present
+        login: true
+        passwordSecret:
+          name: quizmon-db-app
+      - name: powersync_source
+        ensure: present
+        login: true
+        replication: true
+        inRoles:
+          - pg_read_all_data
+        passwordSecret:
+          name: quizmon-db-source
+      - name: powersync_storage
+        ensure: present
+        login: true
+        passwordSecret:
+          name: quizmon-db-storage
+    services:
+      additional:
+        - selectorType: rw
+          serviceTemplate:
+            metadata:
+              name: quizmon-db-private
+            spec:
+              type: ClusterIP
+              clusterIP: 10.0.8.20
+              ports:
+                - name: postgresql
+                  port: 5432
+                  targetPort: 5432
+  storage:
+    size: 10Gi
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 768Mi
+  postgresql:
+    parameters:
+      shared_buffers: 128MB
+      work_mem: 4MB
+      max_connections: "50"
+      max_slot_wal_keep_size: 1GB
+    pg_hba:
+      - hostssl quizmon quizmon,powersync_source all scram-sha-256
+      - hostssl powersync powersync_storage all scram-sha-256
+      - host all all all reject
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: quizmon-backup
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: quizmon-powersync
+  namespace: quizmon
+spec:
+  name: powersync
+  owner: powersync_storage
+  databaseReclaimPolicy: retain
+  cluster:
+    name: quizmon-db

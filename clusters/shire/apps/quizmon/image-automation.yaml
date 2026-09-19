@@ -1,0 +1,52 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: quizmon
+  namespace: flux-system
+spec:
+  suspend: true
+  image: ghcr.io/itay-raveh/quizmon/release
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: quizmon
+  namespace: flux-system
+spec:
+  suspend: true
+  imageRepositoryRef:
+    name: quizmon
+  filterTags:
+    pattern: '^main-[0-9]{9}-[0-9]{3}-[a-f0-9]{12}$'
+  policy:
+    alphabetical:
+      order: asc
+  digestReflectionPolicy: IfNotPresent
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: quizmon
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: flux@raveh.dev
+        name: flux
+      messageTemplate: 'deploy: update quizmon release'
+    push:
+      branch: flux-image-automation
+  update:
+    path: ./clusters/shire/apps/quizmon/release
+    strategy: Setters

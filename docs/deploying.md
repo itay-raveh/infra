@@ -69,6 +69,19 @@ enables automatic squash merge. Versions are in
 See [rollback](disaster-recovery.md#roll-back-an-application-release) to pin an
 older release and pause updates.
 
+## Quizmon first deployment
+
+The [Quizmon database](../clusters/shire/apps/quizmon/reconciliation.yaml) deploys separately from the suspended application release. OpenTofu creates credentials and private networking; the app chart owns migrations, the Worker, and PowerSync.
+
+1. Review the OpenTofu plan with `quizmon_hyperdrive_enabled=false`, then apply it. The default provider needs Connectivity Directory Admin and Hyperdrive Write; the account provider needs Account API Tokens Write.
+2. Run `mise run quizmon:refresh-database-secrets`. Commit the generated encrypted inputs, set `quizmon-database.spec.suspend` to `false`, and merge. Wait for the Certificate, Cluster, and PowerSync Database to become ready.
+3. Set `quizmon_hyperdrive_enabled=true` in the OpenTofu inputs, then plan and apply. The VPC service requires a trusted certificate matching the database hostname. Keep `verify_full` enabled.
+4. Supply the existing production `VAPID_PRIVATE_KEY` in a local JSON file, then run `mise run quizmon:refresh-release-secrets -- <worker-secrets.json>`. The command generates the encrypted release inputs and public runtime ConfigMap. It never reads application source or replaces the reminder key.
+5. Publish the application release image through Quizmon's CI, then resume the resources in [image-automation.yaml](../clusters/shire/apps/quizmon/image-automation.yaml). Wait for Flux image automation to populate the digest in [app-chart.yaml](../clusters/shire/apps/quizmon/release/app-chart.yaml), then enable `quizmon-release` reconciliation. Keep `release.mode: preflight` and `powersync.enabled: false` until the Job confirms a verified TLS database connection.
+6. Set `release.mode: deploy` and `powersync.enabled: true`, review, and merge. The release Job migrates before deploying the Worker. Check sign-in, cross-device sync, offline reload, and a backup restore before inviting users.
+
+To stop releases, suspend `quizmon-release` and its image automation. Reverting an image digest does not undo database migrations. CNPG deletion is excluded from Flux pruning; database deletion requires a separate action. The database hostname resolves to a private Service address, `10.0.8.20`, reserved in both CNPG and OpenTofu.
+
 ## Refresh generated credentials
 
 | Command | Kubernetes Secret |
