@@ -7,7 +7,7 @@ resources:
   - backup.yaml
   - inputs/
 secretGenerator:
-  - name: quizmon-db-ca
+  - name: quizmon-db-server-ca
     namespace: quizmon
     files:
       - ca.crt=letsencrypt.pem

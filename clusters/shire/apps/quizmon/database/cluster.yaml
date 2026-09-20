@@ -17,7 +17,7 @@ spec:
         name: quizmon-db-app
   certificates:
     serverTLSSecret: quizmon-db-tls
-    serverCASecret: quizmon-db-ca
+    serverCASecret: quizmon-db-server-ca
   managed:
     roles:
       - name: quizmon
