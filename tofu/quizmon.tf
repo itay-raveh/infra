@@ -13,8 +13,8 @@ locals {
 
 variable "quizmon_hyperdrive_enabled" {
   type        = bool
-  default     = false
-  description = "Enable after the Quizmon database and its public-CA certificate are ready. Hyperdrive validates the origin on creation."
+  default     = true
+  description = "Enable Quizmon Hyperdrive after its private database and public-CA certificate are ready."
 }
 
 resource "random_password" "quizmon_database" {

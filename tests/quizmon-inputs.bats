@@ -120,8 +120,9 @@ SCRIPT
     local directory="$FIXTURE/clusters/shire/apps/quizmon/release/inputs"
     [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 6 ]
     sops decrypt --output-type json "$directory/quizmon-worker.sops.yaml" | jq -e '.stringData["worker-secrets.json"] | fromjson | .VAPID_PRIVATE_KEY == ("d" * 43)'
-    jq -e '.data["values.yaml"] | fromjson | .runtimeConfig.hyperdriveId == ("c" * 32) and
-      (.inputs.workerSecrets.revision | test("^[a-f0-9]{64}$"))' "$directory/runtime.yaml"
+    yq -o=json -I=0 '.data."values.yaml" | from_yaml' "$directory/runtime.yaml" |
+        jq -e '.runtimeConfig.hyperdriveId == ("c" * 32) and
+          (.inputs.workerSecrets.revision | test("^[a-f0-9]{64}$"))'
     refute_file_contains "$directory/runtime.yaml" deployment-token
     refute_file_contains "$directory/runtime.yaml" app-password
     cp "$directory/quizmon-worker.sops.yaml" "$BATS_TEST_TMPDIR/previous"

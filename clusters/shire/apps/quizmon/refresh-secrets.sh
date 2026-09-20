@@ -40,7 +40,7 @@ if [[ "$mode" == release ]]; then
         {apiVersion: "v1", kind: "ConfigMap",
          metadata: {namespace: "quizmon", name: "quizmon-runtime",
                     labels: {"reconcile.fluxcd.io/watch": "Enabled"}},
-         data: {"values.yaml": ({
+         data: {"values.yaml": {
            runtimeConfig: {hyperdriveId: .hyperdrive_id},
            inputs: {
              workerSecrets: input("quizmon-worker"; "worker-secrets.json"),
@@ -51,8 +51,10 @@ if [[ "$mode" == release ]]; then
              sourceSecret: input("quizmon-sync-source"; "uri"),
              storageSecret: input("quizmon-sync-storage"; "uri")
            }
-         } | tojson)}}
-    ' "$temporary/inputs.json" > "$temporary/runtime.yaml"
+         }}}
+    ' "$temporary/inputs.json" |
+        yq -P '.data."values.yaml" = (.data."values.yaml" | ... style="" | to_yaml) | .data."values.yaml" style="literal"' \
+            > "$temporary/runtime.yaml"
 fi
 
 jq --arg mode "$mode" '{
