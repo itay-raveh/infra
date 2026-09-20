@@ -14,14 +14,14 @@ Recovery requires the encrypted repository, a YubiKey and OpenTofu state. Keep i
 
 ## Restore etcd
 
-Install `zstd` and configure an authenticated `mc` alias named `hetzner`. Choose a snapshot:
+Install `zstd`. Load the read-only recovery credential from SOPS and choose a snapshot:
 
 ```bash
-mc ls --recursive hetzner/shire-backups/etcd/
+bash scripts/sops-exec.sh secrets/backup-recovery.sops.yaml -- mc ls --recursive hetzner/shire-backups/etcd/
 set -o pipefail
 umask 077
 snapshot_dir=$(mktemp -d)
-mc cp 'hetzner/shire-backups/etcd/<SNAPSHOT_OBJECT>' "$snapshot_dir/snapshot.age"
+bash scripts/sops-exec.sh secrets/backup-recovery.sops.yaml -- mc cp 'hetzner/shire-backups/etcd/<SNAPSHOT_OBJECT>' "$snapshot_dir/snapshot.age"
 age --decrypt -i <(sops decrypt bootstrap/etcd-backup-age-key.sops.txt) "$snapshot_dir/snapshot.age" | zstd --decompress > "$snapshot_dir/db.snapshot"
 ```
 

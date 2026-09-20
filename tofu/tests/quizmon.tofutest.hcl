@@ -15,7 +15,7 @@ mock_provider "tailscale" {}
 mock_provider "sentry" {}
 
 variables {
-  backup_s3_operator_project_id = "87654321"
+  backup_s3_recovery_principal = { project_id = "12345678", access_key_id = "DDDDDDDDDDDDDDDDDDDD" }
   backup_s3_principals = {
     etcd        = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
     wanderbound = { project_id = "12345678", access_key_id = "BBBBBBBBBBBBBBBBBBBB" }

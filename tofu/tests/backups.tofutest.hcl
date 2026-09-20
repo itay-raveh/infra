@@ -18,7 +18,7 @@ mock_provider "cloudflare" {
 }
 
 variables {
-  backup_s3_operator_project_id = "87654321"
+  backup_s3_recovery_principal = { project_id = "12345678", access_key_id = "DDDDDDDDDDDDDDDDDDDD" }
   backup_s3_principals = {
     etcd        = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
     wanderbound = { project_id = "12345678", access_key_id = "BBBBBBBBBBBBBBBBBBBB" }
@@ -87,10 +87,10 @@ run "isolate_backup_credentials" {
         for action in statement.Action : contains([
           "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts", "s3:PutObject",
           "s3:DeleteObject", "s3:GetObject", "s3:GetObjectVersion",
-          "s3:GetBucketLocation", "s3:ListBucket",
+          "s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketVersions",
         ], action)
       ]) if statement.Effect == "Allow"
-    ]) && length(jsondecode(minio_s3_bucket_policy.backups.policy).Statement) == 11
+    ]) && length(jsondecode(minio_s3_bucket_policy.backups.policy).Statement) == 13
     error_message = "Backup keys must not receive state access, bucket administration or permanent version deletion."
   }
   assert {
@@ -118,20 +118,36 @@ run "isolate_backup_credentials" {
         contains(statement.Action, "s3:GetObject") == (statement.Sid != "etcdObjects") &&
         contains(statement.Action, "s3:DeleteObject") == (statement.Sid != "etcdObjects") &&
         !contains(statement.Action, "s3:ListBucket")
-      ) if statement.Effect == "Allow" && statement.Sid != "OperatorRecovery"
+      ) if statement.Effect == "Allow" && !startswith(statement.Sid, "Recovery")
     ])
     error_message = "Each backup key must be restricted to its own object paths, with etcd write-only and Barman bucket checks allowed."
   }
   assert {
-    condition = one([
+    condition = alltrue([
       for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
-      statement.Effect == "Allow" &&
-      statement.Principal.AWS == "arn:aws:iam:::user/p87654321:fixture" &&
-      toset(statement.Action) == toset(["s3:GetObject", "s3:GetObjectVersion"]) &&
-      statement.Resource == ["arn:aws:s3:::shire-backups/*"]
-      if statement.Sid == "OperatorRecovery"
-    ])
-    error_message = "The operator must be able to recover objects owned by runtime backup credentials."
+      statement.Principal.AWS == "arn:aws:iam:::user/p12345678:DDDDDDDDDDDDDDDDDDDD" && (
+        statement.Sid == "RecoveryObjects" ? (
+          statement.Effect == "Allow" &&
+          toset(statement.Action) == toset(["s3:GetObject", "s3:GetObjectVersion"]) &&
+          statement.Resource == ["arn:aws:s3:::shire-backups/*"]
+          ) : statement.Sid == "RecoveryBucket" ? (
+          statement.Effect == "Allow" &&
+          toset(statement.Action) == toset(["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketVersions"]) &&
+          statement.Resource == ["arn:aws:s3:::shire-backups"]
+          ) : (
+          statement.Effect == "Deny" &&
+          toset(statement.Action) == toset([
+            "s3:Put*", "s3:Delete*", "s3:AbortMultipartUpload",
+            "s3:*Acl", "s3:*Tagging", "s3:*Retention", "s3:*LegalHold",
+          ]) &&
+          toset(statement.Resource) == toset(["arn:aws:s3:::shire-backups", "arn:aws:s3:::shire-backups/*"])
+        )
+      ) if startswith(statement.Sid, "Recovery")
+      ]) && length([
+      for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : statement
+      if startswith(statement.Sid, "Recovery")
+    ]) == 3
+    error_message = "The separate recovery key needs backup reads and version listing, with writes explicitly denied."
   }
   assert {
     condition = alltrue([
@@ -188,4 +204,15 @@ run "reject_shared_runtime_backup_key" {
     }
   }
   expect_failures = [var.backup_s3_principals]
+}
+
+run "reject_runtime_key_for_recovery" {
+  command = plan
+  plan_options {
+    target = [minio_s3_bucket_policy.backups]
+  }
+  variables {
+    backup_s3_recovery_principal = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
+  }
+  expect_failures = [var.backup_s3_recovery_principal]
 }

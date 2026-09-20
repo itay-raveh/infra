@@ -1,7 +1,19 @@
-variable "backup_s3_operator_project_id" {
-  description = "Hetzner project containing the provisioning S3 key used for backup recovery."
-  type        = string
-  sensitive   = true
+variable "backup_s3_recovery_principal" {
+  description = "Hardware-only recovery key in the backup credentials project."
+  type = object({
+    project_id    = string
+    access_key_id = string
+  })
+  sensitive = true
+
+  validation {
+    condition = (
+      can(regex("^[0-9]+$", var.backup_s3_recovery_principal.project_id)) &&
+      can(regex("^[A-Z0-9]{20}$", var.backup_s3_recovery_principal.access_key_id)) &&
+      !contains(concat([var.s3_access_key_id], [for key in values(var.backup_s3_principals) : key.access_key_id]), var.backup_s3_recovery_principal.access_key_id)
+    )
+    error_message = "Use a recovery key separate from runtime and provisioning keys."
+  }
 }
 
 variable "backup_s3_principals" {
@@ -31,6 +43,7 @@ resource "minio_s3_bucket" "backups" {
 }
 
 locals {
+  backup_recovery_principal = "arn:aws:iam:::user/p${var.backup_s3_recovery_principal.project_id}:${var.backup_s3_recovery_principal.access_key_id}"
   backup_prefixes = {
     etcd        = ["etcd/"]
     wanderbound = ["cnpg/wanderbound/", "app-data/wanderbound/"]
@@ -99,14 +112,26 @@ resource "minio_s3_bucket_policy" "backups" {
       Action   = ["s3:GetBucketLocation", "s3:ListBucket"]
       Resource = [minio_s3_bucket.backups.arn]
       }, {
-      Sid    = "OperatorRecovery"
-      Effect = "Allow"
-      Principal = {
-        AWS = "arn:aws:iam:::user/p${var.backup_s3_operator_project_id}:${var.s3_access_key_id}"
-      }
-      # The uploader owns cross-project objects, including their read permissions.
-      Action   = ["s3:GetObject", "s3:GetObjectVersion"]
-      Resource = ["${minio_s3_bucket.backups.arn}/*"]
+      Sid       = "RecoveryObjects"
+      Effect    = "Allow"
+      Principal = { AWS = local.backup_recovery_principal }
+      Action    = ["s3:GetObject", "s3:GetObjectVersion"]
+      Resource  = ["${minio_s3_bucket.backups.arn}/*"]
+      }, {
+      Sid       = "RecoveryBucket"
+      Effect    = "Allow"
+      Principal = { AWS = local.backup_recovery_principal }
+      Action    = ["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketVersions"]
+      Resource  = [minio_s3_bucket.backups.arn]
+      }, {
+      Sid       = "RecoveryWrites"
+      Effect    = "Deny"
+      Principal = { AWS = local.backup_recovery_principal }
+      Action = [
+        "s3:Put*", "s3:Delete*", "s3:AbortMultipartUpload",
+        "s3:*Acl", "s3:*Tagging", "s3:*Retention", "s3:*LegalHold",
+      ]
+      Resource = [minio_s3_bucket.backups.arn, "${minio_s3_bucket.backups.arn}/*"]
     }])
   })
 }
