@@ -56,6 +56,6 @@ spec:
       authRateLimitNamespace: "1011"
       apiRateLimitNamespace: "1012"
     release:
-      mode: preflight
+      mode: deploy
     powersync:
-      enabled: false
+      enabled: true
