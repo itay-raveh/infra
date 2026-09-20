@@ -14,7 +14,7 @@ pass_filenames = false
 id = "sops-sanity"
 name = "sops-sanity"
 language = "system"
-entry = "scripts/sops-sanity.sh"
+entry = "python3 scripts/sops-sanity.py --staged"
 pass_filenames = false
 always_run = true
 

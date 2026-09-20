@@ -10,7 +10,11 @@ Kubernetes commands require [WireGuard](setup.md#connect-to-the-existing-cluster
 | Shared resources requiring those CRDs | `clusters/shire/infrastructure/configs/` |
 | Application resources and environment values | `clusters/shire/apps/<APP>/` |
 
-Register manifests in the owning `kustomization.yaml`. Review and merge a PR to `main`; Flux reconciles dependencies before their consumers.
+Register manifests in the owning `kustomization.yaml`. `main` requires a PR, passing `checks` from GitHub Actions and squash merge. Flux verifies the resulting commit with the GitHub signing key before reconciling dependencies and consumers.
+
+The public key is in [flux-system/](../clusters/shire/flux-system/). It authenticates GitHub's merge signature, not the PR author's identity. When GitHub rotates its [signing key](https://github.com/web-flow.gpg), verify the replacement and apply that directory with `kubectl apply -k clusters/shire/flux-system` before reconciling.
+
+Apply repository rules and the image-automation environment with `bash scripts/configure-github.sh`. The environment permits only `flux-image-automation`; store its two App secrets there, not as repository-wide secrets.
 
 ```bash
 mise run reconcile

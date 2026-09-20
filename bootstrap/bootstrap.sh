@@ -194,22 +194,14 @@ bash scripts/encrypt-sops.sh "$flux_secret" json -- jq -n '{
         githubAppPrivateKey: env.FLUX_APP_PRIVATE_KEY
     }
 }'
-printf '%s' "$FLUX_APP_ID" | gh secret set FLUX_APP_ID --repo "$repo"
-printf '%s\n' "$FLUX_APP_PRIVATE_KEY" | gh secret set FLUX_APP_PRIVATE_KEY --repo "$repo"
+bash scripts/configure-github.sh
+printf '%s' "$FLUX_APP_ID" | gh secret set FLUX_APP_ID --repo "$repo" --env flux-image-automation
+printf '%s\n' "$FLUX_APP_PRIVATE_KEY" | gh secret set FLUX_APP_PRIVATE_KEY --repo "$repo" --env flux-image-automation
 
 unset STATE_PASSPHRASE HCLOUD_TOKEN S3_AK S3_SK CF_TOKEN CF_ACCOUNT_TOKEN
 unset CF_PRIMARY_EMAIL CF_GMAIL_EMAIL CF_PROTON_EMAIL TS_OAUTH_ID TS_OAUTH_SECRET
 unset UPLOAD_PROJECT_ID UPLOAD_ACCESS_KEY_ID SENTRY_AUTH_TOKEN
 unset FLUX_APP_ID FLUX_APP_INSTALLATION_ID FLUX_APP_PRIVATE_KEY FLUX_APP_PRIVATE_KEY_FILE
 unset WIREGUARD_SERVER_PRIVATE_KEY WIREGUARD_WORKSTATION_PRIVATE_KEY WIREGUARD_WORKSTATION_PUBLIC_KEY
-
-step "applying repository rulesets"
-gh api --method DELETE "repos/$repo/branches/main/protection" >/dev/null 2>&1 || true
-for id in $(gh api "repos/$repo/rulesets" --jq '.[].id'); do
-  gh api --method DELETE "repos/$repo/rulesets/$id" >/dev/null
-done
-for f in .github/rulesets/*.json; do
-  gh api --method POST "repos/$repo/rulesets" --input "$f" >/dev/null
-done
 
 step "done. next: commit and push."

@@ -12,6 +12,12 @@ if [[ "$mode" != database && "$mode" != release ]] ||
     exit 2
 fi
 
+directory="$app_dir/$mode/inputs"
+if [[ "$mode" == database && ! -f "$directory/quizmon-backup.sops.yaml" ]]; then
+    printf 'Create quizmon-backup.sops.yaml with dedicated backup credentials first.\n' >&2
+    exit 1
+fi
+
 temporary=$(mktemp -d)
 trap 'rm -rf -- "$temporary"' EXIT
 bash scripts/tofu-wrapper.sh output -json quizmon_inputs > "$temporary/inputs.json"
@@ -20,7 +26,6 @@ if [[ "$mode" == database ]]; then printf '{}\n' > "$worker_file"; fi
 jq -e --arg mode "$mode" --slurpfile worker "$worker_file" \
     -f "$app_dir/inputs.jq" "$temporary/inputs.json" > "$temporary/secrets.json"
 
-directory="$app_dir/$mode/inputs"
 while IFS= read -r name; do
     jq --arg name "$name" '.[] | select(.metadata.name == $name)' \
         "$temporary/secrets.json" > "$temporary/$name.json"
@@ -52,7 +57,7 @@ fi
 
 jq --arg mode "$mode" '{
   apiVersion: "kustomize.config.k8s.io/v1beta1", kind: "Kustomization",
-  resources: ([.[].metadata.name + ".sops.yaml"] + if $mode == "release" then ["runtime.yaml"] else [] end)
+  resources: ([.[].metadata.name + ".sops.yaml"] + if $mode == "release" then ["runtime.yaml"] else ["quizmon-backup.sops.yaml"] end)
 }' "$temporary/secrets.json" | yq -P > "$temporary/kustomization.yaml"
 mv "$temporary/"*.yaml "$directory/"
 printf 'Updated Quizmon %s inputs. Review and commit the encrypted manifests.\n' "$mode"

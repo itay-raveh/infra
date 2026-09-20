@@ -16,11 +16,7 @@ if $mode == "database" then
     secret("quizmon-db-" + $role[1]; {username: $role[0], password: ($inputs | password($role[0]))}) |
     .type = "kubernetes.io/basic-auth"
   ] + [
-    secret("quizmon-dns"; {token: (.dns_token | required_string("DNS token"))}),
-    secret("quizmon-backup"; {
-      ACCESS_KEY_ID: (.backup_access_key | required_string("backup access key")),
-      ACCESS_SECRET_KEY: (.backup_secret_key | required_string("backup secret key"))
-    })
+    secret("quizmon-dns"; {token: (.dns_token | required_string("DNS token"))})
   ]
 elif $mode == "release" then
   if (.hyperdrive_id | type) != "string" or

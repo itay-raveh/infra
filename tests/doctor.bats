@@ -6,7 +6,8 @@ setup() {
     setup_fakebin
     mkdir -p bootstrap clusters/shire/flux-system
     touch bootstrap/cluster-age-key.sops.txt bootstrap/etcd-backup-age-key.sops.txt \
-        clusters/shire/flux-system/flux-github-app.sops.yaml
+        clusters/shire/flux-system/flux-github-app.sops.yaml \
+        clusters/shire/flux-system/github-web-flow.asc clusters/shire/flux-system/kustomization.yaml
     cat > clusters/shire/flux-system/gotk-sync.yaml <<'YAML'
 kind: GitRepository
 metadata:

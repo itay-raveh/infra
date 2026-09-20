@@ -132,6 +132,8 @@ EOF
     [ "$(cat "$BATS_TEST_TMPDIR/github-FLUX_APP_ID")" = 456 ]
     assert_file_contains "$BOOTSTRAP_CALLS" '--repo example/infra'
     refute_file_contains "$BOOTSTRAP_CALLS" 'BEGIN PRIVATE KEY'
+    assert_file_contains "$BOOTSTRAP_CALLS" '--env flux-image-automation'
+    refute_file_contains "$BOOTSTRAP_CALLS" '--method DELETE'
 }
 
 @test "bootstrap connects the etcd backup recipient and restricts both private keys to recovery identities" {

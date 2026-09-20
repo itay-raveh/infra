@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 bash scripts/doctor.sh
-git pull --rebase
+git pull --ff-only
 
 echo "==> 1/6: creating the Talos image and stable management endpoint"
 bash scripts/tofu-wrapper.sh apply -auto-approve \
@@ -20,9 +20,7 @@ mise run configs:refresh
 target=clusters/shire/infrastructure/controllers/cloudflared-tunnel-token.sops.yaml
 bash scripts/refresh-sops-secret.sh "$target" cloudflared cloudflared-tunnel-token cf-tunnel-token -- \
     bash scripts/tofu-wrapper.sh output -raw tunnel_token
-git add "$target"
-git commit -m "chore: tunnel token for fresh rebuild"
-git push
+bash scripts/publish-rebuild-token.sh "$target"
 
 echo "==> 5/6: seeding SOPS age key"
 kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
@@ -37,6 +35,6 @@ flux install \
   --components-extra=image-reflector-controller,image-automation-controller
 sops --decrypt clusters/shire/flux-system/flux-github-app.sops.yaml \
   | kubectl apply -f -
-kubectl apply -f clusters/shire/flux-system/gotk-sync.yaml
+kubectl apply -k clusters/shire/flux-system
 
 echo "==> rebuild complete. watch with: flux get kustomizations --watch"

@@ -8,6 +8,7 @@ permissions: {}
 
 jobs:
   pr:
+    environment: flux-image-automation
     runs-on: ubuntu-24.04
     steps:
       - name: Mint infra-flux installation token
