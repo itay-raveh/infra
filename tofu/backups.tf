@@ -30,6 +30,21 @@ locals {
     wanderbound = ["cnpg/wanderbound/", "app-data/wanderbound/"]
     quizmon     = ["cnpg/quizmon/"]
   }
+  backup_object_access = {
+    for consumer, prefixes in local.backup_prefixes : consumer => {
+      principal = "arn:aws:iam:::user/p${var.backup_s3_principals[consumer].project_id}:${var.backup_s3_principals[consumer].access_key_id}"
+      actions = concat([
+        "s3:AbortMultipartUpload",
+        "s3:ListMultipartUploadParts",
+        "s3:PutObject",
+        ], consumer == "etcd" ? [] : [
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+      ])
+      resources = [for prefix in prefixes : "${minio_s3_bucket.backups.arn}/${prefix}*"]
+    }
+  }
 }
 
 resource "minio_s3_bucket_policy" "backups" {
@@ -37,36 +52,41 @@ resource "minio_s3_bucket_policy" "backups" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = concat([
-      for consumer, prefixes in local.backup_prefixes : {
-        Sid    = "${consumer}Objects"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam:::user/p${var.backup_s3_principals[consumer].project_id}:${var.backup_s3_principals[consumer].access_key_id}"
-        }
-        Action = concat([
-          "s3:AbortMultipartUpload",
-          "s3:ListMultipartUploadParts",
-          "s3:PutObject",
-          ], consumer == "etcd" ? [] : [
-          "s3:DeleteObject",
-          "s3:GetObject",
-          "s3:GetObjectVersion",
-        ])
-        Resource = [for prefix in prefixes : "${minio_s3_bucket.backups.arn}/${prefix}*"]
+    Statement = concat(flatten([
+      for consumer, access in local.backup_object_access : [
+        {
+          Sid       = "${consumer}Objects"
+          Effect    = "Allow"
+          Principal = { AWS = access.principal }
+          Action    = access.actions
+          Resource  = access.resources
+        },
+        # Object ownership can grant access beyond the Allow statements.
+        {
+          Sid         = "${consumer}OtherPaths"
+          Effect      = "Deny"
+          Principal   = { AWS = access.principal }
+          Action      = ["s3:*"]
+          NotResource = concat(access.resources, consumer == "etcd" ? [] : [minio_s3_bucket.backups.arn])
+        },
+        {
+          Sid       = "${consumer}OtherActions"
+          Effect    = "Deny"
+          Principal = { AWS = access.principal }
+          NotAction = concat(access.actions, consumer == "etcd" ? [] : ["s3:GetBucketLocation", "s3:ListBucket"])
+          Resource  = [minio_s3_bucket.backups.arn, "${minio_s3_bucket.backups.arn}/*"]
+        },
+      ]
+      ]), [{
+      Sid    = "DatabaseBucketChecks"
+      Effect = "Allow"
+      Principal = {
+        AWS = [for consumer in ["wanderbound", "quizmon"] : local.backup_object_access[consumer].principal]
       }
-      ], [{
-        Sid    = "DatabaseBucketChecks"
-        Effect = "Allow"
-        Principal = {
-          AWS = [for consumer in ["wanderbound", "quizmon"] :
-            "arn:aws:iam:::user/p${var.backup_s3_principals[consumer].project_id}:${var.backup_s3_principals[consumer].access_key_id}"
-          ]
-        }
-        # HeadBucket requires ListBucket without an s3:prefix condition.
-        # https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html
-        Action   = ["s3:GetBucketLocation", "s3:ListBucket"]
-        Resource = [minio_s3_bucket.backups.arn]
+      # HeadBucket requires ListBucket without an s3:prefix condition.
+      # https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html
+      Action   = ["s3:GetBucketLocation", "s3:ListBucket"]
+      Resource = [minio_s3_bucket.backups.arn]
     }])
   })
 }

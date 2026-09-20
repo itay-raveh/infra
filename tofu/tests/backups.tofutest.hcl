@@ -79,7 +79,7 @@ run "isolate_backup_credentials" {
   assert {
     condition = alltrue([
       for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
-      statement.Effect == "Allow" && alltrue([
+      alltrue([
         for resource in statement.Resource :
         startswith(resource, "arn:aws:s3:::shire-backups")
         ]) && alltrue([
@@ -88,8 +88,8 @@ run "isolate_backup_credentials" {
           "s3:DeleteObject", "s3:GetObject", "s3:GetObjectVersion",
           "s3:GetBucketLocation", "s3:ListBucket",
         ], action)
-      ])
-    ]) && length(jsondecode(minio_s3_bucket_policy.backups.policy).Statement) == 4
+      ]) if statement.Effect == "Allow"
+    ]) && length(jsondecode(minio_s3_bucket_policy.backups.policy).Statement) == 10
     error_message = "Backup keys must not receive state access, bucket administration or permanent version deletion."
   }
   assert {
@@ -117,9 +117,37 @@ run "isolate_backup_credentials" {
         contains(statement.Action, "s3:GetObject") == (statement.Sid != "etcdObjects") &&
         contains(statement.Action, "s3:DeleteObject") == (statement.Sid != "etcdObjects") &&
         !contains(statement.Action, "s3:ListBucket")
-      )
+      ) if statement.Effect == "Allow"
     ])
     error_message = "Each backup key must be restricted to its own object paths, with etcd write-only and Barman bucket checks allowed."
+  }
+  assert {
+    condition = alltrue([
+      for consumer in ["etcd", "wanderbound", "quizmon"] : alltrue([
+        for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
+        statement.Effect == "Deny" && statement.Principal == one([
+          for grant in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : grant.Principal
+          if grant.Sid == "${consumer}Objects"
+          ]) && (statement.Sid == "${consumer}OtherPaths" ? (
+          toset(statement.Action) == toset(["s3:*"]) &&
+          toset(statement.NotResource) == toset(concat(one([
+            for grant in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : grant.Resource
+            if grant.Sid == "${consumer}Objects"
+          ]), consumer == "etcd" ? [] : ["arn:aws:s3:::shire-backups"]))
+          ) : (
+          toset(statement.Resource) == toset(["arn:aws:s3:::shire-backups", "arn:aws:s3:::shire-backups/*"]) &&
+          toset(statement.NotAction) == toset(concat(one([
+            for grant in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : grant.Action
+            if grant.Sid == "${consumer}Objects"
+          ]), consumer == "etcd" ? [] : ["s3:GetBucketLocation", "s3:ListBucket"]))
+        ))
+        if contains(["${consumer}OtherPaths", "${consumer}OtherActions"], statement.Sid)
+        ]) && length([
+        for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : statement
+        if contains(["${consumer}OtherPaths", "${consumer}OtherActions"], statement.Sid)
+      ]) == 2
+    ])
+    error_message = "Explicit denies must prevent object ownership from bypassing each backup key's paths and actions."
   }
 }
 
