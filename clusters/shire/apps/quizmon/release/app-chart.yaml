@@ -1,4 +1,3 @@
----
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
@@ -42,7 +41,7 @@ spec:
   values:
     releaseImage:
       repository: ghcr.io/itay-raveh/quizmon/release
-      digest: sha256:cce1c60fdccfba93576691fc5cb3fe992bc9e9d3f4fbf8fe7efb4a8998b7bfd7 # {"$imagepolicy": "flux-system:quizmon:digest"}
+      digest: sha256:8a6d7a5c2ad701d09b55c07db41aa19bb7d093afad61d90c9c3ce2c4750658e5 # {"$imagepolicy": "flux-system:quizmon:digest"}
     runtimeConfig:
       version: 1
       workerName: quizmon
