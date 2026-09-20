@@ -8,6 +8,7 @@
 |---|---|---|
 | `secrets/state.sops.yaml` | S3 state access and encryption passphrase | Either YubiKey |
 | `secrets/tofu.sops.yaml` | Provider credentials and account identifiers | Either YubiKey |
+| `secrets/backup-recovery.sops.yaml` | Read-only backup access for `mc` | Either YubiKey |
 | `secrets/wireguard.sops.yaml` | Server private key and workstation public key | Either YubiKey |
 | `secrets/workstation.sops.yaml` | Workstation private key | Either YubiKey |
 | `bootstrap/*.sops.txt` | Flux and etcd private keys | Either YubiKey |
@@ -59,7 +60,8 @@ Both helpers replace the target only after production and encryption succeed. [S
 |---|---|
 | Provider credentials | [providers.tf](../tofu/providers.tf), `secrets/tofu.sops.yaml` |
 | State S3 credentials | [backend.tf](../tofu/backend.tf), `secrets/state.sops.yaml` |
-| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions `FLUX_APP_ID` / `FLUX_APP_PRIVATE_KEY` |
+| Backup S3 credentials | Separate cluster Secrets for etcd, Wanderbound and Quizmon. Quizmon input refresh preserves its backup Secret. |
+| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions environment `flux-image-automation`: `FLUX_APP_ID` / `FLUX_APP_PRIVATE_KEY` |
 | Controller and application credentials | Secret references in their manifests; encrypted files beside those manifests |
 
 | Generated credential | Refresh command |
@@ -67,6 +69,16 @@ Both helpers replace the target only after production and encryption succeed. [S
 | Cloudflare Tunnel | `mise run tunnel:refresh` |
 | Hetzner CSI | `mise run hcloud-csi:refresh-token` |
 | Tailscale operator | `mise run tailscale-operator:refresh-oauth` |
+
+### Backup storage
+
+Create runtime S3 keys in the empty Hetzner `backup-credentials` project. Keys inherit access to every bucket in their own project, so keep buckets out of it. [Hetzner permissions](https://docs.hetzner.com/storage/object-storage/faq/s3-credentials/#how-do-i-restrict-access-per-key).
+
+[backups.tf](../tofu/backups.tf) grants each key access to its paths in `shire-backups`: etcd can write `etcd/`; Wanderbound uses `cnpg/wanderbound/` and `app-data/wanderbound/`; Quizmon uses `cnpg/quizmon/`. Database keys can list all backup filenames for Barman's bucket check. None can access state storage or permanently delete object versions.
+
+The separate recovery key can read backups and list versions. Store its `MC_HOST_hetzner` alias in `secrets/backup-recovery.sops.yaml` and its project/access-key IDs in `TF_VAR_backup_s3_recovery_principal`. Flux cannot decrypt the recovery credential.
+
+To rotate, encrypt the replacement in its cluster Secret and update `TF_VAR_backup_s3_principals` in `secrets/tofu.sops.yaml`. Apply the bucket policy before deploying the Secret. Run a backup and check recovery access before revoking the old key. When replacing a shared provisioning/state key, first update both operator credential files with its replacement, then revoke the shared key. Its encrypted runtime copies remain in Git history.
 
 ## Rotation
 
@@ -78,4 +90,4 @@ Both helpers replace the target only after production and encryption succeed. [S
 | State passphrase | Follow [OpenTofu encryption migration](https://opentofu.org/docs/language/state/encryption/); retain the old read method during migration and keys for historical state. |
 | Etcd backup key | Update the recipient in [talos-backup.yaml](../clusters/shire/infrastructure/controllers/talos-backup.yaml) and encrypted private key in `bootstrap/`. Verify a new snapshot; retain keys needed by older backups. |
 
-Commit recipient changes with the rewrapped files. Re-encryption leaves old Git ciphertext readable by old keys; compromised credentials also require rotation. Secret scans and ciphertext markers do not establish successful decryption.
+Commit recipient changes with the rewrapped files. Re-encryption leaves old Git ciphertext readable by old keys; compromised credentials also require rotation. The commit check validates ciphertext fields, recipients and metadata without decrypting. Only SOPS decryption verifies the MAC.

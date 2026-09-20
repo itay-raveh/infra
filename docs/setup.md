@@ -77,7 +77,7 @@ flux get kustomizations --watch
 kubectl get nodes
 ```
 
-[rebuild.sh](../scripts/rebuild.sh) runs preflight checks, applies OpenTofu with `-auto-approve`, configures management access, commits and pushes the Tunnel token, then installs Flux and its credentials. Application data requires a [separate restore](disaster-recovery.md).
+[rebuild.sh](../scripts/rebuild.sh) runs preflight checks, applies OpenTofu with `-auto-approve`, configures management access, opens a PR for the Tunnel token, waits for CI and squash merge, then installs Flux and its credentials. If that PR fails or remains unmerged for 30 minutes, the script stops before installing Flux. Application data requires a [separate restore](disaster-recovery.md).
 
 ## Account prerequisites
 
@@ -86,5 +86,5 @@ kubectl get nodes
 | Hetzner project and existing state bucket | [providers.tf](../tofu/providers.tf), [backend.tf](../tofu/backend.tf) |
 | Cloudflare account, zone and tokens | [Cloudflare](cloudflare.md) |
 | Tailscale tailnet and OAuth client | [tailscale.tf](../tofu/tailscale.tf) |
-| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions secrets `FLUX_APP_ID` and `FLUX_APP_PRIVATE_KEY` |
+| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions environment `flux-image-automation`: `FLUX_APP_ID` and `FLUX_APP_PRIVATE_KEY` |
 | Hardware, Flux and etcd keys | [Bootstrap](../bootstrap/README.md), [Secrets](secrets.md) |

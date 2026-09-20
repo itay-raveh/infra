@@ -121,11 +121,9 @@ output "quizmon_inputs" {
     database_passwords = {
       for name, password in random_password.quizmon_database : name => password.result
     }
-    auth_secret       = random_password.quizmon_auth.result
-    dns_token         = cloudflare_account_token.quizmon_dns.value
-    cloudflare        = { accountId = local.cloudflare_account_id, token = cloudflare_account_token.quizmon_release.value }
-    hyperdrive_id     = try(cloudflare_hyperdrive_config.quizmon[0].id, null)
-    backup_access_key = var.s3_access_key_id
-    backup_secret_key = var.s3_secret_access_key
+    auth_secret   = random_password.quizmon_auth.result
+    dns_token     = cloudflare_account_token.quizmon_dns.value
+    cloudflare    = { accountId = local.cloudflare_account_id, token = cloudflare_account_token.quizmon_release.value }
+    hyperdrive_id = try(cloudflare_hyperdrive_config.quizmon[0].id, null)
   }
 }

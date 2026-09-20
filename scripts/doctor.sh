@@ -72,32 +72,11 @@ if ((available[git])); then
 fi
 
 if ((available[gh])); then
-    github_access=$(gh api 'repos/{owner}/{repo}' \
-        --jq '.permissions.admin and .permissions.push' 2>/dev/null || true)
+    github_access=$(gh api 'repos/{owner}/{repo}' --jq '.permissions.push' 2>/dev/null || true)
     if [[ "$github_access" == "true" ]]; then
-        pass "authenticated GitHub account has admin push access"
-
-        ruleset_id=$(gh api 'repos/{owner}/{repo}/rulesets' \
-            --jq '.[] | select(.name == "main branch checks" and .enforcement == "active") | .id' \
-            2>/dev/null || true)
-        bypass=false
-        if [[ -n "$ruleset_id" ]]; then
-            bypass=$(gh api "repos/{owner}/{repo}/rulesets/$ruleset_id" --jq '
-                [.bypass_actors[]? |
-                    select(.actor_type == "RepositoryRole" and
-                           .actor_id == 5 and
-                           (.bypass_mode == "always" or .bypass_mode == "exempt"))] |
-                length > 0
-            ' 2>/dev/null || true)
-        fi
-
-        if [[ "$bypass" == "true" ]]; then
-            pass "main branch ruleset allows the admin rebuild push"
-        else
-            fail "main branch ruleset does not allow the admin rebuild push"
-        fi
+        pass "authenticated GitHub account can push branches and open rebuild PRs"
     else
-        fail "authenticated GitHub account lacks admin push access"
+        fail "authenticated GitHub account lacks repository push access"
     fi
 fi
 
@@ -110,6 +89,8 @@ required_files=(
     bootstrap/etcd-backup-age-key.sops.txt
     clusters/shire/flux-system/flux-github-app.sops.yaml
     clusters/shire/flux-system/gotk-sync.yaml
+    clusters/shire/flux-system/github-web-flow.asc
+    clusters/shire/flux-system/kustomization.yaml
 )
 
 for file in "${required_files[@]}"; do

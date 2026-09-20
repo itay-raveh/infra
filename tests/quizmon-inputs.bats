@@ -23,13 +23,15 @@ render() {
 @test "database inputs assign each CNPG role its own credential and exclude release secrets" {
     render database > "$BATS_TEST_TMPDIR/rendered.json"
     jq -e '
-      length == 5 and
+      length == 4 and
       ([.[] | select(.type == "kubernetes.io/basic-auth") | .stringData.username] | sort) ==
         ["powersync_source", "powersync_storage", "quizmon"] and
       all(.[]; .metadata.namespace == "quizmon") and
       all(.[]; .metadata.name != "quizmon-worker")
     ' "$BATS_TEST_TMPDIR/rendered.json"
     refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" deployment-token
+    refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" backup-secret
+    refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" quizmon-backup
 }
 
 @test "release inputs require TLS and preserve special characters in URI passwords" {
@@ -78,6 +80,9 @@ prepare_refresh() {
     printf '    encrypted_regex: "^(data|stringData)$"\n' >> "$FIXTURE/.sops.yaml"
     mkdir -p "$FIXTURE/clusters/shire/apps/quizmon/"{database,release}/inputs
     cp "$source_root/clusters/shire/apps/quizmon/"{refresh-secrets.sh,inputs.jq} "$FIXTURE/clusters/shire/apps/quizmon/"
+    (cd "$FIXTURE" && encrypt_fixture clusters/shire/apps/quizmon/database/inputs/quizmon-backup.sops.yaml \
+        '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"quizmon-backup","namespace":"quizmon"},"stringData":{"ACCESS_KEY_ID":"scoped-backup-key","ACCESS_SECRET_KEY":"scoped-backup-secret"}}')
+    cp "$FIXTURE/clusters/shire/apps/quizmon/database/inputs/quizmon-backup.sops.yaml" "$BATS_TEST_TMPDIR/original-backup"
     for mode in database release; do
         printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources: []\n' > \
             "$FIXTURE/clusters/shire/apps/quizmon/$mode/inputs/kustomization.yaml"
@@ -106,6 +111,7 @@ SCRIPT
     [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 5 ]
     refute_file_contains "$directory/quizmon-db-app.sops.yaml" app-password
     [ "$(stat -c '%a' "$directory/quizmon-db-app.sops.yaml")" = 600 ]
+    cmp "$BATS_TEST_TMPDIR/original-backup" "$directory/quizmon-backup.sops.yaml"
 }
 
 @test "release refresh keeps credentials out of public runtime values and preserves files on invalid input" {
@@ -124,4 +130,12 @@ SCRIPT
     run bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" release "$WORKER"
     [ "$status" -ne 0 ]
     cmp "$BATS_TEST_TMPDIR/previous" "$directory/quizmon-worker.sops.yaml"
+}
+
+@test "database refresh cannot silently omit backup credentials" {
+    prepare_refresh
+    rm "$FIXTURE/clusters/shire/apps/quizmon/database/inputs/quizmon-backup.sops.yaml"
+    run bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" database
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'dedicated backup credentials first'* ]]
 }

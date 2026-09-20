@@ -29,10 +29,10 @@ Credentials are entered at hidden prompts. Connect one YubiKey at a time when pr
 | Recipients and encryption rules | `.sops.yaml` |
 | Flux and etcd private keys | `bootstrap/*.sops.txt`, encrypted to the YubiKeys |
 | Provider, state and WireGuard credentials | `secrets/*.sops.yaml` |
-| Flux GitHub App credentials | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions `FLUX_APP_ID` and `FLUX_APP_PRIVATE_KEY` |
+| Flux GitHub App credentials | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions environment `flux-image-automation`: `FLUX_APP_ID` and `FLUX_APP_PRIVATE_KEY` |
 | Etcd backup recipient | `AGE_X25519_PUBLIC_KEY` in [talos-backup.yaml](../clusters/shire/infrastructure/controllers/talos-backup.yaml) |
 | Git configuration | Both signing keys registered with GitHub; global SSH commit signing enabled |
-| Repository protection | Existing protection and rulesets replaced with [.github/rulesets/](../.github/rulesets/) |
+| Repository protection | [.github/rulesets/](../.github/rulesets/) applied by name; unrelated rules preserved |
 
 Application-specific credentials belong in `secrets/tofu.sops.yaml` under the `TF_VAR_*` names declared in their `tofu/` files. Add these before planning those resources.
 
@@ -42,7 +42,7 @@ Application-specific credentials belong in `secrets/tofu.sops.yaml` under the `T
 mise run check
 sops decrypt bootstrap/cluster-age-key.sops.txt | age-keygen -y
 sops decrypt bootstrap/etcd-backup-age-key.sops.txt | age-keygen -y
-gh secret list
+gh secret list --env flux-image-automation
 ```
 
 Match the public recipients to `.sops.yaml` and `talos-backup.yaml`; confirm both `FLUX_APP_*` names. Commit the generated files before [rebuilding](../docs/setup.md#rebuild-the-cluster). Store the spare YubiKey offsite.

@@ -18,6 +18,12 @@ mock_provider "cloudflare" {
 }
 
 variables {
+  backup_s3_recovery_principal = { project_id = "12345678", access_key_id = "DDDDDDDDDDDDDDDDDDDD" }
+  backup_s3_principals = {
+    etcd        = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
+    wanderbound = { project_id = "12345678", access_key_id = "BBBBBBBBBBBBBBBBBBBB" }
+    quizmon     = { project_id = "12345678", access_key_id = "CCCCCCCCCCCCCCCCCCCC" }
+  }
   encryption_passphrase                       = "fixture"
   hcloud_token                                = "fixture"
   cloudflare_api_token                        = "fixture"
@@ -60,4 +66,153 @@ run "preserve_database_recovery_window" {
     ]) && length([for rule in minio_ilm_policy.backups.rule : rule if rule.filter == "cnpg/"]) == 1
     error_message = "S3 must not expire current CNPG objects independently of Barman, or remove old versions before its recovery window."
   }
+}
+
+run "isolate_backup_credentials" {
+  command = plan
+  plan_options {
+    target = [minio_s3_bucket_policy.backups]
+  }
+  override_resource {
+    target = minio_s3_bucket.backups
+    values = { arn = "arn:aws:s3:::shire-backups" }
+  }
+  assert {
+    condition = alltrue([
+      for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
+      alltrue([
+        for resource in statement.Resource :
+        startswith(resource, "arn:aws:s3:::shire-backups")
+        ]) && alltrue([
+        for action in statement.Action : contains([
+          "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts", "s3:PutObject",
+          "s3:DeleteObject", "s3:GetObject", "s3:GetObjectVersion",
+          "s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketVersions",
+        ], action)
+      ]) if statement.Effect == "Allow"
+    ]) && length(jsondecode(minio_s3_bucket_policy.backups.policy).Statement) == 13
+    error_message = "Backup keys must not receive state access, bucket administration or permanent version deletion."
+  }
+  assert {
+    condition = alltrue([
+      for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
+      statement.Sid == "DatabaseBucketChecks" ? (
+        toset(statement.Action) == toset(["s3:GetBucketLocation", "s3:ListBucket"]) &&
+        toset(statement.Resource) == toset(["arn:aws:s3:::shire-backups"]) &&
+        toset(statement.Principal.AWS) == toset([
+          "arn:aws:iam:::user/p12345678:BBBBBBBBBBBBBBBBBBBB",
+          "arn:aws:iam:::user/p12345678:CCCCCCCCCCCCCCCCCCCC",
+        ]) && !can(statement.Condition)
+        ) : (
+        toset(statement.Resource) == {
+          etcdObjects        = toset(["arn:aws:s3:::shire-backups/etcd/*"])
+          wanderboundObjects = toset(["arn:aws:s3:::shire-backups/cnpg/wanderbound/*", "arn:aws:s3:::shire-backups/app-data/wanderbound/*"])
+          quizmonObjects     = toset(["arn:aws:s3:::shire-backups/cnpg/quizmon/*"])
+        }[statement.Sid] &&
+        statement.Principal.AWS == {
+          etcdObjects        = "arn:aws:iam:::user/p12345678:AAAAAAAAAAAAAAAAAAAA"
+          wanderboundObjects = "arn:aws:iam:::user/p12345678:BBBBBBBBBBBBBBBBBBBB"
+          quizmonObjects     = "arn:aws:iam:::user/p12345678:CCCCCCCCCCCCCCCCCCCC"
+        }[statement.Sid] &&
+        contains(statement.Action, "s3:PutObject") &&
+        contains(statement.Action, "s3:GetObject") == (statement.Sid != "etcdObjects") &&
+        contains(statement.Action, "s3:DeleteObject") == (statement.Sid != "etcdObjects") &&
+        !contains(statement.Action, "s3:ListBucket")
+      ) if statement.Effect == "Allow" && !startswith(statement.Sid, "Recovery")
+    ])
+    error_message = "Each backup key must be restricted to its own object paths, with etcd write-only and Barman bucket checks allowed."
+  }
+  assert {
+    condition = alltrue([
+      for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
+      statement.Principal.AWS == "arn:aws:iam:::user/p12345678:DDDDDDDDDDDDDDDDDDDD" && (
+        statement.Sid == "RecoveryObjects" ? (
+          statement.Effect == "Allow" &&
+          toset(statement.Action) == toset(["s3:GetObject", "s3:GetObjectVersion"]) &&
+          statement.Resource == ["arn:aws:s3:::shire-backups/*"]
+          ) : statement.Sid == "RecoveryBucket" ? (
+          statement.Effect == "Allow" &&
+          toset(statement.Action) == toset(["s3:GetBucketLocation", "s3:ListBucket", "s3:ListBucketVersions"]) &&
+          statement.Resource == ["arn:aws:s3:::shire-backups"]
+          ) : (
+          statement.Effect == "Deny" &&
+          toset(statement.Action) == toset([
+            "s3:Put*", "s3:Delete*", "s3:AbortMultipartUpload",
+            "s3:*Acl", "s3:*Tagging", "s3:*Retention", "s3:*LegalHold",
+          ]) &&
+          toset(statement.Resource) == toset(["arn:aws:s3:::shire-backups", "arn:aws:s3:::shire-backups/*"])
+        )
+      ) if startswith(statement.Sid, "Recovery")
+      ]) && length([
+      for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : statement
+      if startswith(statement.Sid, "Recovery")
+    ]) == 3
+    error_message = "The separate recovery key needs backup reads and version listing, with writes explicitly denied."
+  }
+  assert {
+    condition = alltrue([
+      for consumer in ["etcd", "wanderbound", "quizmon"] : alltrue([
+        for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
+        statement.Effect == "Deny" && statement.Principal == one([
+          for grant in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : grant.Principal
+          if grant.Sid == "${consumer}Objects"
+          ]) && (statement.Sid == "${consumer}OtherPaths" ? (
+          toset(statement.Action) == toset(["s3:*"]) &&
+          toset(statement.NotResource) == toset(concat(one([
+            for grant in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : grant.Resource
+            if grant.Sid == "${consumer}Objects"
+          ]), consumer == "etcd" ? [] : ["arn:aws:s3:::shire-backups"]))
+          ) : (
+          toset(statement.Resource) == toset(["arn:aws:s3:::shire-backups", "arn:aws:s3:::shire-backups/*"]) &&
+          !can(statement.NotAction) && toset(statement.Action) == toset(concat([
+            "s3:*Acl", "s3:*Tagging", "s3:*Retention", "s3:*LegalHold",
+            "s3:DeleteObjectVersion", "s3:PutBucket*", "s3:DeleteBucket*",
+            "s3:PutLifecycleConfiguration", "s3:PutReplicationConfiguration",
+          ], consumer == "etcd" ? ["s3:Get*", "s3:Delete*"] : []))
+        ))
+        if contains(["${consumer}OtherPaths", "${consumer}OtherActions"], statement.Sid)
+        ]) && length([
+        for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : statement
+        if contains(["${consumer}OtherPaths", "${consumer}OtherActions"], statement.Sid)
+      ]) == 2
+    ])
+    error_message = "Explicit denies must prevent object ownership from bypassing each backup key's paths and actions."
+  }
+}
+
+run "reject_provisioning_key_for_backups" {
+  command = plan
+  plan_options {
+    target = [minio_s3_bucket_policy.backups]
+  }
+  variables {
+    s3_access_key_id = "AAAAAAAAAAAAAAAAAAAA"
+  }
+  expect_failures = [var.backup_s3_principals]
+}
+
+run "reject_shared_runtime_backup_key" {
+  command = plan
+  plan_options {
+    target = [minio_s3_bucket_policy.backups]
+  }
+  variables {
+    backup_s3_principals = {
+      etcd        = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
+      wanderbound = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
+      quizmon     = { project_id = "12345678", access_key_id = "CCCCCCCCCCCCCCCCCCCC" }
+    }
+  }
+  expect_failures = [var.backup_s3_principals]
+}
+
+run "reject_runtime_key_for_recovery" {
+  command = plan
+  plan_options {
+    target = [minio_s3_bucket_policy.backups]
+  }
+  variables {
+    backup_s3_recovery_principal = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
+  }
+  expect_failures = [var.backup_s3_recovery_principal]
 }

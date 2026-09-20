@@ -15,6 +15,12 @@ mock_provider "tailscale" {}
 mock_provider "sentry" {}
 
 variables {
+  backup_s3_recovery_principal = { project_id = "12345678", access_key_id = "DDDDDDDDDDDDDDDDDDDD" }
+  backup_s3_principals = {
+    etcd        = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
+    wanderbound = { project_id = "12345678", access_key_id = "BBBBBBBBBBBBBBBBBBBB" }
+    quizmon     = { project_id = "12345678", access_key_id = "CCCCCCCCCCCCCCCCCCCC" }
+  }
   encryption_passphrase                       = "fixture"
   hcloud_token                                = "fixture"
   cloudflare_api_token                        = "fixture"
