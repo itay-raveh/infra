@@ -5,7 +5,6 @@ metadata:
   name: quizmon
   namespace: flux-system
 spec:
-  suspend: true
   image: ghcr.io/itay-raveh/quizmon/release
   interval: 5m
 ---
@@ -15,7 +14,6 @@ metadata:
   name: quizmon
   namespace: flux-system
 spec:
-  suspend: true
   imageRepositoryRef:
     name: quizmon
   filterTags:
@@ -31,7 +29,6 @@ metadata:
   name: quizmon
   namespace: flux-system
 spec:
-  suspend: true
   interval: 5m
   sourceRef:
     kind: GitRepository
