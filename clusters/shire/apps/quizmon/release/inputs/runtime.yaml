@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: quizmon
+  name: quizmon-runtime
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+data:
+  values.yaml: |
+    runtimeConfig:
+      hyperdriveId: 1929d5d5eafe40819047418ffb4a5532
+    inputs:
+      workerSecrets:
+        name: quizmon-worker
+        key: worker-secrets.json
+        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263
+      cloudflare:
+        name: quizmon-cloudflare
+        key: cloudflare.json
+        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263
+      migrationConnection:
+        name: quizmon-migration
+        key: migration-connection.json
+        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263
+    powersync:
+      sourceSecret:
+        name: quizmon-sync-source
+        key: uri
+        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263
+      storageSecret:
+        name: quizmon-sync-storage
+        key: uri
+        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    namespace: quizmon
+    name: quizmon-migration
+stringData:
+    migration-connection.json: ENC[AES256_GCM,data:CjoyUgra0obdA7j4iPzIGy9h7y2x0lw3b5j3NIPu+uAs5lEMhgcGJNo5CL3ojQlUvs4U6vnak5QQ2NFeymw3LtL3nnGDVRtUgdUGlm8TypI5RRzm8+Lxkqym4fAQ1GvgO35XOPbNXyHwHmqWGACd2VFhHpg1oaF0/TtyF2ZQVC2eUhHFEDyIjl64pr6wUOh5zPG+NEOz4gu6YF4=,iv:wsTyjl1KYr06OkvTcq9biG8tgcZwzv5HoNKTYufNLJk=,tag:L6wWEpLON9oxlo6nwcXC0g==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHBpdi1wMjU2IDJDM2Y5ZyBBb1pzZUR1
+            d0o1ZnFrd29vTTRqQjMzVXcva0JCVlZEVVhmVWViM25abnRZRQppa0lna1ZsTERi
+            a3lSU1NEYXJmVGdTNWJONWtMUGhIc3hWREpYdGlWWWFVCi0tLSBLOTV0bTRjVHJW
+            bU9TRXJwck84VXpYKytuOEs5R2RlakhQanRXT1d3aHVrCj/rEzsNVLTkbFGu9iKp
+            +JGuLkMOF9MXP7igwUaBQuyjWN9ysPiePgO2gJV+HFQ52s88aGfPbAaV/iz4xfpN
+            ZFk=
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1yubikey1qghympnz70sye3tx2a9yvudmmnvrq3ms7yd3gns8wz76r7k46hx0upwcu33
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHBpdi1wMjU2IDUyTHkxZyBBK0hnYjE3
+            M3RSaXNqZ0t4MlByQjlGTzI2RDR1eG8zNko2UFArdU0zcDRDMQpqR1B3ZXA4RFRm
+            UXpvb3B2NDYzR0xwTU9LK3RrS2FFa080ZWNSbnJiOHYwCi0tLSBYa1JqaWordUdH
+            YlpESmRDQWI3cTgwQ04vOWM2bHpOeVZBb3p4TUVBdDFBCvir8ayD6OPs9cMKTKNr
+            ikSCRvJs0E/UBCwc+mKNxNIZFzDDlETu5qCSuJ4GQrKVbnb3LDY1E//YRmHbiDK+
+            ysM=
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1yubikey1qvcujpaxamuraf4neev9xcxgj40e5x54n5a8kz0xvg3fpcnl6p48xsgkyg4
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA1ZVJmOElVY0JTRUpqRUVJ
+            eE12QnlNbUp3VktCcG1hMEhzeEx4L2F3QVdzClNpUzk4MkJZVnNSYVo4ZVNDNzFq
+            USswaGJwbkdyR2VKall2VDBhU28zdGMKLS0tIHFVcDVMNEhlVmt4cG9OakJBUlZG
+            MDJaWXJKMFh3aFdaYjRMVmdOdk9UemsKP6i7UzWZ9z/9eFVEu0+tIk7/49LrMMmA
+            MEdI6o3+F/210Hdg8UULQoN1X/4EoR7TaH5r9+d0at+Q7Ljs6cwgTw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1dhztnm2nhdpcwsuv8uz6ss05tdx4jyfhm22dltu9l4u4fu8v3a4qs5asa7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-20T13:51:00Z"
+    mac: ENC[AES256_GCM,data:4Y8KHJpJkSEiXfJdCsrh0Jr8GoM2UCer+z0vnPhPqcmkCSfJelHUoITswkSUoUa17lqNc7P6nKvbbw8CMrL9sFq/+vgM53Aq1/lgRn7T3934iqJZIYxfa6k2DY+7Fxk8Zw4D6O1ayCASjuN5tBS07lvwJzJCjextEoHpLWvstdg=,iv:nBuD+WhStSBt45MZ+gcs0kfWuEkbOdquswP9g1OBTwQ=,tag:pR+vLRwmhamT+ruoAHuoNA==,type:str]
+    version: 3.13.3

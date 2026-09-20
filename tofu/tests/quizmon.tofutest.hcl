@@ -33,6 +33,9 @@ variables {
 
 run "private_database" {
   command = plan
+  variables {
+    quizmon_hyperdrive_enabled = false
+  }
   plan_options {
     target = [cloudflare_connectivity_directory_service.quizmon_database, cloudflare_hyperdrive_config.quizmon]
   }
