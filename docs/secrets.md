@@ -75,6 +75,8 @@ Create runtime S3 keys in the empty Hetzner `backup-credentials` project. Keys i
 
 [backups.tf](../tofu/backups.tf) grants each key access to its paths in `shire-backups`: etcd can write `etcd/`; Wanderbound uses `cnpg/wanderbound/` and `app-data/wanderbound/`; Quizmon uses `cnpg/quizmon/`. Database keys can list all backup filenames for Barman's bucket check. None can access state storage or permanently delete object versions.
 
+Set `TF_VAR_backup_s3_operator_project_id` in `secrets/tofu.sops.yaml` to the bucket project's ID. The policy grants the operator key recovery reads for objects uploaded by runtime keys.
+
 To rotate, encrypt the replacement in its cluster Secret and update `TF_VAR_backup_s3_principals` in `secrets/tofu.sops.yaml`. Apply the bucket policy before deploying the Secret. Run a backup and check recovery access before revoking the old key. When replacing a shared provisioning/state key, first update both operator credential files with its replacement, then revoke the shared key. Its encrypted runtime copies remain in Git history.
 
 ## Rotation

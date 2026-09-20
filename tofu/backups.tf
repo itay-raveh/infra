@@ -1,3 +1,9 @@
+variable "backup_s3_operator_project_id" {
+  description = "Hetzner project containing the provisioning S3 key used for backup recovery."
+  type        = string
+  sensitive   = true
+}
+
 variable "backup_s3_principals" {
   description = "Dedicated Hetzner S3 credentials for each backup consumer, created outside the bucket's project."
   type = map(object({
@@ -73,8 +79,13 @@ resource "minio_s3_bucket_policy" "backups" {
           Sid       = "${consumer}OtherActions"
           Effect    = "Deny"
           Principal = { AWS = access.principal }
-          NotAction = concat(access.actions, consumer == "etcd" ? [] : ["s3:GetBucketLocation", "s3:ListBucket"])
-          Resource  = [minio_s3_bucket.backups.arn, "${minio_s3_bucket.backups.arn}/*"]
+          # NotAction denies are ineffective on this S3 implementation.
+          Action = concat([
+            "s3:*Acl", "s3:*Tagging", "s3:*Retention", "s3:*LegalHold",
+            "s3:DeleteObjectVersion", "s3:PutBucket*", "s3:DeleteBucket*",
+            "s3:PutLifecycleConfiguration", "s3:PutReplicationConfiguration",
+          ], consumer == "etcd" ? ["s3:Get*", "s3:Delete*"] : [])
+          Resource = [minio_s3_bucket.backups.arn, "${minio_s3_bucket.backups.arn}/*"]
         },
       ]
       ]), [{
@@ -87,6 +98,15 @@ resource "minio_s3_bucket_policy" "backups" {
       # https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html
       Action   = ["s3:GetBucketLocation", "s3:ListBucket"]
       Resource = [minio_s3_bucket.backups.arn]
+      }, {
+      Sid    = "OperatorRecovery"
+      Effect = "Allow"
+      Principal = {
+        AWS = "arn:aws:iam:::user/p${var.backup_s3_operator_project_id}:${var.s3_access_key_id}"
+      }
+      # The uploader owns cross-project objects, including their read permissions.
+      Action   = ["s3:GetObject", "s3:GetObjectVersion"]
+      Resource = ["${minio_s3_bucket.backups.arn}/*"]
     }])
   })
 }

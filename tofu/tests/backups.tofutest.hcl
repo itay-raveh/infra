@@ -18,6 +18,7 @@ mock_provider "cloudflare" {
 }
 
 variables {
+  backup_s3_operator_project_id = "87654321"
   backup_s3_principals = {
     etcd        = { project_id = "12345678", access_key_id = "AAAAAAAAAAAAAAAAAAAA" }
     wanderbound = { project_id = "12345678", access_key_id = "BBBBBBBBBBBBBBBBBBBB" }
@@ -89,7 +90,7 @@ run "isolate_backup_credentials" {
           "s3:GetBucketLocation", "s3:ListBucket",
         ], action)
       ]) if statement.Effect == "Allow"
-    ]) && length(jsondecode(minio_s3_bucket_policy.backups.policy).Statement) == 10
+    ]) && length(jsondecode(minio_s3_bucket_policy.backups.policy).Statement) == 11
     error_message = "Backup keys must not receive state access, bucket administration or permanent version deletion."
   }
   assert {
@@ -117,9 +118,20 @@ run "isolate_backup_credentials" {
         contains(statement.Action, "s3:GetObject") == (statement.Sid != "etcdObjects") &&
         contains(statement.Action, "s3:DeleteObject") == (statement.Sid != "etcdObjects") &&
         !contains(statement.Action, "s3:ListBucket")
-      ) if statement.Effect == "Allow"
+      ) if statement.Effect == "Allow" && statement.Sid != "OperatorRecovery"
     ])
     error_message = "Each backup key must be restricted to its own object paths, with etcd write-only and Barman bucket checks allowed."
+  }
+  assert {
+    condition = one([
+      for statement in jsondecode(minio_s3_bucket_policy.backups.policy).Statement :
+      statement.Effect == "Allow" &&
+      statement.Principal.AWS == "arn:aws:iam:::user/p87654321:fixture" &&
+      toset(statement.Action) == toset(["s3:GetObject", "s3:GetObjectVersion"]) &&
+      statement.Resource == ["arn:aws:s3:::shire-backups/*"]
+      if statement.Sid == "OperatorRecovery"
+    ])
+    error_message = "The operator must be able to recover objects owned by runtime backup credentials."
   }
   assert {
     condition = alltrue([
@@ -136,10 +148,11 @@ run "isolate_backup_credentials" {
           ]), consumer == "etcd" ? [] : ["arn:aws:s3:::shire-backups"]))
           ) : (
           toset(statement.Resource) == toset(["arn:aws:s3:::shire-backups", "arn:aws:s3:::shire-backups/*"]) &&
-          toset(statement.NotAction) == toset(concat(one([
-            for grant in jsondecode(minio_s3_bucket_policy.backups.policy).Statement : grant.Action
-            if grant.Sid == "${consumer}Objects"
-          ]), consumer == "etcd" ? [] : ["s3:GetBucketLocation", "s3:ListBucket"]))
+          !can(statement.NotAction) && toset(statement.Action) == toset(concat([
+            "s3:*Acl", "s3:*Tagging", "s3:*Retention", "s3:*LegalHold",
+            "s3:DeleteObjectVersion", "s3:PutBucket*", "s3:DeleteBucket*",
+            "s3:PutLifecycleConfiguration", "s3:PutReplicationConfiguration",
+          ], consumer == "etcd" ? ["s3:Get*", "s3:Delete*"] : []))
         ))
         if contains(["${consumer}OtherPaths", "${consumer}OtherActions"], statement.Sid)
         ]) && length([
