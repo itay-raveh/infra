@@ -54,7 +54,5 @@ spec:
       analyticsDataset: quizmon_events
       authRateLimitNamespace: "1011"
       apiRateLimitNamespace: "1012"
-    release:
-      mode: deploy
     powersync:
       enabled: true
