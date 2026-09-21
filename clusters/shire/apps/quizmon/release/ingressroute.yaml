@@ -8,7 +8,7 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`quizmon-sync.raveh.dev`) && (PathPrefix(`/sync/`) || Path(`/probes/liveness`))
+    - match: Host(`quizmon-sync.raveh.dev`) && (PathPrefix(`/sync/`) || Path(`/write-checkpoint2.json`) || Path(`/probes/liveness`))
       kind: Rule
       services:
         - name: online-quizmon-sync
