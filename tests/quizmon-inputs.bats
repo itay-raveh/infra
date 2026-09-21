@@ -5,19 +5,16 @@ load test_helper/common
 setup() {
     setup_repo
     export INPUT="$BATS_TEST_TMPDIR/input.json"
-    export WORKER="$BATS_TEST_TMPDIR/worker.json"
     jq -n '{
       database_host: "database.example.test",
       database_passwords: {quizmon: "app-password", powersync_source: "source:@/password", powersync_storage: "storage-password"},
-      auth_secret: ("a" * 64), dns_token: "dns-token",
-      cloudflare: {accountId: ("b" * 32), token: "deployment-token"},
+      dns_token: "dns-token",
       hyperdrive_id: ("c" * 32), backup_access_key: "backup-key", backup_secret_key: "backup-secret"
     }' > "$INPUT"
-    jq -n '{VAPID_PRIVATE_KEY: ("d" * 43)}' > "$WORKER"
 }
 
 render() {
-    jq -e --arg mode "$1" --slurpfile worker "$WORKER" -f "$REPO_ROOT/clusters/shire/apps/quizmon/inputs.jq" "$INPUT"
+    jq -e --arg mode "$1" -f "$REPO_ROOT/clusters/shire/apps/quizmon/inputs.jq" "$INPUT"
 }
 
 @test "database inputs assign each CNPG role its own credential and exclude release secrets" {
@@ -29,7 +26,6 @@ render() {
       all(.[]; .metadata.namespace == "quizmon") and
       all(.[]; .metadata.name != "quizmon-worker")
     ' "$BATS_TEST_TMPDIR/rendered.json"
-    refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" deployment-token
     refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" backup-secret
     refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" quizmon-backup
 }
@@ -53,13 +49,6 @@ render() {
     run render release
     [ "$status" -ne 0 ]
     [[ "$output" == *"Hyperdrive must be provisioned"* ]]
-}
-
-@test "missing reminder key cannot silently replace existing subscriptions" {
-    printf '{}\n' > "$WORKER"
-    run render release
-    [ "$status" -ne 0 ]
-    [[ "$output" == *"existing VAPID_PRIVATE_KEY"* ]]
 }
 
 @test "missing database credentials fail before producing a partial manifest" {
@@ -116,20 +105,22 @@ SCRIPT
 
 @test "release refresh keeps credentials out of public runtime values and preserves files on invalid input" {
     prepare_refresh
-    bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" release "$WORKER"
+    bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" release
     local directory="$FIXTURE/clusters/shire/apps/quizmon/release/inputs"
-    [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 6 ]
-    sops decrypt --output-type json "$directory/quizmon-worker.sops.yaml" | jq -e '.stringData["worker-secrets.json"] | fromjson | .VAPID_PRIVATE_KEY == ("d" * 43)'
+    [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 4 ]
+    sops decrypt --output-type json "$directory/quizmon-migration.sops.yaml" | jq -e '.stringData["migration-connection.json"] | fromjson | .password == "app-password"'
     yq -o=json -I=0 '.data."values.yaml" | from_yaml' "$directory/runtime.yaml" |
         jq -e '.runtimeConfig.hyperdriveId == ("c" * 32) and
-          (.inputs.workerSecrets.revision | test("^[a-f0-9]{64}$"))'
-    refute_file_contains "$directory/runtime.yaml" deployment-token
+          (.inputs.migrationConnection.revision | test("^[a-f0-9]{64}$")) and
+          (.inputs | has("workerSecrets") | not) and
+          (.inputs | has("cloudflare") | not)'
     refute_file_contains "$directory/runtime.yaml" app-password
-    cp "$directory/quizmon-worker.sops.yaml" "$BATS_TEST_TMPDIR/previous"
-    printf '{}\n' > "$WORKER"
-    run bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" release "$WORKER"
+    cp "$directory/quizmon-migration.sops.yaml" "$BATS_TEST_TMPDIR/previous"
+    jq 'del(.database_passwords.quizmon)' "$INPUT" > "$INPUT.next"
+    mv "$INPUT.next" "$INPUT"
+    run bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" release
     [ "$status" -ne 0 ]
-    cmp "$BATS_TEST_TMPDIR/previous" "$directory/quizmon-worker.sops.yaml"
+    cmp "$BATS_TEST_TMPDIR/previous" "$directory/quizmon-migration.sops.yaml"
 }
 
 @test "database refresh cannot silently omit backup credentials" {

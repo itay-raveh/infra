@@ -24,24 +24,7 @@ elif $mode == "release" then
      .hyperdrive_id == "00000000000000000000000000000000" then
     error("Hyperdrive must be provisioned before generating release inputs")
   else . end |
-  if (.auth_secret | type) != "string" or (.auth_secret | length) < 32 then
-    error("missing authentication secret")
-  else . end |
-  if ($worker[0].VAPID_PRIVATE_KEY | type) != "string" or
-     (($worker[0].VAPID_PRIVATE_KEY | test("^[A-Za-z0-9_-]{43}$")) | not) then
-    error("provide the existing VAPID_PRIVATE_KEY in a JSON file")
-  else . end |
-  if (.cloudflare.accountId | type) != "string" or
-     ((.cloudflare.accountId | test("^[a-f0-9]{32}$")) | not) then
-    error("invalid Cloudflare account ID")
-  else . end |
-  .cloudflare.token |= required_string("Cloudflare deployment token") |
   [
-    secret("quizmon-worker"; {"worker-secrets.json": {
-      BETTER_AUTH_SECRET: .auth_secret,
-      VAPID_PRIVATE_KEY: $worker[0].VAPID_PRIVATE_KEY
-    } | tojson}),
-    secret("quizmon-cloudflare"; {"cloudflare.json": (.cloudflare | tojson)}),
     secret("quizmon-migration"; {"migration-connection.json": {
       version: 1, host: .database_host, port: 5432, database: "quizmon",
       user: "quizmon", password: password("quizmon")

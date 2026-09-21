@@ -5,10 +5,8 @@ cd "$(dirname "$0")/../../../.."
 app_dir=clusters/shire/apps/quizmon
 
 mode=${1:-}
-if [[ "$mode" != database && "$mode" != release ]] ||
-   [[ "$mode" == release && $# != 2 ]] ||
-   [[ "$mode" == database && $# != 1 ]]; then
-    printf 'usage: refresh-secrets.sh database | release <existing-worker-secrets.json>\n' >&2
+if [[ "$mode" != database && "$mode" != release ]] || [[ $# != 1 ]]; then
+    printf 'usage: refresh-secrets.sh database | release\n' >&2
     exit 2
 fi
 
@@ -21,9 +19,7 @@ fi
 temporary=$(mktemp -d)
 trap 'rm -rf -- "$temporary"' EXIT
 bash scripts/tofu-wrapper.sh output -json quizmon_inputs > "$temporary/inputs.json"
-worker_file=${2:-$temporary/worker.json}
-if [[ "$mode" == database ]]; then printf '{}\n' > "$worker_file"; fi
-jq -e --arg mode "$mode" --slurpfile worker "$worker_file" \
+jq -e --arg mode "$mode" \
     -f "$app_dir/inputs.jq" "$temporary/inputs.json" > "$temporary/secrets.json"
 
 while IFS= read -r name; do
@@ -43,8 +39,6 @@ if [[ "$mode" == release ]]; then
          data: {"values.yaml": {
            runtimeConfig: {hyperdriveId: .hyperdrive_id},
            inputs: {
-             workerSecrets: input("quizmon-worker"; "worker-secrets.json"),
-             cloudflare: input("quizmon-cloudflare"; "cloudflare.json"),
              migrationConnection: input("quizmon-migration"; "migration-connection.json")
            },
            powersync: {
