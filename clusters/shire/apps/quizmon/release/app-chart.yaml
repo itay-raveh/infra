@@ -51,7 +51,6 @@ spec:
         endpoint: https://quizmon-sync.raveh.dev
         audience: quizmon
       mailFrom: noreply@raveh.dev
-      analyticsDataset: quizmon_events
       authRateLimitNamespace: "1011"
       apiRateLimitNamespace: "1012"
     powersync:
