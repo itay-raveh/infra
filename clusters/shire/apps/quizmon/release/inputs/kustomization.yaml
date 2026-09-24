@@ -2,9 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - quizmon-migration.sops.yaml
-  - quizmon-migration-next.sops.yaml
   - quizmon-sync-source.sops.yaml
-  - quizmon-sync-source-next.sops.yaml
   - quizmon-sync-storage.sops.yaml
-  - quizmon-sync-storage-next.sops.yaml
   - runtime.yaml

@@ -75,26 +75,6 @@ resource "cloudflare_hyperdrive_config" "quizmon" {
   }
 }
 
-resource "cloudflare_hyperdrive_config" "quizmon_next" {
-  count      = var.quizmon_hyperdrive_enabled ? 1 : 0
-  account_id = local.cloudflare_account_id
-  name       = "quizmon-next"
-  origin = {
-    service_id = cloudflare_connectivity_directory_service.quizmon_database.service_id
-    scheme     = "postgresql"
-    database   = "quizmon_next"
-    user       = "quizmon"
-    password   = random_password.quizmon_database["quizmon"].result
-  }
-  caching = {
-    disabled = true
-  }
-  origin_connection_limit = 10
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 data "cloudflare_account_api_token_permission_groups_list" "quizmon" {
   provider   = cloudflare.account
   account_id = local.cloudflare_account_id
@@ -141,10 +121,9 @@ output "quizmon_inputs" {
     database_passwords = {
       for name, password in random_password.quizmon_database : name => password.result
     }
-    auth_secret        = random_password.quizmon_auth.result
-    dns_token          = cloudflare_account_token.quizmon_dns.value
-    cloudflare         = { accountId = local.cloudflare_account_id, token = cloudflare_account_token.quizmon_release.value }
-    hyperdrive_id      = try(cloudflare_hyperdrive_config.quizmon[0].id, null)
-    hyperdrive_next_id = try(cloudflare_hyperdrive_config.quizmon_next[0].id, null)
+    auth_secret   = random_password.quizmon_auth.result
+    dns_token     = cloudflare_account_token.quizmon_dns.value
+    cloudflare    = { accountId = local.cloudflare_account_id, token = cloudflare_account_token.quizmon_release.value }
+    hyperdrive_id = try(cloudflare_hyperdrive_config.quizmon[0].id, null)
   }
 }
