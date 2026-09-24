@@ -5,7 +5,7 @@ metadata:
   name: quizmon-database
   namespace: flux-system
 spec:
-  suspend: false
+  suspend: true
   interval: 10m
   path: ./clusters/shire/apps/quizmon/database
   prune: true
@@ -32,7 +32,7 @@ metadata:
   name: quizmon-release
   namespace: flux-system
 spec:
-  suspend: false
+  suspend: true
   interval: 5m
   path: ./clusters/shire/apps/quizmon/release
   prune: true

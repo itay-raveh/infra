@@ -67,9 +67,7 @@ spec:
       max_slot_wal_keep_size: 1GB
     pg_hba:
       - hostssl quizmon quizmon,powersync_source all scram-sha-256
-      - hostssl quizmon_next quizmon,powersync_source all scram-sha-256
       - hostssl powersync powersync_storage all scram-sha-256
-      - hostssl powersync_next powersync_storage all scram-sha-256
       - host all all all reject
   plugins:
     - name: barman-cloud.cloudnative-pg.io
@@ -80,22 +78,10 @@ spec:
 apiVersion: postgresql.cnpg.io/v1
 kind: Database
 metadata:
-  name: quizmon-powersync
+  name: quizmon-app
   namespace: quizmon
 spec:
-  name: powersync
-  owner: powersync_storage
-  databaseReclaimPolicy: retain
-  cluster:
-    name: quizmon-db
----
-apiVersion: postgresql.cnpg.io/v1
-kind: Database
-metadata:
-  name: quizmon-next
-  namespace: quizmon
-spec:
-  name: quizmon_next
+  name: quizmon
   owner: quizmon
   databaseReclaimPolicy: retain
   cluster:
@@ -104,10 +90,10 @@ spec:
 apiVersion: postgresql.cnpg.io/v1
 kind: Database
 metadata:
-  name: quizmon-powersync-next
+  name: quizmon-powersync
   namespace: quizmon
 spec:
-  name: powersync_next
+  name: powersync
   owner: powersync_storage
   databaseReclaimPolicy: retain
   cluster:
