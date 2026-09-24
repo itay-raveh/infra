@@ -8,18 +8,18 @@ metadata:
 data:
   values.yaml: |
     runtimeConfig:
-      hyperdriveId: 1929d5d5eafe40819047418ffb4a5532
+      hyperdriveId: a682435a618046e1a141d3cfb595cc4d
     inputs:
       migrationConnection:
-        name: quizmon-migration
+        name: quizmon-migration-next
         key: migration-connection.json
-        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263
+        revision: 96b19a3eaac65ccc3108cf5a9b0b3c7973ee881ff19948ccb53bc0cf0e85df65
     powersync:
       sourceSecret:
-        name: quizmon-sync-source
+        name: quizmon-sync-source-next
         key: uri
-        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263
+        revision: 96b19a3eaac65ccc3108cf5a9b0b3c7973ee881ff19948ccb53bc0cf0e85df65
       storageSecret:
-        name: quizmon-sync-storage
+        name: quizmon-sync-storage-next
         key: uri
-        revision: 686e8108e6500d4ab7e2160a83632ee86c7e6bc0fa14a8d4ecfff82fdfcb2263
+        revision: 96b19a3eaac65ccc3108cf5a9b0b3c7973ee881ff19948ccb53bc0cf0e85df65
