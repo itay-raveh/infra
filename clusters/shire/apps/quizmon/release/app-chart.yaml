@@ -41,7 +41,7 @@ spec:
   values:
     releaseImage:
       repository: ghcr.io/itay-raveh/quizmon/release
-      digest: sha256:0e8eae4dd2ed7a8629b4da1838ec85cfe734969b5f07229b136ec41bdfc5df0c # {"$imagepolicy": "flux-system:quizmon:digest"}
+      digest: sha256:279c5afd0be218bc15f7b8052cd82994076d5aa87a9296aa9ce0402939e99488 # {"$imagepolicy": "flux-system:quizmon:digest"}
     runtimeConfig:
       version: 1
       workerName: quizmon
