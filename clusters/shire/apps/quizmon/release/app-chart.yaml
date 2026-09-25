@@ -43,11 +43,9 @@ spec:
       repository: ghcr.io/itay-raveh/quizmon/release
       digest: sha256:11736c0497571ec70f60294f0577b9156e0096f61416a0cac4b791863ad5b9b7 # {"$imagepolicy": "flux-system:quizmon:digest"}
     runtimeConfig:
-      version: 1
       workerName: quizmon
       origin: https://quizmon.raveh.dev
       sync:
-        version: 1
         endpoint: https://quizmon-sync.raveh.dev
         audience: quizmon
       mailFrom: noreply@raveh.dev
