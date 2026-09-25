@@ -26,7 +26,7 @@ elif $mode == "release" then
   else . end |
   [
     secret("quizmon-migration"; {"migration-connection.json": {
-      version: 1, host: .database_host, port: 5432, database: "quizmon",
+      host: .database_host, port: 5432, database: "quizmon",
       user: "quizmon", password: password("quizmon")
     } | tojson}),
     secret("quizmon-sync-source"; {uri: uri("powersync_source"; "quizmon")}),
