@@ -13,7 +13,7 @@ data:
       migrationConnection:
         name: quizmon-migration
         key: migration-connection.json
-        revision: 96b19a3eaac65ccc3108cf5a9b0b3c7973ee881ff19948ccb53bc0cf0e85df65
+        revision: e66362bbff4991ebe4d1f55b25ae9232f80d67936912bd7368d05e4c8733dc89
     powersync:
       sourceSecret:
         name: quizmon-sync-source

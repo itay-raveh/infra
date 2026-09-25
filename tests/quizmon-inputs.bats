@@ -38,7 +38,7 @@ render() {
       any($uris[]; contains("source%3A%40%2Fpassword")) and
       ([.[] | select(.metadata.name == "quizmon-migration") |
         .stringData["migration-connection.json"] | fromjson] | .[0] |
-        .host == "database.example.test" and .database == "quizmon" and .user == "quizmon")
+        (has("version") | not) and .host == "database.example.test" and .database == "quizmon" and .user == "quizmon")
     ' "$BATS_TEST_TMPDIR/rendered.json"
     refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" backup-secret
 }
