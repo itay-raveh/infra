@@ -19,7 +19,7 @@ terraform {
 
     imager = {
       source  = "hcloud-talos/imager"
-      version = "1.0.21"
+      version = "1.0.23"
     }
 
     random = {
