@@ -2,6 +2,24 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: quizmon-operator
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 10m
+  path: ./clusters/shire/apps/quizmon/operator
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: infrastructure
+  wait: true
+  timeout: 15m
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: quizmon-database
   namespace: flux-system
 spec:
@@ -18,9 +36,14 @@ spec:
       name: sops-age
   dependsOn:
     - name: infrastructure
+    - name: quizmon-operator
   wait: true
   timeout: 15m
   healthCheckExprs:
+    - apiVersion: psmdb.percona.com/v1
+      kind: PerconaServerMongoDB
+      failed: status.state == 'error'
+      current: status.state == 'ready'
     - apiVersion: postgresql.cnpg.io/v1
       kind: Database
       failed: has(status.applied) && !status.applied
@@ -32,7 +55,7 @@ metadata:
   name: quizmon-release
   namespace: flux-system
 spec:
-  suspend: false
+  suspend: true
   interval: 5m
   path: ./clusters/shire/apps/quizmon/release
   prune: true

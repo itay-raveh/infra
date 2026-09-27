@@ -107,7 +107,7 @@ run "isolate_backup_credentials" {
         toset(statement.Resource) == {
           etcdObjects        = toset(["arn:aws:s3:::shire-backups/etcd/*"])
           wanderboundObjects = toset(["arn:aws:s3:::shire-backups/cnpg/wanderbound/*", "arn:aws:s3:::shire-backups/app-data/wanderbound/*"])
-          quizmonObjects     = toset(["arn:aws:s3:::shire-backups/cnpg/quizmon/*"])
+          quizmonObjects     = toset(["arn:aws:s3:::shire-backups/cnpg/quizmon/*", "arn:aws:s3:::shire-backups/mongo/quizmon/*"])
         }[statement.Sid] &&
         statement.Principal.AWS == {
           etcdObjects        = "arn:aws:iam:::user/p12345678:AAAAAAAAAAAAAAAAAAAA"
