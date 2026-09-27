@@ -6,7 +6,6 @@ resources:
   - cluster.yaml
   - mongo.yaml
   - backup.yaml
-  - inputs/quizmon-mongo-backup.sops.yaml
   - inputs/
 secretGenerator:
   - name: quizmon-db-server-ca

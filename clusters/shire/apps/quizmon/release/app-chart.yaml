@@ -51,5 +51,10 @@ spec:
       mailFrom: noreply@raveh.dev
       authRateLimitNamespace: "1011"
       apiRateLimitNamespace: "1012"
-    powersync:
+    sync:
       enabled: true
+      mongoSecret:
+        name: quizmon-mongo-custom-user-secret-conn-str
+        key: quizmon_rs0_connectionString
+      mongoTlsSecret:
+        name: quizmon-mongo-ssl

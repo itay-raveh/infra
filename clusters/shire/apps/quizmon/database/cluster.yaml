@@ -25,19 +25,6 @@ spec:
         login: true
         passwordSecret:
           name: quizmon-db-app
-      - name: powersync_source
-        ensure: present
-        login: true
-        replication: true
-        inRoles:
-          - pg_read_all_data
-        passwordSecret:
-          name: quizmon-db-source
-      - name: powersync_storage
-        ensure: present
-        login: true
-        passwordSecret:
-          name: quizmon-db-storage
     services:
       additional:
         - selectorType: rw
@@ -66,8 +53,7 @@ spec:
       max_connections: "50"
       max_slot_wal_keep_size: 1GB
     pg_hba:
-      - hostssl quizmon quizmon,powersync_source all scram-sha-256
-      - hostssl powersync powersync_storage all scram-sha-256
+      - hostssl quizmon quizmon all scram-sha-256
       - host all all all reject
   plugins:
     - name: barman-cloud.cloudnative-pg.io
@@ -83,18 +69,6 @@ metadata:
 spec:
   name: quizmon
   owner: quizmon
-  databaseReclaimPolicy: retain
-  cluster:
-    name: quizmon-db
----
-apiVersion: postgresql.cnpg.io/v1
-kind: Database
-metadata:
-  name: quizmon-powersync
-  namespace: quizmon
-spec:
-  name: powersync
-  owner: powersync_storage
   databaseReclaimPolicy: retain
   cluster:
     name: quizmon-db
