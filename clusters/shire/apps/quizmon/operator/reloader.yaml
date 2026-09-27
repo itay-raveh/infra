@@ -25,3 +25,8 @@ spec:
     reloader:
       watchGlobally: false
       reloadStrategy: annotations
+      deployment:
+        containerSecurityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
