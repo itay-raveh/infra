@@ -1,0 +1,60 @@
+apiVersion: psmdb.percona.com/v1
+kind: PerconaServerMongoDB
+metadata:
+  name: quizmon-mongo
+  namespace: quizmon
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  crVersion: 1.23.0
+  image: percona/percona-server-mongodb:8.0.26-11
+  updateStrategy: SmartUpdate
+  upgradeOptions:
+    apply: disabled
+    schedule: "0 2 * * *"
+  unsafeFlags:
+    replsetSize: true
+  replsets:
+    - name: rs0
+      size: 1
+      volumeSpec:
+        persistentVolumeClaim:
+          resources:
+            requests:
+              storage: 10Gi
+      resources:
+        requests:
+          cpu: 300m
+          memory: 1Gi
+        limits:
+          memory: 1Gi
+  sharding:
+    enabled: false
+  users:
+    - name: quizmon
+      db: admin
+      roles:
+        - name: readWriteAnyDatabase
+          db: admin
+  backup:
+    enabled: true
+    image: percona/percona-backup-mongodb:2.15.0
+    storages:
+      hetzner:
+        type: minio
+        minio:
+          bucket: shire-backups
+          region: fsn1
+          credentialsSecret: quizmon-mongo-backup
+          endpointUrl: fsn1.your-objectstorage.com
+          prefix: mongo/quizmon/
+          secure: true
+    tasks:
+      - name: daily
+        enabled: true
+        schedule: "0 3 * * *"
+        storageName: hetzner
+        retention:
+          count: 30
+          type: count
+          deleteFromStorage: true
