@@ -60,5 +60,8 @@ spec:
                       - ALL
                   readOnlyRootFilesystem: true
   values:
+    image:
+      repository: cloudflare/cloudflared
+      tag: "2026.9.3"
     managed:
       existingSecret: cloudflared-tunnel-token

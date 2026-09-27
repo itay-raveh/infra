@@ -3,6 +3,7 @@
 | Configuration | Owner |
 |---|---|
 | DNS, Tunnel, TLS, mail, account policies | [`tofu/modules/cloudflare/`](../tofu/modules/cloudflare/) |
+| Tunnel connector and image version | [`cloudflared.yaml`](../clusters/shire/infrastructure/controllers/cloudflared.yaml) |
 | App domains, policies and private database connections | App-specific files in [`tofu/`](../tofu/) |
 | Application Worker code, bindings and logs | Application repositories |
 | Credentials and rotation | [Secrets](secrets.md) |
