@@ -47,7 +47,7 @@ locals {
   backup_prefixes = {
     etcd        = ["etcd/"]
     wanderbound = ["cnpg/wanderbound/", "app-data/wanderbound/"]
-    quizmon     = ["cnpg/quizmon/"]
+    quizmon     = ["cnpg/quizmon/", "mongo/quizmon/"]
   }
   backup_object_access = {
     for consumer, prefixes in local.backup_prefixes : consumer => {
@@ -153,6 +153,15 @@ resource "minio_ilm_policy" "backups" {
 
     # Barman retains the base backup preceding the 30-day recovery window.
     # https://cloudnative-pg.io/plugin-barman-cloud/docs/retention/
+    noncurrent_expiration {
+      days = "60d"
+    }
+  }
+
+  rule {
+    id     = "mongo-expire"
+    filter = "mongo/"
+
     noncurrent_expiration {
       days = "60d"
     }

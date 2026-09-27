@@ -11,8 +11,8 @@ if [[ "$mode" != database && "$mode" != release ]] || [[ $# != 1 ]]; then
 fi
 
 directory="$app_dir/$mode/inputs"
-if [[ "$mode" == database && ! -f "$directory/quizmon-backup.sops.yaml" ]]; then
-    printf 'Create quizmon-backup.sops.yaml with dedicated backup credentials first.\n' >&2
+if [[ "$mode" == database && ( ! -f "$directory/quizmon-backup.sops.yaml" || ! -f "$directory/quizmon-mongo-backup.sops.yaml" ) ]]; then
+    printf 'Create quizmon-backup.sops.yaml and quizmon-mongo-backup.sops.yaml first.\n' >&2
     exit 1
 fi
 
@@ -40,10 +40,6 @@ if [[ "$mode" == release ]]; then
            runtimeConfig: {hyperdriveId: .hyperdrive_id},
            inputs: {
              migrationConnection: input("quizmon-migration"; "migration-connection.json")
-           },
-           powersync: {
-             sourceSecret: input("quizmon-sync-source"; "uri"),
-             storageSecret: input("quizmon-sync-storage"; "uri")
            }
          }}}
     ' "$temporary/inputs.json" |
@@ -53,7 +49,7 @@ fi
 
 jq --arg mode "$mode" '{
   apiVersion: "kustomize.config.k8s.io/v1beta1", kind: "Kustomization",
-  resources: ([.[].metadata.name + ".sops.yaml"] + if $mode == "release" then ["runtime.yaml"] else ["quizmon-backup.sops.yaml"] end)
+  resources: ([.[].metadata.name + ".sops.yaml"] + if $mode == "release" then ["runtime.yaml"] else ["quizmon-backup.sops.yaml", "quizmon-mongo-backup.sops.yaml"] end)
 }' "$temporary/secrets.json" | yq -P > "$temporary/kustomization.yaml"
 mv "$temporary/"*.yaml "$directory/"
 printf 'Updated Quizmon %s inputs. Review and commit the encrypted manifests.\n' "$mode"

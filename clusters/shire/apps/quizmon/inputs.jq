@@ -4,15 +4,12 @@ def secret($name; $data):
   {apiVersion: "v1", kind: "Secret", metadata: {namespace: "quizmon", name: $name}, stringData: $data};
 def password($name):
   .database_passwords[$name] | required_string("database password: " + $name);
-def uri($role; $database):
-  "postgresql://\($role):\(password($role) | @uri)@\(.database_host):5432/\($database)?sslmode=verify-full";
-
 .database_host |= required_string("database host") |
 if (.database_host | test("^[a-z0-9-]+([.][a-z0-9-]+)+$")) | not then error("invalid database host") else . end |
 if $mode == "database" then
   . as $inputs |
   [
-    (["quizmon", "app"], ["powersync_source", "source"], ["powersync_storage", "storage"]) as $role |
+    (["quizmon", "app"]) as $role |
     secret("quizmon-db-" + $role[1]; {username: $role[0], password: ($inputs | password($role[0]))}) |
     .type = "kubernetes.io/basic-auth"
   ] + [
@@ -28,8 +25,6 @@ elif $mode == "release" then
     secret("quizmon-migration"; {"migration-connection.json": {
       host: .database_host, port: 5432, database: "quizmon",
       user: "quizmon", password: password("quizmon")
-    } | tojson}),
-    secret("quizmon-sync-source"; {uri: uri("powersync_source"; "quizmon")}),
-    secret("quizmon-sync-storage"; {uri: uri("powersync_storage"; "powersync")})
+    } | tojson})
   ]
 else error("mode must be database or release") end

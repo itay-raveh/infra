@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - certificates.yaml
   - cluster.yaml
+  - mongo.yaml
   - backup.yaml
   - inputs/
 secretGenerator:
