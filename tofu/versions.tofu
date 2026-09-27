@@ -14,12 +14,12 @@ terraform {
 
     talos = {
       source  = "siderolabs/talos"
-      version = "0.11.0"
+      version = "0.12.0"
     }
 
     imager = {
       source  = "hcloud-talos/imager"
-      version = "1.0.21"
+      version = "1.0.23"
     }
 
     random = {
@@ -34,7 +34,7 @@ terraform {
 
     aws = {
       source  = "hashicorp/aws"
-      version = "6.65.0"
+      version = "6.66.0"
     }
 
     tailscale = {

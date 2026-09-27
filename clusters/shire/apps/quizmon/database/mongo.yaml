@@ -8,6 +8,12 @@ metadata:
 spec:
   crVersion: 1.23.0
   image: percona/percona-server-mongodb:8.0.26-11
+  initContainerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+    runAsNonRoot: true
+    runAsUser: 1001
   updateStrategy: SmartUpdate
   upgradeOptions:
     apply: disabled
@@ -17,6 +23,19 @@ spec:
   replsets:
     - name: rs0
       size: 1
+      podSecurityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ALL]
+        runAsNonRoot: true
+        runAsUser: 1001
       volumeSpec:
         persistentVolumeClaim:
           resources:
@@ -39,6 +58,18 @@ spec:
   backup:
     enabled: true
     image: percona/percona-backup-mongodb:2.15.0
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+      runAsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: [ALL]
+      runAsNonRoot: true
+      runAsUser: 1001
     storages:
       hetzner:
         type: minio
