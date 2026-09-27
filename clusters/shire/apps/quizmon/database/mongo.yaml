@@ -78,7 +78,7 @@ spec:
           region: fsn1
           credentialsSecret: quizmon-mongo-backup
           endpointUrl: fsn1.your-objectstorage.com
-          prefix: mongo/quizmon/
+          prefix: mongo/quizmon
           secure: true
     tasks:
       - name: daily
