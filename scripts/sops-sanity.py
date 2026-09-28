@@ -15,7 +15,6 @@ CIPHERTEXT = re.compile(
     r"ENC\[AES256_GCM,data:([A-Za-z0-9+/=]*),iv:([A-Za-z0-9+/=]+),"
     r"tag:([A-Za-z0-9+/=]+),type:(str|int|float|bool|bytes)\]"
 )
-VENDOR = "clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest.yaml"
 
 
 def unique_object(pairs):
@@ -106,18 +105,11 @@ def check_encrypted(path, docs, rules):
         raise ValueError("secret values must contain complete SOPS ciphertext")
 
 
-def check_plaintext(path, docs):
+def check_plaintext(docs):
     for document in docs:
         for item in mappings(document):
             if item.get("kind") != "Secret":
                 continue
-            if path == VENDOR and item.get("data", {}).keys() == {"SIDECAR_IMAGE"} and not item.get("stringData"):
-                try:
-                    image = base64.b64decode("".join(item["data"]["SIDECAR_IMAGE"].split()), validate=True).decode()
-                    if re.fullmatch(r"ghcr\.io/cloudnative-pg/plugin-barman-cloud-sidecar:v[0-9.]+", image):
-                        continue
-                except (ValueError, UnicodeError):
-                    pass
             raise ValueError("plaintext Kubernetes Secret")
 
 
@@ -145,7 +137,7 @@ def main():
             if is_encrypted:
                 check_encrypted(path, docs, rules)
             else:
-                check_plaintext(path, docs)
+                check_plaintext(docs)
         except (ValueError, KeyError, TypeError, AttributeError, OSError, subprocess.CalledProcessError) as error:
             print(f"{path}: {error}", file=sys.stderr)
             failed = True

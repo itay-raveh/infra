@@ -112,16 +112,3 @@ setup() {
     run betterleaks dir secrets --config "$SCANNER_CONFIG" --redact --no-banner
     [ "$status" -eq 0 ]
 }
-
-@test "vendored image exception cannot hide an additional plaintext Secret value" {
-    local target=clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest.yaml
-    mkdir -p "$(dirname "$target")"
-    printf 'kind: Secret\ndata:\n  SIDECAR_IMAGE: %s\n' \
-        "$(printf 'ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar:v0.12.0' | base64 -w0)" > "$target"
-    git add "$target"
-    run python3 "$CHECKER"
-    [ "$status" -eq 0 ]
-    printf '  password: %s\n' c2VjcmV0 >> "$target"
-    run python3 "$CHECKER"
-    [ "$status" -ne 0 ]
-}
