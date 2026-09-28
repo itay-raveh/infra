@@ -5,7 +5,7 @@ metadata:
   name: quizmon
   namespace: flux-system
 spec:
-  image: ghcr.io/itay-raveh/quizmon/release
+  image: ghcr.io/itay-raveh/quizmon
   interval: 5m
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
