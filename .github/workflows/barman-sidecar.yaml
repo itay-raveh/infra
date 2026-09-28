@@ -1,0 +1,49 @@
+---
+name: barman-sidecar
+on:
+  pull_request:
+    paths:
+      - containers/barman-cloud-sidecar/**
+      - .github/workflows/barman-sidecar.yaml
+  push:
+    branches: [main]
+    paths:
+      - containers/barman-cloud-sidecar/**
+      - .github/workflows/barman-sidecar.yaml
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: docker build -t barman-cloud-sidecar:test containers/barman-cloud-sidecar
+      - run: |
+          docker run --rm --network none --read-only \
+            --entrypoint /venv/bin/python3 \
+            -v "$PWD/containers/barman-cloud-sidecar/test_fallback.py:/tmp/test_fallback.py:ro" \
+            barman-cloud-sidecar:test /tmp/test_fallback.py
+
+  publish:
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Publish patched sidecar
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE: ghcr.io/itay-raveh/barman-cloud-sidecar:${{ github.sha }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          docker build -t "$IMAGE" containers/barman-cloud-sidecar
+          docker push "$IMAGE"
