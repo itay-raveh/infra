@@ -524,43 +524,43 @@ url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/552067
 provenance = "github-attestations"
 
 [[tools.hcloud]]
-version = "1.68.0"
+version = "1.69.0"
 backend = "aqua:hetznercloud/cli"
 
 [tools.hcloud."platforms.linux-arm64"]
-checksum = "sha256:33164d240bbb4f44430160f00bf6b9e913d5085266c7b7009045dff1ef7c4e96"
-url = "https://github.com/hetznercloud/cli/releases/download/v1.68.0/hcloud-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/563658342"
+checksum = "sha256:3afa68ac6c7dfb62f41d4a740376aaf88d3772e95f94a8816f41050c4bf1077e"
+url = "https://github.com/hetznercloud/cli/releases/download/v1.69.0/hcloud-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/586188465"
 
 [tools.hcloud."platforms.linux-arm64-musl"]
-checksum = "sha256:33164d240bbb4f44430160f00bf6b9e913d5085266c7b7009045dff1ef7c4e96"
-url = "https://github.com/hetznercloud/cli/releases/download/v1.68.0/hcloud-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/563658342"
+checksum = "sha256:3afa68ac6c7dfb62f41d4a740376aaf88d3772e95f94a8816f41050c4bf1077e"
+url = "https://github.com/hetznercloud/cli/releases/download/v1.69.0/hcloud-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/586188465"
 
 [tools.hcloud."platforms.linux-x64"]
-checksum = "sha256:4b3b4b98aaec7add939cef69256d81831b6317ee601e44c52309594650ccfec2"
-url = "https://github.com/hetznercloud/cli/releases/download/v1.68.0/hcloud-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/563658317"
+checksum = "sha256:aca1a346c8d218a094f1811ee1705013d394cabf48e40887292caff464b64277"
+url = "https://github.com/hetznercloud/cli/releases/download/v1.69.0/hcloud-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/586188429"
 
 [tools.hcloud."platforms.linux-x64-musl"]
-checksum = "sha256:4b3b4b98aaec7add939cef69256d81831b6317ee601e44c52309594650ccfec2"
-url = "https://github.com/hetznercloud/cli/releases/download/v1.68.0/hcloud-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/563658317"
+checksum = "sha256:aca1a346c8d218a094f1811ee1705013d394cabf48e40887292caff464b64277"
+url = "https://github.com/hetznercloud/cli/releases/download/v1.69.0/hcloud-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/586188429"
 
 [tools.hcloud."platforms.macos-arm64"]
-checksum = "sha256:2ba97342c18de3d8ecaf422b37110e306603b1bca951a2051a0359cd4263b74e"
-url = "https://github.com/hetznercloud/cli/releases/download/v1.68.0/hcloud-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/563658333"
+checksum = "sha256:a0ee07cbd1c2350b8cc962aa99967a1aa6558fac3ae87e8a141f008772315b5d"
+url = "https://github.com/hetznercloud/cli/releases/download/v1.69.0/hcloud-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/586188377"
 
 [tools.hcloud."platforms.macos-x64"]
-checksum = "sha256:b4889bfaf861e0f0342000dc4021de9c0d9d30f5044df1f1eff0e5ad01ad4799"
-url = "https://github.com/hetznercloud/cli/releases/download/v1.68.0/hcloud-darwin-amd64.tar.gz"
-url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/563658363"
+checksum = "sha256:689d660a6de05741b02248044ead925918e26dd54372b01f30862f89aa740f1b"
+url = "https://github.com/hetznercloud/cli/releases/download/v1.69.0/hcloud-darwin-amd64.tar.gz"
+url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/586188380"
 
 [tools.hcloud."platforms.windows-x64"]
-checksum = "sha256:82dc811c7113f1194e7e2184101dbd4af8d00f363f6017d0997b189a384434ff"
-url = "https://github.com/hetznercloud/cli/releases/download/v1.68.0/hcloud-windows-amd64.zip"
-url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/563658382"
+checksum = "sha256:76ff326b7ad66e818564126c8964458fb6a365b6ff9087808e12d14f89443d22"
+url = "https://github.com/hetznercloud/cli/releases/download/v1.69.0/hcloud-windows-amd64.zip"
+url_api = "https://api.github.com/repos/hetznercloud/cli/releases/assets/586188517"
 
 [[tools.helm]]
 version = "4.3.0"
