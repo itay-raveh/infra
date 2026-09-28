@@ -1,27 +1,51 @@
+variable "quizmon_maintenance_enabled" {
+  type        = bool
+  default     = false
+  description = "Temporarily redirect Quizmon page visits during maintenance."
+}
+
 resource "cloudflare_ruleset" "redirect_apex_to_itay" {
   depends_on = [cloudflare_workers_route.root]
 
   zone_id     = local.cloudflare_zone_id
   name        = "default"
-  description = "Canonical hostname redirects"
+  description = "Canonical hostname and Quizmon maintenance redirects"
   kind        = "zone"
   phase       = "http_request_dynamic_redirect"
 
-  rules = [{
-    ref         = "redirect_apex_to_itay"
-    description = "Redirect raveh.dev to itay.raveh.dev"
-    expression  = "http.host eq \"raveh.dev\" and not http.request.uri.path in {\"/privacy\" \"/privacy/\" \"/privacy.html\" \"/ads.txt\"}"
-    action      = "redirect"
-    action_parameters = {
-      from_value = {
-        target_url = {
-          expression = "concat(\"https://itay.raveh.dev\", http.request.uri.path)"
+  rules = [
+    {
+      ref         = "redirect_apex_to_itay"
+      description = "Redirect raveh.dev to itay.raveh.dev"
+      expression  = "http.host eq \"raveh.dev\" and not http.request.uri.path in {\"/privacy\" \"/privacy/\" \"/privacy.html\" \"/ads.txt\"}"
+      action      = "redirect"
+      action_parameters = {
+        from_value = {
+          target_url = {
+            expression = "concat(\"https://itay.raveh.dev\", http.request.uri.path)"
+          }
+          status_code           = 301
+          preserve_query_string = true
         }
-        status_code           = 301
-        preserve_query_string = true
       }
-    }
-  }]
+    },
+    {
+      ref         = "quizmon_maintenance"
+      description = "Temporarily redirect Quizmon page visits during maintenance"
+      expression  = "http.host eq \"quizmon.raveh.dev\" and http.request.method eq \"GET\" and http.request.uri.path ne \"/maintenance\" and http.request.uri.path ne \"/maintenance.html\" and any(http.request.headers[\"accept\"][*] contains \"text/html\")"
+      action      = "redirect"
+      enabled     = var.quizmon_maintenance_enabled
+      action_parameters = {
+        from_value = {
+          target_url = {
+            value = "https://quizmon.raveh.dev/maintenance"
+          }
+          status_code           = 302
+          preserve_query_string = false
+        }
+      }
+    },
+  ]
 }
 
 resource "cloudflare_worker" "root" {
