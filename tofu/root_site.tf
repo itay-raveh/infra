@@ -1,3 +1,9 @@
+variable "quizmon_maintenance_enabled" {
+  type        = bool
+  default     = false
+  description = "Temporarily redirect Quizmon page visits during maintenance."
+}
+
 resource "cloudflare_ruleset" "redirect_apex_to_itay" {
   depends_on = [cloudflare_workers_route.root]
 
@@ -28,7 +34,7 @@ resource "cloudflare_ruleset" "redirect_apex_to_itay" {
       description = "Temporarily redirect Quizmon page visits during maintenance"
       expression  = "http.host eq \"quizmon.raveh.dev\" and http.request.method eq \"GET\" and http.request.uri.path ne \"/maintenance\" and http.request.uri.path ne \"/maintenance.html\" and any(http.request.headers[\"accept\"][*] contains \"text/html\")"
       action      = "redirect"
-      enabled     = false
+      enabled     = var.quizmon_maintenance_enabled
       action_parameters = {
         from_value = {
           target_url = {
@@ -40,11 +46,6 @@ resource "cloudflare_ruleset" "redirect_apex_to_itay" {
       }
     },
   ]
-
-  lifecycle {
-    # The local maintenance command owns this rule's temporary enabled state.
-    ignore_changes = [rules[1].enabled]
-  }
 }
 
 resource "cloudflare_worker" "root" {

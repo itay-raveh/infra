@@ -68,7 +68,12 @@ run = "bash scripts/tofu-wrapper.sh output -raw \"$@\""
 [tasks."quizmon:maintenance"]
 description = "Toggle the Quizmon maintenance redirect without deploying the Worker"
 dir = "{{config_root}}"
-run = 'bash scripts/sops-exec.sh secrets/tofu.sops.yaml -- bash scripts/quizmon-maintenance.sh "$@"'
+usage = '''
+arg "<enabled>" help="true to enable, false to disable" {
+  choices "true" "false"
+}
+'''
+run = 'mise run tofu:apply -- -var="quizmon_maintenance_enabled={{usage.enabled}}" -target=cloudflare_ruleset.redirect_apex_to_itay'
 
 [tasks."configs:refresh"]
 description = "Refresh Kubernetes and Talos client configs from state"
