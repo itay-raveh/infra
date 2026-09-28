@@ -11,6 +11,7 @@ forward_pid=
 cleanup() {
   local status=$?
   if (( status != 0 )); then
+    kubectl -n fixture logs pod/object-store --tail=30 || true
     kubectl get pods -A || true
     kubectl get events -A --sort-by=.lastTimestamp | tail -40 || true
     flux get all -A || true
@@ -27,20 +28,19 @@ kind create cluster --name "$cluster" --config tests/integration/kind.yaml --wai
 [[ $(kubectl config current-context) == "kind-$cluster" ]]
 flux install --components=source-controller,kustomize-controller,helm-controller
 kubectl create namespace fixture
-kubectl -n fixture run minio \
-  --image=quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
-  --env=MINIO_ROOT_USER=fixture-access --env=MINIO_ROOT_PASSWORD=fixture-secret \
-  -- server /data
-kubectl -n fixture expose pod minio --port=9000
-kubectl -n fixture wait pod/minio --for=condition=Ready --timeout=180s
-kubectl -n fixture port-forward svc/minio :9000 > "$test_dir/forward.log" 2>&1 &
+kubectl -n fixture run object-store \
+  --image=chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882 \
+  --env=AWS_ACCESS_KEY_ID=fixture-access --env=AWS_SECRET_ACCESS_KEY=fixture-secret
+kubectl -n fixture expose pod object-store --port=8333
+kubectl -n fixture wait pod/object-store --for=condition=Ready --timeout=180s
+kubectl -n fixture port-forward svc/object-store :8333 > "$test_dir/forward.log" 2>&1 &
 forward_pid=$!
 for ((attempt=0; attempt<30; attempt++)); do
   port=$(sed -n 's/Forwarding from 127.0.0.1:\([0-9]*\).*/\1/p' "$test_dir/forward.log")
   [[ -z "$port" ]] || break
   sleep 1
 done
-mc alias set fixture "http://127.0.0.1:${port:?MinIO port forward failed}" fixture-access fixture-secret
+mc alias set fixture "http://127.0.0.1:${port:?S3 port forward failed}" fixture-access fixture-secret
 mc mb fixture/manifests fixture/backups
 
 mkdir "$test_dir/manifests"
@@ -52,7 +52,7 @@ kubectl -n fixture create secret generic recovered-secret --from-literal=message
 sops --config /dev/null encrypt --age "$(age-keygen -y "$test_dir/age.key")" --encrypted-regex '^(data|stringData)$' \
   "$test_dir/secret.yaml" > "$test_dir/manifests/secret.sops.yaml"
 mc cp "$test_dir/manifests/secret.sops.yaml" fixture/manifests/
-flux create source bucket fixture --bucket-name=manifests --endpoint=minio.fixture.svc.cluster.local:9000 \
+flux create source bucket fixture --bucket-name=manifests --endpoint=object-store.fixture.svc.cluster.local:8333 \
   --insecure --access-key=fixture-access --secret-key=fixture-secret --interval=1m
 flux create kustomization fixture --source=Bucket/fixture --prune --wait \
   --decryption-provider=sops --decryption-secret=sops-age --export | kubectl apply -f -

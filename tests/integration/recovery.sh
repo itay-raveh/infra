@@ -38,7 +38,7 @@ printf 'CNPG/Barman backup and restore passed.\n'
 
 image=restic/restic:0.19.1@sha256:08916bcda4a4435f9d9828ebb4e91bb7ada3d2c8a53699788930e0ae1bd4fa67
 kubectl -n fixture run restic --image="$image" \
-  --env=RESTIC_REPOSITORY=s3:http://minio.fixture.svc.cluster.local:9000/backups/app-data \
+  --env=RESTIC_REPOSITORY=s3:http://object-store.fixture.svc.cluster.local:8333/backups/app-data \
   --env=RESTIC_PASSWORD="$(openssl rand -hex 32)" --env=AWS_ACCESS_KEY_ID=fixture-access \
   --env=AWS_SECRET_ACCESS_KEY=fixture-secret --command -- sleep 600
 kubectl -n fixture wait pod/restic --for=condition=Ready --timeout=180s
