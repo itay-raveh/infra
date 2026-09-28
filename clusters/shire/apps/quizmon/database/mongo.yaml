@@ -57,7 +57,7 @@ spec:
           db: admin
   backup:
     enabled: true
-    image: percona/percona-backup-mongodb:2.15.0
+    image: percona/percona-backup-mongodb:2.16.0
     podSecurityContext:
       runAsNonRoot: true
       runAsUser: 1001
