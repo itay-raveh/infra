@@ -18,7 +18,7 @@ variable "quizmon_hyperdrive_enabled" {
 }
 
 resource "random_password" "quizmon_database" {
-  for_each = toset(["quizmon", "powersync_source", "powersync_storage"])
+  for_each = toset(["quizmon"])
   length   = 48
   special  = false
 }

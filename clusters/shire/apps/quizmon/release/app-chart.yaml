@@ -41,7 +41,7 @@ spec:
   values:
     releaseImage:
       repository: ghcr.io/itay-raveh/quizmon/release
-      digest: sha256:94ec70f8fbe135375f0102ba514777aa5ceaf74ddc763d0642be987407543bb6 # {"$imagepolicy": "flux-system:quizmon:digest"}
+      digest: sha256:29f11a53ec40a16059410cf063ed5f232f9152c3b663490318f76c95b17ad424 # {"$imagepolicy": "flux-system:quizmon:digest"}
     runtimeConfig:
       workerName: quizmon
       origin: https://quizmon.raveh.dev
@@ -51,5 +51,10 @@ spec:
       mailFrom: noreply@raveh.dev
       authRateLimitNamespace: "1011"
       apiRateLimitNamespace: "1012"
-    powersync:
+    sync:
       enabled: true
+      mongoSecret:
+        name: quizmon-mongo-custom-user-secret-conn-str
+        key: quizmon_rs0_connectionString
+      mongoTlsSecret:
+        name: quizmon-mongo-ssl

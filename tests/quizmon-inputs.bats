@@ -7,7 +7,7 @@ setup() {
     export INPUT="$BATS_TEST_TMPDIR/input.json"
     jq -n '{
       database_host: "database.example.test",
-      database_passwords: {quizmon: "app-password", powersync_source: "source:@/password", powersync_storage: "storage-password"},
+      database_passwords: {quizmon: "app-password"},
       dns_token: "dns-token",
       hyperdrive_id: ("c" * 32), backup_access_key: "backup-key", backup_secret_key: "backup-secret"
     }' > "$INPUT"
@@ -17,12 +17,12 @@ render() {
     jq -e --arg mode "$1" -f "$REPO_ROOT/clusters/shire/apps/quizmon/inputs.jq" "$INPUT"
 }
 
-@test "database inputs assign each CNPG role its own credential and exclude release secrets" {
+@test "database inputs include the account role and exclude release secrets" {
     render database > "$BATS_TEST_TMPDIR/rendered.json"
     jq -e '
-      length == 4 and
+      length == 2 and
       ([.[] | select(.type == "kubernetes.io/basic-auth") | .stringData.username] | sort) ==
-        ["powersync_source", "powersync_storage", "quizmon"] and
+        ["quizmon"] and
       all(.[]; .metadata.namespace == "quizmon") and
       all(.[]; .metadata.name != "quizmon-worker")
     ' "$BATS_TEST_TMPDIR/rendered.json"
@@ -30,12 +30,10 @@ render() {
     refute_file_contains "$BATS_TEST_TMPDIR/rendered.json" quizmon-backup
 }
 
-@test "release inputs require TLS and preserve special characters in URI passwords" {
+@test "release inputs keep database credentials in the migration Secret" {
     render release > "$BATS_TEST_TMPDIR/rendered.json"
     jq -e '
-      [.[] | select(.stringData.uri) | .stringData.uri] as $uris |
-      ($uris | length) == 2 and all($uris[]; endswith("?sslmode=verify-full")) and
-      any($uris[]; contains("source%3A%40%2Fpassword")) and
+      length == 1 and
       ([.[] | select(.metadata.name == "quizmon-migration") |
         .stringData["migration-connection.json"] | fromjson] | .[0] |
         (has("version") | not) and .host == "database.example.test" and .database == "quizmon" and .user == "quizmon")
@@ -71,6 +69,8 @@ prepare_refresh() {
     cp "$source_root/clusters/shire/apps/quizmon/"{refresh-secrets.sh,inputs.jq} "$FIXTURE/clusters/shire/apps/quizmon/"
     (cd "$FIXTURE" && encrypt_fixture clusters/shire/apps/quizmon/database/inputs/quizmon-backup.sops.yaml \
         '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"quizmon-backup","namespace":"quizmon"},"stringData":{"ACCESS_KEY_ID":"scoped-backup-key","ACCESS_SECRET_KEY":"scoped-backup-secret"}}')
+    (cd "$FIXTURE" && encrypt_fixture clusters/shire/apps/quizmon/database/inputs/quizmon-mongo-backup.sops.yaml \
+        '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"quizmon-mongo-backup","namespace":"quizmon"},"stringData":{"AWS_ACCESS_KEY_ID":"backup-key","AWS_SECRET_ACCESS_KEY":"backup-secret"}}')
     cp "$FIXTURE/clusters/shire/apps/quizmon/database/inputs/quizmon-backup.sops.yaml" "$BATS_TEST_TMPDIR/original-backup"
     for mode in database release; do
         printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources: []\n' > \
@@ -91,13 +91,13 @@ SCRIPT
     for file in "$directory/"*.sops.yaml; do
         sops decrypt "$file" > /dev/null
     done
-    yq -o=json -I=0 "$BATS_TEST_TMPDIR/rendered.yaml" | jq -se 'length == 5 and all(.[]; .kind == "Secret" and .sops.mac != null)'
+    yq -o=json -I=0 "$BATS_TEST_TMPDIR/rendered.yaml" | jq -se 'length == 4 and all(.[]; .kind == "Secret" and .sops.mac != null)'
     # Kustomize reorders fields. Flux also skips the whole-document MAC after rendering.
     # https://github.com/fluxcd/kustomize-controller/blob/v1.8.3/internal/decryptor/decryptor.go#L135-L139
     while IFS= read -r secret; do
         printf '%s\n' "$secret" | sops decrypt --ignore-mac --input-type json --output-type json /dev/stdin | jq -e '.stringData | length > 0' > /dev/null
     done < <(yq -o=json -I=0 "$BATS_TEST_TMPDIR/rendered.yaml")
-    [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 5 ]
+    [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 4 ]
     refute_file_contains "$directory/quizmon-db-app.sops.yaml" app-password
     [ "$(stat -c '%a' "$directory/quizmon-db-app.sops.yaml")" = 600 ]
     cmp "$BATS_TEST_TMPDIR/original-backup" "$directory/quizmon-backup.sops.yaml"
@@ -107,7 +107,7 @@ SCRIPT
     prepare_refresh
     bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" release
     local directory="$FIXTURE/clusters/shire/apps/quizmon/release/inputs"
-    [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 4 ]
+    [ "$(yq '.resources | length' "$directory/kustomization.yaml")" -eq 2 ]
     sops decrypt --output-type json "$directory/quizmon-migration.sops.yaml" | jq -e '.stringData["migration-connection.json"] | fromjson | .password == "app-password"'
     yq -o=json -I=0 '.data."values.yaml" | from_yaml' "$directory/runtime.yaml" |
         jq -e '.runtimeConfig.hyperdriveId == ("c" * 32) and
@@ -128,5 +128,5 @@ SCRIPT
     rm "$FIXTURE/clusters/shire/apps/quizmon/database/inputs/quizmon-backup.sops.yaml"
     run bash "$FIXTURE/clusters/shire/apps/quizmon/refresh-secrets.sh" database
     [ "$status" -eq 1 ]
-    [[ "$output" == *'dedicated backup credentials first'* ]]
+    [[ "$output" == *'quizmon-backup.sops.yaml and quizmon-mongo-backup.sops.yaml first'* ]]
 }
