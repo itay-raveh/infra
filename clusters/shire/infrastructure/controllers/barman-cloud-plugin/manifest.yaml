@@ -962,17 +962,6 @@ subjects:
   namespace: cnpg-system
 ---
 apiVersion: v1
-data:
-  SIDECAR_IMAGE: |
-    Z2hjci5pby9jbG91ZG5hdGl2ZS1wZy9wbHVnaW4tYmFybWFuLWNsb3VkLXNpZGVjYXI6dj
-    AuMTUuMA==
-kind: Secret
-metadata:
-  name: plugin-barman-cloud-2b4mtt7m69
-  namespace: cnpg-system
-type: Opaque
----
-apiVersion: v1
 kind: Service
 metadata:
   annotations:
@@ -1022,10 +1011,7 @@ spec:
         - --log-level=debug
         env:
         - name: SIDECAR_IMAGE
-          valueFrom:
-            secretKeyRef:
-              key: SIDECAR_IMAGE
-              name: plugin-barman-cloud-2b4mtt7m69
+          value: ghcr.io/itay-raveh/barman-cloud-sidecar@sha256:72f0a256c8558fbcc81b2942fc60871c063896e2e3276c15ce5f53d1cc87e184
         image: ghcr.io/cloudnative-pg/plugin-barman-cloud:v0.15.0
         name: barman-cloud
         ports:
