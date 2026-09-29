@@ -13,6 +13,7 @@ spec:
       - selector:
           dnsNames:
             - quizmon-db.raveh.dev
+            - quizmon-mongo.raveh.dev
         dns01:
           cloudflare:
             apiTokenSecretRef:
@@ -37,6 +38,25 @@ spec:
     - server auth
   dnsNames:
     - quizmon-db.raveh.dev
+  issuerRef:
+    name: quizmon-letsencrypt
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: quizmon-mongo-public
+  namespace: quizmon
+spec:
+  secretName: quizmon-mongo-public-tls
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+  usages:
+    - server auth
+  dnsNames:
+    - quizmon-mongo.raveh.dev
   issuerRef:
     name: quizmon-letsencrypt
     kind: Issuer
