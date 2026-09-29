@@ -5,6 +5,7 @@ resources:
   - certificates.yaml
   - cluster.yaml
   - mongo.yaml
+  - mongo-ingress.yaml
   - backup.yaml
   - inputs/
 secretGenerator:
