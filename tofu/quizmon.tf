@@ -37,6 +37,15 @@ resource "cloudflare_dns_record" "quizmon_database" {
   ttl     = 300
 }
 
+resource "cloudflare_dns_record" "quizmon_mongo" {
+  zone_id = local.cloudflare_zone_id
+  name    = "quizmon-mongo.raveh.dev"
+  type    = "A"
+  content = module.talos.public_ipv4_list[0]
+  proxied = false
+  ttl     = 300
+}
+
 resource "cloudflare_connectivity_directory_service" "quizmon_database" {
   account_id   = local.cloudflare_account_id
   name         = "quizmon-db"
