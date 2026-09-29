@@ -31,8 +31,8 @@ resource "cloudflare_ruleset" "redirect_apex_to_itay" {
     },
     {
       ref         = "quizmon_maintenance"
-      description = "Temporarily redirect Quizmon page visits during maintenance"
-      expression  = "http.host eq \"quizmon.raveh.dev\" and http.request.method eq \"GET\" and http.request.uri.path ne \"/maintenance\" and http.request.uri.path ne \"/maintenance.html\" and any(http.request.headers[\"accept\"][*] contains \"text/html\")"
+      description = "Temporarily redirect Quizmon pages and API traffic during maintenance"
+      expression  = "http.host eq \"quizmon-sync.raveh.dev\" or (http.host eq \"quizmon.raveh.dev\" and not http.request.uri.path in {\"/maintenance\" \"/maintenance.html\"} and (http.request.method ne \"GET\" or http.request.uri.path eq \"/api\" or starts_with(http.request.uri.path, \"/api/\") or any(http.request.headers[\"accept\"][*] contains \"text/html\")))"
       action      = "redirect"
       enabled     = var.quizmon_maintenance_enabled
       action_parameters = {
