@@ -55,6 +55,11 @@ spec:
       roles:
         - name: readWriteAnyDatabase
           db: admin
+    - name: quizmon-worker
+      db: admin
+      roles:
+        - name: readWrite
+          db: quizmon_app
   backup:
     enabled: true
     image: percona/percona-backup-mongodb:2.16.0
