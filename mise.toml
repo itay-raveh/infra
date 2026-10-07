@@ -31,7 +31,7 @@ prek = "0.5.3"
 shellcheck = "0.11"
 sops = { version = "3.13.3", bin = "sops", slsa_signer_identity = "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v2.1.0", slsa_signer_issuer = "https://token.actions.githubusercontent.com" }
 talosctl = "1.14.1"
-yq = "4.53.6"
+yq = "4.54.1"
 "github:home-operations/flate" = "0.6.5"
 "github:fluxcd/flux-schema" = "v0.14.0"
 kind = "0.33.0"
