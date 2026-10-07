@@ -2,7 +2,7 @@
 
 | Configuration | Owner |
 |---|---|
-| DNS, Tunnel, TLS, mail, account policies | [`tofu/modules/cloudflare/`](../tofu/modules/cloudflare/) |
+| DNS, Tunnel, TLS, mail, account policies, AI crawler policies | [`tofu/modules/cloudflare/`](../tofu/modules/cloudflare/) |
 | Tunnel connector and image version | [`cloudflared.yaml`](../clusters/shire/infrastructure/controllers/cloudflared.yaml) |
 | App domains, policies and private database connections | App-specific files in [`tofu/`](../tofu/) |
 | Application Worker code, bindings and logs | Application repositories |
@@ -23,13 +23,15 @@ The default token manages zone DNS, settings, certificates, redirects, WAF, Work
 | Alerts | Tunnel alerts cover connectors, not app availability. Universal SSL alerts include renewals. Disable Certificate Transparency alerts before deleting the resource; [provider deletion only forgets state](https://github.com/cloudflare/terraform-provider-cloudflare/blob/v5.24.0/internal/services/ct_alerting/resource.go). |
 | Bot Fight Mode | Off; domain-wide challenges affect APIs and [cannot be skipped by WAF rules](https://developers.cloudflare.com/bots/get-started/bot-fight-mode/#rules). |
 
+[bots.tf](../tofu/modules/cloudflare/bots.tf) preserves the AI crawler policies and migration opt-out that allows mixed-purpose search crawlers.
+
 Leave `cf_robots_variant` unset in [bots.tf](../tofu/modules/cloudflare/bots.tf). The provider's `"off"` serialization has caused [inconsistent results](https://github.com/cloudflare/terraform-provider-cloudflare/issues/6727); verify the live value remains `"off"` after changes.
 
 ## Dashboard-managed settings
 
 | Setting | Location / value |
 |---|---|
-| Mixed-purpose crawlers | Security → Settings → Block AI bots: allow mixed-purpose crawlers. [Migration](https://developers.cloudflare.com/bots/additional-configurations/block-ai-bots/). |
+| Bot Preference Sync | Security → Settings → Configure AI bot policies: enabled. Provider 5.27.0 does not send this field to the API. |
 | Security contact | Security → Settings → Web application exploits → Security.txt. Renew before its configured expiry; test `/.well-known/security.txt`. |
 | Budget alerts | Create in Billing → Billable Usage; edit in Notifications. Account-wide notifications, not spending caps. |
 | Traffic overview | Analytics → Dashboards → Traffic overview. |
