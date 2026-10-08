@@ -37,12 +37,6 @@ module "talos" {
     port        = "51820"
     source_ips  = ["0.0.0.0/0"]
     description = "WireGuard management tunnel"
-    }, {
-    direction   = "in"
-    protocol    = "tcp"
-    port        = "32017"
-    source_ips  = ["0.0.0.0/0"]
-    description = "Quizmon MongoDB TLS gateway"
   }]
 
   talos_control_plane_extra_config_patches = [
