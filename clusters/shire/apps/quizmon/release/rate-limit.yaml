@@ -1,0 +1,55 @@
+---
+# Review values, not measured origin capacity. Public requests must arrive via
+# Cloudflare Tunnel with its supplied CF-Connecting-IP header.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: quizmon-sync-cors
+  namespace: quizmon
+spec:
+  headers:
+    accessControlAllowOriginList:
+      - https://quizmon.raveh.dev
+    accessControlAllowCredentials: true
+    accessControlExposeHeaders:
+      - Retry-After
+    addVaryHeader: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: quizmon-sync-rate
+  namespace: quizmon
+spec:
+  rateLimit:
+    average: 10
+    period: 1s
+    burst: 50
+    sourceCriterion:
+      requestHeaderName: CF-Connecting-IP
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: quizmon-read-rate
+  namespace: quizmon
+spec:
+  rateLimit:
+    average: 5
+    period: 1s
+    burst: 20
+    sourceCriterion:
+      requestHeaderName: CF-Connecting-IP
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: quizmon-expensive-rate
+  namespace: quizmon
+spec:
+  rateLimit:
+    average: 10
+    period: 1m
+    burst: 2
+    sourceCriterion:
+      requestHeaderName: CF-Connecting-IP

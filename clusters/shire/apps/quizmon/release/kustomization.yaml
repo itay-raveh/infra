@@ -4,4 +4,5 @@ kind: Kustomization
 resources:
   - app-chart.yaml
   - ingressroute.yaml
+  - rate-limit.yaml
   - inputs/
