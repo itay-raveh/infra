@@ -8,8 +8,44 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`quizmon-sync.raveh.dev`) && (PathPrefix(`/players/`) || PathPrefix(`/rounds/`) || PathPrefix(`/read/`) || Path(`/health`))
+    - match: Host(`quizmon-sync.raveh.dev`) && Path(`/health`)
       kind: Rule
+      priority: 100
+      middlewares: []
+      services:
+        - name: online-quizmon-sync
+          port: 8080
+    - match:
+        Host(`quizmon-sync.raveh.dev`) && Method(`OPTIONS`) && (PathPrefix(`/players/`)
+        || PathPrefix(`/rounds/`) || PathPrefix(`/read/`))
+      kind: Rule
+      priority: 90
+      middlewares: []
+      services:
+        - name: online-quizmon-sync
+          port: 8080
+    - match: Host(`quizmon-sync.raveh.dev`) && PathPrefix(`/read/`) && PathRegexp(`^/read/(?i:export|account)/?$`)
+      kind: Rule
+      priority: 70
+      middlewares:
+        - name: quizmon-expensive-rate
+      services:
+        - name: online-quizmon-sync
+          port: 8080
+    - match: Host(`quizmon-sync.raveh.dev`) && PathPrefix(`/read/`)
+      kind: Rule
+      priority: 60
+      middlewares:
+        - name: quizmon-read-rate
+      services:
+        - name: online-quizmon-sync
+          port: 8080
+    - match: Host(`quizmon-sync.raveh.dev`) && (PathPrefix(`/players/`) || PathPrefix(`/rounds/`))
+      kind: Rule
+      priority: 50
+      middlewares:
+        - name: quizmon-sync-cors
+        - name: quizmon-sync-rate
       services:
         - name: online-quizmon-sync
           port: 8080
