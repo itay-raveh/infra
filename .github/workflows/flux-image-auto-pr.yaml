@@ -2,14 +2,21 @@
 name: flux-image-auto-pr
 on:
   push:
-    branches: [flux-image-automation]
+    branches: [flux-image-automation, main]
 
 permissions: {}
+
+concurrency:
+  # Keep a main push from replacing a pending Flux push; expected heads guard
+  # updates between the two ref queues.
+  group: flux-image-auto-pr-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   pr:
     environment: flux-image-automation
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - name: Mint infra-flux installation token
         id: token
@@ -20,24 +27,17 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      - name: Ensure PR with auto-merge
+      - name: Check out the trusted workflow helper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          token: ${{ steps.token.outputs.token }}
+          persist-credentials: false
+
+      - name: Refresh the image PR and retain normal auto-merge
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          pr=$(gh pr list \
-            --head flux-image-automation \
-            --base main \
-            --state open \
-            --json number \
-            --jq '.[0].number // empty')
-          if [ -z "$pr" ]; then
-            pr=$(gh pr create \
-              --head flux-image-automation \
-              --base main \
-              --title "flux: image automation updates" \
-              --body "Automated image bumps from the Flux image-automation-controller." \
-              | grep -oE '[0-9]+$')
-          fi
-          gh pr merge "$pr" --auto --squash
+          FLUX_PUSH_REF: ${{ github.ref }}
+          FLUX_PUSH_SHA: ${{ github.sha }}
+        run: python3 scripts/flux-image-auto-pr.py
