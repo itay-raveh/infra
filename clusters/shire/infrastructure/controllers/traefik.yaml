@@ -43,15 +43,3 @@ spec:
     service:
       spec:
         type: ClusterIP
-      additionalServices:
-        mongo:
-          spec:
-            type: NodePort
-    ports:
-      mongo:
-        port: 27017
-        exposedPort: 27017
-        nodePort: 32017
-        expose:
-          default: false
-          mongo: true
