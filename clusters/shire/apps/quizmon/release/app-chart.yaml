@@ -48,7 +48,7 @@ spec:
       sync:
         endpoint: https://quizmon-sync.raveh.dev
         audience: quizmon
-      mailFrom: noreply@raveh.dev
+      mailFrom: quizmon@raveh.dev
       authRateLimitNamespace: "1011"
       apiRateLimitNamespace: "1012"
     sync:
