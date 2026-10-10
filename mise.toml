@@ -27,7 +27,7 @@ kubectl = "1.37.1"
 opentofu = "1.12.6"
 "pipx:yamllint" = "1.38.0"
 "pipx:yubikey-manager" = "5.9.2"
-prek = "0.5.4"
+prek = "0.5.5"
 shellcheck = "0.11"
 sops = { version = "3.13.3", bin = "sops", slsa_signer_identity = "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v2.1.0", slsa_signer_issuer = "https://token.actions.githubusercontent.com" }
 talosctl = "1.14.2"
