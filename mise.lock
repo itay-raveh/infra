@@ -248,64 +248,64 @@ url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/
 provenance = "cosign"
 
 [[tools.flux2]]
-version = "2.9.5"
+version = "2.9.6"
 backend = "github:fluxcd/flux2"
 
 [tools.flux2."platforms.linux-arm64"]
-checksum = "sha256:f3e159af616ec0b9bd0a405c2185cf09d06b74652c1de3c7f377e8166826651a"
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/flux_2.9.5_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/538282890"
+checksum = "sha256:6663c154755b732f43dc993d72321f71c2fc1ff0bcb94b2696e0a8638fa562b4"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/flux_2.9.6_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/602941235"
 
 [tools.flux2."platforms.linux-arm64".provenance.slsa]
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/provenance.intoto.jsonl"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/provenance.intoto.jsonl"
 
 [tools.flux2."platforms.linux-arm64-musl"]
-checksum = "sha256:f3e159af616ec0b9bd0a405c2185cf09d06b74652c1de3c7f377e8166826651a"
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/flux_2.9.5_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/538282890"
+checksum = "sha256:6663c154755b732f43dc993d72321f71c2fc1ff0bcb94b2696e0a8638fa562b4"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/flux_2.9.6_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/602941235"
 
 [tools.flux2."platforms.linux-arm64-musl".provenance.slsa]
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/provenance.intoto.jsonl"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/provenance.intoto.jsonl"
 
 [tools.flux2."platforms.linux-x64"]
-checksum = "sha256:b853df82adfd7736f580692f9f734473d571606307139f8fd20c2a80dd1ff473"
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/flux_2.9.5_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/538282891"
+checksum = "sha256:b4d22673e9246cbd628881f1a9ef3b090085dced291e42d804555cee8e8d42c5"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/flux_2.9.6_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/602941244"
 
 [tools.flux2."platforms.linux-x64".provenance.slsa]
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/provenance.intoto.jsonl"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/provenance.intoto.jsonl"
 
 [tools.flux2."platforms.linux-x64-musl"]
-checksum = "sha256:b853df82adfd7736f580692f9f734473d571606307139f8fd20c2a80dd1ff473"
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/flux_2.9.5_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/538282891"
+checksum = "sha256:b4d22673e9246cbd628881f1a9ef3b090085dced291e42d804555cee8e8d42c5"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/flux_2.9.6_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/602941244"
 
 [tools.flux2."platforms.linux-x64-musl".provenance.slsa]
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/provenance.intoto.jsonl"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/provenance.intoto.jsonl"
 
 [tools.flux2."platforms.macos-arm64"]
-checksum = "sha256:2869ef7151a6f1b27e6b5d2a6804f3ef23c7bdaa06a74e00d3fe5bfc646547fd"
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/flux_2.9.5_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/538282876"
+checksum = "sha256:7008a758da4b8d57c5845aad6552f256d4d23630c2b2de2ca8da362f9a48c126"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/flux_2.9.6_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/602941251"
 
 [tools.flux2."platforms.macos-arm64".provenance.slsa]
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/provenance.intoto.jsonl"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/provenance.intoto.jsonl"
 
 [tools.flux2."platforms.macos-x64"]
-checksum = "sha256:5748583cf5da035ca2d751190d2c15f5f656d305c166ec28a312a2f3b6799e31"
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/flux_2.9.5_darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/538282892"
+checksum = "sha256:c3c3532c8c6cf689ef7b93125b33dc170df84a9d5d036f578568bfdf88a2d7e6"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/flux_2.9.6_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/602941249"
 
 [tools.flux2."platforms.macos-x64".provenance.slsa]
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/provenance.intoto.jsonl"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/provenance.intoto.jsonl"
 
 [tools.flux2."platforms.windows-x64"]
-checksum = "sha256:1a23053bf9abbedbdac07237f5c6ae9b0da0bcb77ddbd103faa99839c6a7f562"
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/flux_2.9.5_windows_amd64.zip"
-url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/538282898"
+checksum = "sha256:164e87a13ee8be864a96dbfe597d938cfcea60b9f309a2bd8eaad3e539fba054"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/flux_2.9.6_windows_amd64.zip"
+url_api = "https://api.github.com/repos/fluxcd/flux2/releases/assets/602941233"
 
 [tools.flux2."platforms.windows-x64".provenance.slsa]
-url = "https://github.com/fluxcd/flux2/releases/download/v2.9.5/provenance.intoto.jsonl"
+url = "https://github.com/fluxcd/flux2/releases/download/v2.9.6/provenance.intoto.jsonl"
 
 [[tools.gh]]
 version = "2.102.0"
@@ -354,49 +354,49 @@ url_api = "https://api.github.com/repos/cli/cli/releases/assets/599854760"
 provenance = "github-attestations"
 
 [[tools."github:fluxcd/flux-schema"]]
-version = "0.14.0"
+version = "0.15.0"
 backend = "github:fluxcd/flux-schema"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-arm64"]
-checksum = "sha256:62b25f3fcfd29a27f582472d71721927ac6ec20e82de8b1239e41bb2ec62ab7a"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.14.0/flux-schema_0.14.0_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/586181513"
+checksum = "sha256:763053c9953b19fbf71d43c7e88b5f1e0dd1d7453cc03e5a3cb9f26e53ac7e91"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.15.0/flux-schema_0.15.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/603051095"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-arm64-musl"]
-checksum = "sha256:62b25f3fcfd29a27f582472d71721927ac6ec20e82de8b1239e41bb2ec62ab7a"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.14.0/flux-schema_0.14.0_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/586181513"
+checksum = "sha256:763053c9953b19fbf71d43c7e88b5f1e0dd1d7453cc03e5a3cb9f26e53ac7e91"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.15.0/flux-schema_0.15.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/603051095"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-x64"]
-checksum = "sha256:63c045b6dce07f5c66def75b0dfebf1bfb5b79e15ac22154aee096228685c21a"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.14.0/flux-schema_0.14.0_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/586181514"
+checksum = "sha256:0cdf69b6c79a539d62d3084f688464953dfe0d888ff574cf742a0a79082ee1f8"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.15.0/flux-schema_0.15.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/603051092"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-x64-musl"]
-checksum = "sha256:63c045b6dce07f5c66def75b0dfebf1bfb5b79e15ac22154aee096228685c21a"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.14.0/flux-schema_0.14.0_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/586181514"
+checksum = "sha256:0cdf69b6c79a539d62d3084f688464953dfe0d888ff574cf742a0a79082ee1f8"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.15.0/flux-schema_0.15.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/603051092"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.macos-arm64"]
-checksum = "sha256:e30a284229b6ee8c5816cad9620fcde1940a474816f5741b1ad583c0e5c8eafd"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.14.0/flux-schema_0.14.0_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/586181512"
+checksum = "sha256:e33270e89ee4293a6011c92caddb70facc892f582441c27f2e03e281c9a1dbc4"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.15.0/flux-schema_0.15.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/603051094"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.macos-x64"]
-checksum = "sha256:84c126183a27acb1255d83ea48e5e7623f3e3b60f7824298a4f1db2b2c1681d7"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.14.0/flux-schema_0.14.0_darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/586181515"
+checksum = "sha256:dc87d3446abcf35f48c4a9001136385469c39df3be0b6a47651adb97328adff0"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.15.0/flux-schema_0.15.0_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/603051096"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.windows-x64"]
-checksum = "sha256:19c4fe1b64db19deeb3104627f2eb24f4214e01e119aefe10df4944071a632c5"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.14.0/flux-schema_0.14.0_windows_amd64.zip"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/586181553"
+checksum = "sha256:b0c8e2d9bf0fd6512592ba123cdb4f3e4cd45a8269ea6905e79b5bac47f2178f"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.15.0/flux-schema_0.15.0_windows_amd64.zip"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/603051152"
 provenance = "github-attestations"
 
 [[tools."github:home-operations/flate"]]
@@ -837,49 +837,49 @@ version = "5.9.2"
 backend = "pipx:yubikey-manager"
 
 [[tools.prek]]
-version = "0.5.4"
+version = "0.5.5"
 backend = "aqua:j178/prek"
 
 [tools.prek."platforms.linux-arm64"]
-checksum = "sha256:5478e436210b5226b8db3dccdd1a2e9094b1c63d81155d96bfa8b83f0398885c"
-url = "https://github.com/j178/prek/releases/download/v0.5.4/prek-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/j178/prek/releases/assets/594534943"
+checksum = "sha256:420451a13aaf3de670dfe73b25e18dbca0d96bc3b153cc3924b9d01c3b7caa12"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684496"
 provenance = "github-attestations"
 
 [tools.prek."platforms.linux-arm64-musl"]
-checksum = "sha256:5ba9d0dc3d4add8cc2c569f4fa27b56d6a042a59f6ee008ec9d7790cece5a200"
-url = "https://github.com/j178/prek/releases/download/v0.5.4/prek-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/j178/prek/releases/assets/594534949"
+checksum = "sha256:e7208e5d42daaa8d9167971e7d2d3388d80cce241d1cecea745a6c88d6b6368e"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684498"
 provenance = "github-attestations"
 
 [tools.prek."platforms.linux-x64"]
-checksum = "sha256:6147dfe64051af590f4bfc2c073a0780fb5e2cc37d9eab8e47fe9fe26c7dfb80"
-url = "https://github.com/j178/prek/releases/download/v0.5.4/prek-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/j178/prek/releases/assets/594534988"
+checksum = "sha256:5470e4aa0fc0ad9d3de7dfaf088fb746d59c2eda3b173c06418e7c8861a520eb"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684555"
 provenance = "github-attestations"
 
 [tools.prek."platforms.linux-x64-musl"]
-checksum = "sha256:805632185f4539ca2eb0fd1b3b52ea842cecbc4ba1e749be430df948621353b0"
-url = "https://github.com/j178/prek/releases/download/v0.5.4/prek-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/j178/prek/releases/assets/594535002"
+checksum = "sha256:57948d4772f4eb58387ce4a6d619ecd2d8d7e9d765eed6a316f5b3f92c86d951"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684574"
 provenance = "github-attestations"
 
 [tools.prek."platforms.macos-arm64"]
-checksum = "sha256:88eec06dd10fd61a9b345223fafc9bedb6746ee4cc47377551239d89d752b365"
-url = "https://github.com/j178/prek/releases/download/v0.5.4/prek-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/j178/prek/releases/assets/594534934"
+checksum = "sha256:e4bc3132023b50020e62b073bc3147082828bf250d8b9282850c6f2bed5471b6"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684483"
 provenance = "github-attestations"
 
 [tools.prek."platforms.macos-x64"]
-checksum = "sha256:bc3ddd3a5686fa97120ec2d09db9e7353df4311a85e7b00944342ddd9c4a2035"
-url = "https://github.com/j178/prek/releases/download/v0.5.4/prek-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/j178/prek/releases/assets/594534978"
+checksum = "sha256:9ea09639374a34b6f0b7d2a2567c175221cd37e44004e9b1cf591f31f9dda1b3"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684529"
 provenance = "github-attestations"
 
 [tools.prek."platforms.windows-x64"]
-checksum = "sha256:244bc3eeade60a0ee586dfe9f5c90bd1c1d790514009aad2c7055dcb731a3e50"
-url = "https://github.com/j178/prek/releases/download/v0.5.4/prek-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/j178/prek/releases/assets/594534981"
+checksum = "sha256:6e52e1723b1b753b977be632a150d5516862471b29c14ad8e7d71685f07769b4"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684549"
 provenance = "github-attestations"
 
 [[tools.shellcheck]]
