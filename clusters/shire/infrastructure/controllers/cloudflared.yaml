@@ -62,6 +62,6 @@ spec:
   values:
     image:
       repository: cloudflare/cloudflared
-      tag: "2026.9.3"
+      tag: "2026.10.0"
     managed:
       existingSecret: cloudflared-tunnel-token
