@@ -37,7 +37,7 @@ Talos and Kubernetes versions live in [locals.tf](../tofu/locals.tf). Check the 
 
 ## Application releases
 
-Application CI publishes OCI Helm charts containing the tested container image digest. Flux consumes those charts directly with [`HelmRelease.chartRef` and `OCIRepository.ref.semver`](https://fluxcd.io/flux/components/helm/helmreleases/#recommended-settings). Infra PRs own environment values, Secret references and the allowed version range. Renovate owns third-party dependencies.
+Application CI publishes OCI Helm charts containing the tested container image digest. Flux consumes those charts directly with [`HelmRelease.chartRef` and `OCIRepository.ref.semver`](https://fluxcd.io/flux/components/helm/helmreleases/#recommended-settings). Infra PRs own environment values, Secret references and the allowed version range. Renovate owns third-party dependencies; its [package rules](../.github/renovate.json) exclude these two app charts so it cannot move a rollback digest pin.
 
 | Application | OCI chart | Stable range | Version |
 |---|---|---|---|

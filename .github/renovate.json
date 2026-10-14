@@ -5,18 +5,42 @@
     "helpers:pinGitHubActionDigests",
     ":timezone(UTC)"
   ],
-  "schedule": ["every weekend"],
-  "labels": ["dependencies"],
+  "schedule": [
+    "every weekend"
+  ],
+  "labels": [
+    "dependencies"
+  ],
   "minimumReleaseAge": "3 days",
   "commitMessagePrefix": "build(deps):",
-  "flux": { "managerFilePatterns": ["/\\.yaml$/"] },
-  "kubernetes": { "managerFilePatterns": ["/\\.yaml$/"] },
+  "flux": {
+    "managerFilePatterns": [
+      "/\\.yaml$/"
+    ]
+  },
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/\\.yaml$/"
+    ]
+  },
   "packageRules": [
     {
-      "matchManagers": ["terraform"],
-      "matchDepTypes": ["required_version"],
+      "matchManagers": [
+        "terraform"
+      ],
+      "matchDepTypes": [
+        "required_version"
+      ],
       "overridePackageName": "opentofu/opentofu",
       "overrideDepName": "opentofu/opentofu"
+    },
+    {
+      "description": "Flux tracks app charts; chart digest pins hold intentional rollbacks.",
+      "matchPackageNames": [
+        "ghcr.io/itay-raveh/charts/wanderbound",
+        "ghcr.io/itay-raveh/charts/quizmon"
+      ],
+      "enabled": false
     }
   ]
 }
