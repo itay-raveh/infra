@@ -7,7 +7,8 @@ spec:
   interval: 5m
   url: oci://ghcr.io/itay-raveh/charts/wanderbound
   ref:
-    tag: 1.16.0 # {"$imagepolicy": "flux-system:wanderbound:tag"}
+    semver: ">=1.16.1"
+    semverFilter: '^[0-9]+\.[0-9]+\.[0-9]+$'
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease

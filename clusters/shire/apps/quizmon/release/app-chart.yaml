@@ -1,16 +1,14 @@
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
+kind: OCIRepository
 metadata:
-  name: quizmon
+  name: quizmon-chart
   namespace: quizmon
 spec:
   interval: 5m
-  url: https://github.com/itay-raveh/quizmon.git
+  url: oci://ghcr.io/itay-raveh/charts/quizmon
   ref:
-    branch: main
-  ignore: |
-    /*
-    !/charts/
+    semver: ">=0.0.0"
+    semverFilter: '^[0-9]+\.[0-9]+\.[0-9]+$'
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -21,13 +19,9 @@ spec:
   interval: 5m
   releaseName: online
   timeout: 10m
-  chart:
-    spec:
-      chart: ./charts/quizmon
-      sourceRef:
-        kind: GitRepository
-        name: quizmon
-      reconcileStrategy: Revision
+  chartRef:
+    kind: OCIRepository
+    name: quizmon-chart
   install:
     remediation:
       retries: 0
@@ -39,9 +33,6 @@ spec:
       name: quizmon-runtime
       valuesKey: values.yaml
   values:
-    releaseImage:
-      repository: ghcr.io/itay-raveh/quizmon
-      digest: sha256:afd2563197ee501440792dbd3aa7829f5d5092fd4e1532818285ba79629b8249 # {"$imagepolicy": "flux-system:quizmon:digest"}
     runtimeConfig:
       workerName: quizmon
       origin: https://quizmon.raveh.dev

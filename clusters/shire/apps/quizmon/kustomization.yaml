@@ -4,4 +4,3 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - reconciliation.yaml
-  - image-automation.yaml
