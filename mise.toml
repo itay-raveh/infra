@@ -15,7 +15,7 @@ betterleaks = "v1.9.0"
 # 0.5.0 is the last upstream release with a Linux binary
 "aqua:str4d/age-plugin-yubikey" = "0.5.0"
 "aqua:cloudnative-pg/cloudnative-pg/kubectl-cnpg" = "1.30.1"
-flux2 = { version = "2.9.5", slsa_signer_identity = "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v2.1.0", slsa_signer_issuer = "https://token.actions.githubusercontent.com" }
+flux2 = { version = "2.9.6", slsa_signer_identity = "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v2.1.0", slsa_signer_issuer = "https://token.actions.githubusercontent.com" }
 gh = "2.102.0"
 "github:zizmorcore/zizmor" = "v1.30.1"
 hcloud = "1.69.0"
@@ -24,16 +24,16 @@ jq = "1.8.2"
 k9s = "0.51.0"
 kubectl = "1.37.1"
 "github:minio/mc" = { version = "RELEASE.2025-08-13T08-35-41Z", bin = "mc" }
-opentofu = "1.12.6"
+opentofu = "1.13.1"
 "pipx:yamllint" = "1.38.0"
 "pipx:yubikey-manager" = "5.9.2"
-prek = "0.5.4"
+prek = "0.5.5"
 shellcheck = "0.11"
 sops = { version = "3.13.3", bin = "sops", slsa_signer_identity = "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v2.1.0", slsa_signer_issuer = "https://token.actions.githubusercontent.com" }
 talosctl = "1.14.2"
 yq = "4.54.1"
 "github:home-operations/flate" = "0.6.5"
-"github:fluxcd/flux-schema" = "v0.14.0"
+"github:fluxcd/flux-schema" = "v0.15.0"
 kind = "0.33.0"
 lychee = "0.24.2"
 

@@ -41,14 +41,14 @@ spec:
   values:
     releaseImage:
       repository: ghcr.io/itay-raveh/quizmon
-      digest: sha256:19c6203bcdd33fe1ab8b34147c56c7714d3c32c33018890b96b768f4d22c7275 # {"$imagepolicy": "flux-system:quizmon:digest"}
+      digest: sha256:afd2563197ee501440792dbd3aa7829f5d5092fd4e1532818285ba79629b8249 # {"$imagepolicy": "flux-system:quizmon:digest"}
     runtimeConfig:
       workerName: quizmon
       origin: https://quizmon.raveh.dev
       sync:
         endpoint: https://quizmon-sync.raveh.dev
         audience: quizmon
-      mailFrom: noreply@raveh.dev
+      mailFrom: quizmon@raveh.dev
       authRateLimitNamespace: "1011"
       apiRateLimitNamespace: "1012"
     sync:
