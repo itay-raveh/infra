@@ -7,8 +7,7 @@ on:
 permissions: {}
 
 concurrency:
-  # Keep a main push from replacing a pending Flux push; expected heads guard
-  # updates between the two ref queues.
+  # A main push must not replace a pending Flux push that can create the PR.
   group: flux-image-auto-pr-${{ github.ref }}
   cancel-in-progress: false
 
@@ -27,17 +26,64 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      - name: Check out the trusted workflow helper
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: main
-          token: ${{ steps.token.outputs.token }}
-          persist-credentials: false
-
       - name: Refresh the image PR and retain normal auto-merge
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           GH_REPO: ${{ github.repository }}
-          FLUX_PUSH_REF: ${{ github.ref }}
-          FLUX_PUSH_SHA: ${{ github.sha }}
-        run: python3 scripts/flux-image-auto-pr.py
+        run: |
+          set -euo pipefail
+          branch=flux-image-automation
+          api="repos/$GH_REPO"
+          number=$(gh pr list --head "$branch" --base main --state open --json number \
+            --jq 'if length > 1 then error("Multiple image PRs") else .[0].number // empty end')
+          if [[ -z "$number" && "$GITHUB_REF" != "refs/heads/$branch" ]]; then exit 0; fi
+          head=$(gh api "$api/git/ref/heads/$branch" --jq .object.sha)
+          if [[ -z "$number" ]]; then
+            [[ "$head" == "$GITHUB_SHA" ]] || exit 0
+            # A native branch refresh must not reopen an already-merged update.
+            commit=$(gh api "$api/git/commits/$head")
+            jq -e '
+              (.parents | length) == 1 and .author.name == "flux" and .author.email == "flux@raveh.dev" and
+              (.message == "deploy: update quizmon release" or .message == "deploy: update wanderbound release")
+            ' <<< "$commit" >/dev/null || exit 0
+          fi
+          main=$(gh api "$api/git/ref/heads/main" --jq .object.sha)
+          comparison=$(gh api "$api/compare/$main...$head")
+          valid=$(jq '
+            .files | length > 0 and length <= 2 and all(.[];
+              (if .filename == "clusters/shire/apps/quizmon/release/app-chart.yaml" then
+                "(?<prefix> +digest: )(?<value>sha256:[a-f0-9]{64})(?<suffix> # \\{\\\"\\$imagepolicy\\\": \\\"flux-system:quizmon:digest\\\"\\})"
+              elif .filename == "clusters/shire/apps/wanderbound/app-chart.yaml" then
+                "(?<prefix> +tag: )(?<value>[0-9]+\\.[0-9]+\\.[0-9]+)(?<suffix> # \\{\\\"\\$imagepolicy\\\": \\\"flux-system:wanderbound:tag\\\"\\})"
+              else null end) as $pattern |
+              if $pattern == null then false else
+                [(.patch // "" | split("\n")[]) | select(test("^[+-]"))] as $lines |
+                [$lines[] | capture("^[+-]" + $pattern + "$")] as $setters |
+                .status == "modified" and .additions == 1 and .deletions == 1 and
+                ($lines | map(.[0:1])) == ["-", "+"] and ($setters | length) == 2 and
+                $setters[0].value != $setters[1].value and
+                ($setters[0] | del(.value)) == ($setters[1] | del(.value))
+              end
+            )
+          ' <<< "$comparison")
+          if [[ -z "$number" ]]; then
+            [[ "$valid" == true ]] || exit 1
+            url=$(gh pr create --head "$branch" --base main --title 'flux: image automation updates' \
+              --body 'Automated image bumps from the Flux image-automation-controller.')
+            number=${url##*/}
+          fi
+          pr=$(gh api "$api/pulls/$number")
+          jq -e --arg repo "$GH_REPO" --arg head "$head" '
+            .state == "open" and .draft == false and .user.login == "infra-flux[bot]" and
+            .head.repo.full_name == $repo and .head.ref == "flux-image-automation" and
+            .base.ref == "main" and .head.sha == $head
+          ' <<< "$pr" >/dev/null
+          if [[ "$valid" != true ]] || [[ $(jq .behind_by <<< "$comparison") -gt 0 ]]; then
+            if jq -e '.auto_merge != null' <<< "$pr" >/dev/null; then
+              gh pr merge "$number" --disable-auto
+            fi
+            [[ "$valid" == true ]] || exit 1
+            gh api "$api/pulls/$number/update-branch" --method PUT -f expected_head_sha="$head"
+          else
+            gh pr merge "$number" --auto --squash --match-head-commit "$head"
+          fi

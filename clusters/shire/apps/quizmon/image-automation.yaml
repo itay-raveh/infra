@@ -34,9 +34,6 @@ spec:
     kind: GitRepository
     name: flux-system
   git:
-    checkout:
-      ref:
-        branch: main
     commit:
       author:
         email: flux@raveh.dev
@@ -46,4 +43,3 @@ spec:
       branch: flux-image-automation
   update:
     path: ./clusters/shire/apps/quizmon/release
-    strategy: Setters
