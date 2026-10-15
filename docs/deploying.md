@@ -14,7 +14,7 @@ Register manifests in the owning `kustomization.yaml`. `main` requires a PR, pas
 
 The public key is in [flux-system/](../clusters/shire/flux-system/). It authenticates GitHub's merge signature, not the PR author's identity. When GitHub rotates its [signing key](https://github.com/web-flow.gpg), verify the replacement and apply that directory with `kubectl apply -k clusters/shire/flux-system` before reconciling.
 
-Apply repository rules and the image-automation environment with `bash scripts/configure-github.sh`. The environment permits only `flux-image-automation`; store its two App secrets there, not as repository-wide secrets.
+Apply repository rules and the image-automation environment with `bash scripts/configure-github.sh`. The environment permits only `flux-image-automation` and `main`; store its two App secrets there, not as repository-wide secrets.
 
 ```bash
 mise run reconcile
@@ -37,7 +37,7 @@ Talos and Kubernetes versions live in [locals.tf](../tofu/locals.tf). Check the 
 
 ## Application releases
 
-Each application's manifests select its artifact and supply environment values and Secret references. Image automation writes updates to `flux-image-automation`; the [shared workflow](../.github/workflows/flux-image-auto-pr.yaml) opens a PR and enables automatic squash merge.
+Each application's manifests select its artifact and supply environment values and Secret references. Image automation writes updates to `flux-image-automation`; the [shared workflow](../.github/workflows/flux-image-auto-pr.yaml) opens a PR and enables automatic squash merge after validating its image setters. When `main` advances, the workflow refreshes the existing PR through GitHub's branch update API and waits for the new head's required checks.
 
 To pin or roll back a release:
 
