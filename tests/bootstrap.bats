@@ -76,8 +76,6 @@ set -euo pipefail
 printf 'gh %s\n' "$*" >> "$BOOTSTRAP_CALLS"
 if [[ "$1 $2" == 'repo view' ]]; then
     printf 'example/infra\n'
-elif [[ "$1 $2" == 'secret set' ]]; then
-    cat > "$BATS_TEST_TMPDIR/github-$3"
 fi
 EOF
     cat > "$FAKEBIN/git" <<'EOF'
@@ -128,11 +126,9 @@ EOF
     ' >/dev/null
     sops decrypt --output-type json clusters/shire/flux-system/flux-github-app.sops.yaml |
         jq -r .stringData.githubAppPrivateKey | cmp - "$BATS_TEST_TMPDIR/app.pem"
-    cmp "$BATS_TEST_TMPDIR/github-FLUX_APP_PRIVATE_KEY" "$BATS_TEST_TMPDIR/app.pem"
-    [ "$(cat "$BATS_TEST_TMPDIR/github-FLUX_APP_ID")" = 456 ]
-    assert_file_contains "$BOOTSTRAP_CALLS" '--repo example/infra'
+    refute_file_contains "$BOOTSTRAP_CALLS" 'gh secret set'
     refute_file_contains "$BOOTSTRAP_CALLS" 'BEGIN PRIVATE KEY'
-    assert_file_contains "$BOOTSTRAP_CALLS" '--env flux-image-automation'
+    refute_file_contains "$BOOTSTRAP_CALLS" environments
     refute_file_contains "$BOOTSTRAP_CALLS" '--method DELETE'
 }
 

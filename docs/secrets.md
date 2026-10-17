@@ -61,7 +61,7 @@ Both helpers replace the target only after production and encryption succeed. [S
 | Provider credentials | [providers.tf](../tofu/providers.tf), `secrets/tofu.sops.yaml` |
 | State S3 credentials | [backend.tf](../tofu/backend.tf), `secrets/state.sops.yaml` |
 | Backup S3 credentials | Separate cluster Secrets for etcd, Wanderbound and Quizmon. Quizmon input refresh preserves its backup Secret. |
-| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions environment `flux-image-automation`: `FLUX_APP_ID` / `FLUX_APP_PRIVATE_KEY` |
+| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml` |
 | Controller and application credentials | Secret references in their manifests; encrypted files beside those manifests |
 
 | Generated credential | Refresh command |
