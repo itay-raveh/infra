@@ -41,14 +41,14 @@ Application CI publishes OCI Helm charts containing the tested container image d
 
 | Application | OCI chart | Stable range | Version |
 |---|---|---|---|
-| Wanderbound | `ghcr.io/itay-raveh/charts/wanderbound` | `>=1.16.1`, including future majors | Release tag without `v`; earlier charts do not bundle image digests |
+| Wanderbound | `ghcr.io/itay-raveh/charts/wanderbound` | `>=1.16.2`, including future majors | Release tag without `v`; `1.16.1` and earlier charts do not bundle image digests |
 | Quizmon | `ghcr.io/itay-raveh/charts/quizmon` | `>=0.0.0`, including future majors | `0.<CI run number>.<run attempt>` for successful runtime or chart builds |
 
 Both sources filter tags to numeric `major.minor.patch` versions. App publication validates chart schemas and rendered Kubernetes resources using the public infra production values before publishing the release chart. It records the infra revision used. Environment changes also require the normal infra validation gate. A passing chart render does not validate live Secret contents or credentials.
 
 ### Migration order (draft)
 
-This sequence has not been exercised against production. The infra switch remains a draft until the first compatible charts exist and their public registry reads succeed. The migration takes effect when the infra PR is merged; no calendar cutoff is scheduled. The owner may classify this section as historical after both HelmReleases are ready on OCI charts.
+This sequence has not been exercised against production. The infra switch remains a draft until the first compatible charts exist and their public registry reads succeed. The draft Wanderbound range excludes the existing `1.16.1` and earlier charts. Its final lower bound must be confirmed against the first compatible, publicly readable publication before cutover. Tagging a pre-contract revision runs its old publisher and is not a compatible release. The migration takes effect when the infra PR is merged; no calendar cutoff is scheduled. The owner may classify this section as historical after both HelmReleases are ready on OCI charts.
 
 | Current selection | OCI selection |
 |---|---|
@@ -57,7 +57,7 @@ This sequence has not been exercised against production. The infra switch remain
 | Shared updater workflow mints a GitHub App write token | Source controller reads OCI charts; infra Git source keeps its current App Secret |
 
 1. Merge the app release-contract PRs after their checks pass. Undo: revert an app PR before publishing new releases; retain published artifacts for rollback.
-2. Publish and verify a Wanderbound release at `1.16.1` or later and a Quizmon OCI chart through their normal CI. This is an operator release action, outside PR preparation. Verify that both packaged charts contain the expected image digest and render with production values. Artifact publication is retained in the registry; undo selection with a chart digest pin rather than deleting the artifact.
+2. Publish and verify a Wanderbound release at `1.16.2` or later from a revision containing the merged release contract and a Quizmon OCI chart through their normal CI. This is an operator release action, outside PR preparation. Verify that both packaged charts contain the expected image digest and render with production values. Artifact publication is retained in the registry; undo selection with a chart digest pin rather than deleting the artifact.
 3. Review and merge the infra switch. Wrong order leaves a chart source without a matching artifact. Undo: revert the switch to restore the previous source and selected image, subject to database compatibility.
 4. Verify source and HelmRelease readiness with the safe read-only commands below. Inspect failed release Jobs and application health before accepting the rollout.
 
