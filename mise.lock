@@ -131,26 +131,6 @@ checksum = "sha256:e0f59fd04d4842d456d8730b656517f37f6cf86862a5ef6506c742ab66239
 url = "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.30.1/kubectl-cnpg_1.30.1_windows_x86_64.tar.gz"
 url_api = "https://api.github.com/repos/cloudnative-pg/cloudnative-pg/releases/assets/583849037"
 
-[[tools."aqua:str4d/age-plugin-yubikey"]]
-version = "0.5.0"
-backend = "aqua:str4d/age-plugin-yubikey"
-
-[tools."aqua:str4d/age-plugin-yubikey"."platforms.linux-x64"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-x86_64-linux.tar.gz"
-url_api = "https://api.github.com/repos/str4d/age-plugin-yubikey/releases/assets/183756217"
-
-[tools."aqua:str4d/age-plugin-yubikey"."platforms.linux-x64-musl"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-x86_64-linux.tar.gz"
-url_api = "https://api.github.com/repos/str4d/age-plugin-yubikey/releases/assets/183756217"
-
-[tools."aqua:str4d/age-plugin-yubikey"."platforms.macos-arm64"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-arm64-darwin.tar.gz"
-url_api = "https://api.github.com/repos/str4d/age-plugin-yubikey/releases/assets/183756180"
-
-[tools."aqua:str4d/age-plugin-yubikey"."platforms.windows-x64"]
-url = "https://github.com/str4d/age-plugin-yubikey/releases/download/v0.5.0/age-plugin-yubikey-v0.5.0-x86_64-windows.zip"
-url_api = "https://api.github.com/repos/str4d/age-plugin-yubikey/releases/assets/183756347"
-
 [[tools."aqua:tailscale/tailscale"]]
 version = "1.96.4"
 backend = "aqua:tailscale/tailscale"
@@ -246,6 +226,10 @@ checksum = "sha256:b765daec9fda475b031b5a5159798cbe4294a3f2a50683cbc0471226e376d
 url = "https://github.com/betterleaks/betterleaks/releases/download/v1.9.0/betterleaks_1.9.0_windows_x64.zip"
 url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/599108997"
 provenance = "cosign"
+
+[[tools."cargo:age-plugin-yubikey"]]
+version = "0.5.1"
+backend = "cargo:age-plugin-yubikey"
 
 [[tools.flux2]]
 version = "2.9.6"

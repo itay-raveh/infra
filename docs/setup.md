@@ -9,7 +9,7 @@ Use the existing keys and encrypted files. [Bootstrap](../bootstrap/README.md) i
 Install [mise](https://mise.jdx.dev/getting-started.html). On Debian or Ubuntu:
 
 ```bash
-sudo apt-get install -y pcscd libpcsclite-dev build-essential swig python3-dev wireguard-tools
+sudo apt-get install -y pcscd libpcsclite-dev build-essential cargo swig python3-dev wireguard-tools
 sudo systemctl enable --now pcscd.socket
 mise install
 prek install
