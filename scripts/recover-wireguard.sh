@@ -4,9 +4,11 @@ umask 077
 
 cd "$(dirname "$0")/.."
 
-set -a
-eval "$(sops decrypt --output-type dotenv tofu/secrets.sops.yaml)"
-set +a
+if [[ "${1:-}" != --decrypted ]]; then
+    exec bash scripts/sops-exec.sh secrets/state.sops.yaml secrets/wireguard.sops.yaml -- \
+        bash scripts/recover-wireguard.sh --decrypted "$@"
+fi
+shift
 
 : "${TF_VAR_wireguard_server_private_key:?missing TF_VAR_wireguard_server_private_key}"
 : "${TF_VAR_wireguard_workstation_public_key:?missing TF_VAR_wireguard_workstation_public_key}"

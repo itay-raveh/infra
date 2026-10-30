@@ -1,0 +1,9 @@
+---
+context: fixture
+contexts:
+  fixture:
+    endpoints: [192.0.2.1]
+    nodes: []
+    ca: ""
+    crt: ""
+    key: ""

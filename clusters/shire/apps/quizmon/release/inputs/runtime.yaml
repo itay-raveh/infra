@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: quizmon
+  name: quizmon-runtime
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+data:
+  values.yaml: |
+    runtimeConfig:
+      hyperdriveId: 1929d5d5eafe40819047418ffb4a5532
+    inputs:
+      migrationConnection:
+        name: quizmon-migration
+        key: migration-connection.json
+        revision: e66362bbff4991ebe4d1f55b25ae9232f80d67936912bd7368d05e4c8733dc89

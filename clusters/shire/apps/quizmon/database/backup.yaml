@@ -1,0 +1,43 @@
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: quizmon-backup
+  namespace: quizmon
+spec:
+  instanceSidecarConfiguration:
+    env:
+      - name: AWS_RETRY_MODE
+        value: standard
+      - name: AWS_MAX_ATTEMPTS
+        value: "10"
+    retentionPolicyIntervalSeconds: 86400
+  configuration:
+    destinationPath: s3://shire-backups/cnpg/quizmon/
+    endpointURL: https://fsn1.your-objectstorage.com
+    s3Credentials:
+      accessKeyId:
+        name: quizmon-backup
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: quizmon-backup
+        key: ACCESS_SECRET_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  retentionPolicy: 30d
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: quizmon-db-daily
+  namespace: quizmon
+spec:
+  schedule: "0 30 3 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: quizmon-db
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io

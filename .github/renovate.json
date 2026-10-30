@@ -11,14 +11,12 @@
   "commitMessagePrefix": "build(deps):",
   "flux": { "managerFilePatterns": ["/\\.yaml$/"] },
   "kubernetes": { "managerFilePatterns": ["/\\.yaml$/"] },
-  "customManagers": [
+  "packageRules": [
     {
-      "customType": "regex",
-      "managerFilePatterns": ["clusters/shire/infrastructure/controllers/barman-cloud-plugin/kustomization\\.yaml"],
-      "matchStrings": ["releases/download/v(?<currentValue>[0-9.]+)/manifest\\.yaml"],
-      "depNameTemplate": "cloudnative-pg/plugin-barman-cloud",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v(?<version>.*)$"
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["required_version"],
+      "overridePackageName": "opentofu/opentofu",
+      "overrideDepName": "opentofu/opentofu"
     }
   ]
 }

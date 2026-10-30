@@ -1,40 +1,40 @@
 terraform {
-  required_version = "1.16.1"
+  required_version = "1.13.2"
 
   required_providers {
     hcloud = {
       source  = "hetznercloud/hcloud"
-      version = "1.68.0"
+      version = "1.70.0"
     }
 
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "5.24.0"
+      version = "5.28.1"
     }
 
     talos = {
       source  = "siderolabs/talos"
-      version = "0.11.0"
+      version = "0.12.0"
     }
 
     imager = {
       source  = "hcloud-talos/imager"
-      version = "1.0.20"
+      version = "1.0.25"
     }
 
     random = {
       source  = "hashicorp/random"
-      version = "3.9.0"
+      version = "3.9.1"
     }
 
     minio = {
       source  = "aminueza/minio"
-      version = "3.41.1"
+      version = "3.45.0"
     }
 
     aws = {
       source  = "hashicorp/aws"
-      version = "6.63.0"
+      version = "6.69.1"
     }
 
     tailscale = {
@@ -44,7 +44,7 @@ terraform {
 
     sentry = {
       source  = "jianyuan/sentry"
-      version = "0.15.7"
+      version = "0.15.8"
     }
   }
 }

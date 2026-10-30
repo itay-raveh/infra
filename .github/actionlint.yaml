@@ -1,0 +1,6 @@
+---
+paths:
+  .github/workflows/ci.yaml:
+    ignore:
+      # Remove when https://github.com/rhysd/actionlint/issues/711 is released.
+      - '^reusable workflow call "\$/\.github/workflows/recovery-test\.yaml" at "uses" is not following the format '

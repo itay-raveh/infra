@@ -2,10 +2,15 @@
 useDefault = true
 
 [[allowlists]]
-description = "SOPS ciphertext + vendored upstream manifests"
-paths = [
-  '''\.sops\.(yaml|json|txt)$''',
-  # cnpg plugin-barman-cloud release manifest ships a kind:Secret holding
-  # only a base64 public image ref. Re-verify on each plugin version bump.
-  '''^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$''',
-]
+description = "Complete SOPS ciphertext values"
+targetRules = ["generic-password"]
+regexTarget = "line"
+regexes = ['''^\s*["']?[^:"'\r\n]+["']?:\s*["']?ENC\[AES256_GCM,data:[A-Za-z0-9+/=]*,iv:[A-Za-z0-9+/=]+,tag:[A-Za-z0-9+/=]+,type:[a-z]+\]["']?,?\s*$''']
+
+[[allowlists]]
+description = "Vendored public Barman sidecar image"
+targetRules = ["kubernetes-secret-yaml"]
+condition = "AND"
+paths = ['''^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$''']
+regexTarget = "match"
+regexes = ['''SIDECAR_IMAGE:\s*\|\s*Z2hjci5pby9jbG91ZG5hdGl2ZS1wZy9wbHVnaW4tYmFybWFuLWNsb3VkLXNpZGVjYXI6dj\s*[A-Za-z0-9+/=\s]+''']

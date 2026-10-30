@@ -14,7 +14,7 @@ pass_filenames = false
 id = "sops-sanity"
 name = "sops-sanity"
 language = "system"
-entry = "scripts/sops-sanity.sh"
+entry = "python3 scripts/sops-sanity.py --staged"
 pass_filenames = false
 always_run = true
 
@@ -22,7 +22,7 @@ always_run = true
 id = "yamllint"
 name = "yamllint"
 language = "system"
-entry = "bash scripts/lint-yaml.sh"
+entry = "yamllint"
 types = ["yaml"]
 exclude = '\.sops\.(yaml|yml)$|^clusters/shire/infrastructure/controllers/barman-cloud-plugin/manifest\.yaml$'
 

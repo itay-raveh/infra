@@ -1,0 +1,42 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: quizmon-letsencrypt
+  namespace: quizmon
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: quizmon-acme-account
+    solvers:
+      - selector:
+          dnsNames:
+            - quizmon-db.raveh.dev
+        dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: quizmon-dns
+              key: token
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: quizmon-db
+  namespace: quizmon
+spec:
+  secretName: quizmon-db-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: "true"
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+  usages:
+    - server auth
+  dnsNames:
+    - quizmon-db.raveh.dev
+  issuerRef:
+    name: quizmon-letsencrypt
+    kind: Issuer

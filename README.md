@@ -1,12 +1,11 @@
 # `raveh.dev` infrastructure
 
 [![CI](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml/badge.svg)](https://github.com/itay-raveh/infra/actions/workflows/ci.yaml)
-[![License](https://img.shields.io/github/license/itay-raveh/infra)](https://github.com/itay-raveh/infra/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/itay-raveh/infra)](LICENSE)
 
-Built to be as stateless and immutable as possible.
-Everything is IaC, data is backed up in S3, so all other infrastructure is essentially ephemeral (namely the VPS).
+IaC for Cloudflare and `shire`, a single-node Talos Kubernetes cluster on Hetzner.
 
-## Architecture
+[Setup](docs/setup.md) · [Deploying](docs/deploying.md) · [Secrets](docs/secrets.md) · [Cloudflare](docs/cloudflare.md) · [Troubleshooting](docs/troubleshooting.md) · [Recovery](docs/disaster-recovery.md)
 
 ```mermaid
 flowchart
@@ -54,19 +53,3 @@ flowchart
     Barman -.-> S3[("S3 (Hetnzer)")]
     Restic -.-> S3
 ```
-
-## Stack
-
-|   |   |
-|---|---|
-| [Talos Linux](https://talos.dev) | Immutable Kubernetes OS |
-| [Flux CD](https://fluxcd.io) | GitOps reconciliation |
-| [OpenTofu](https://opentofu.org) | Infrastructure provisioning |
-| [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/) | Static hosting for `itay.raveh.dev` and `quizmon.raveh.dev` |
-| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Public ingress without exposing an origin HTTP port |
-| [Traefik](https://traefik.io) | Reverse proxy |
-| [Tailscale](https://tailscale.com) | Private ingress |
-| [Headlamp](https://headlamp.dev) | Flux-aware admin dashboard (Tailnet-only) |
-| [CNPG](https://cloudnative-pg.io) | PostgreSQL |
-| [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/) | Backups, [Wanderbound](https://github.com/itay-raveh/wanderbound) user uploads (presigned S3 PUTs avoid uploading through the Cloudflare tunnel) |
-| [SOPS](https://github.com/getsops/sops) | Secret encryption |

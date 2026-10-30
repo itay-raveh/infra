@@ -1,0 +1,34 @@
+---
+shared:
+  - '.github/workflows/**'
+  - '.github/actions/**'
+  - '.github/ci-paths.yaml'
+  - '.github/actionlint.yaml'
+  - 'mise.toml'
+  - 'mise.lock'
+  - '.mise/**'
+  - 'prek.toml'
+shell:
+  - 'bootstrap/**'
+  - 'scripts/**'
+  - 'clusters/shire/apps/**/*.sh'
+  - 'clusters/shire/apps/**/*.jq'
+  - 'tests/**'
+  - '.github/rulesets/**'
+  - 'tofu/variables.tf'
+  - 'clusters/shire/infrastructure/controllers/talos-backup.yaml'
+tofu:
+  - 'tofu/**'
+  - 'workers/**'
+  - 'scripts/check-tofu.sh'
+  - 'clusters/shire/apps/**/*.yaml'
+manifests:
+  - 'clusters/**'
+  - 'tofu/locals.tf'
+  - 'scripts/check-manifests.sh'
+  - 'scripts/diff-manifests.sh'
+recovery:
+  - 'tests/integration/**'
+  - 'clusters/shire/infrastructure/controllers/cert-manager.yaml'
+  - 'clusters/shire/infrastructure/controllers/cnpg.yaml'
+  - 'clusters/shire/infrastructure/controllers/barman-cloud-plugin/**'
