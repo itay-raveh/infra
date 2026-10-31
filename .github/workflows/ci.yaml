@@ -48,7 +48,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
         with:
           install_args: actionlint betterleaks github:zizmorcore/zizmor pipx:yamllint prek shellcheck lychee yq
       - run: mise run --skip-tools check:lint
@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
         with:
           install_args: age bats betterleaks jq kubectl sops talosctl yq
       - run: mise run --skip-tools test
@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
         with:
           install_args: opentofu
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
@@ -97,7 +97,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5
         with:
           install_args: kubectl flux2 github:home-operations/flate github:fluxcd/flux-schema
       - run: mise run --skip-tools check:manifests
