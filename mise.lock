@@ -338,49 +338,49 @@ url_api = "https://api.github.com/repos/cli/cli/releases/assets/679195750"
 provenance = "github-attestations"
 
 [[tools."github:fluxcd/flux-schema"]]
-version = "0.16.0"
+version = "0.17.0"
 backend = "github:fluxcd/flux-schema"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-arm64"]
-checksum = "sha256:4908d7ae299e6ec1911e02fd016aac256fa8ad96d1ea4ff4b8fc83c4cb812b5a"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.16.0/flux-schema_0.16.0_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/640404031"
+checksum = "sha256:305a717fc4bcdff3e117aa269e7d6f8224db98c399b5db7ac1cd7da02960db2f"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.17.0/flux-schema_0.17.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/669586365"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-arm64-musl"]
-checksum = "sha256:4908d7ae299e6ec1911e02fd016aac256fa8ad96d1ea4ff4b8fc83c4cb812b5a"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.16.0/flux-schema_0.16.0_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/640404031"
+checksum = "sha256:305a717fc4bcdff3e117aa269e7d6f8224db98c399b5db7ac1cd7da02960db2f"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.17.0/flux-schema_0.17.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/669586365"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-x64"]
-checksum = "sha256:f92a9aed079aa81173abd2cae8ab74444d247cdf2d095b2eb05e3acbb77fd0ff"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.16.0/flux-schema_0.16.0_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/640404026"
+checksum = "sha256:d9a429f6c1c5fe687a1eee25a0c130e4d7abbc560d497a4ee9054ef4dff621ee"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.17.0/flux-schema_0.17.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/669586366"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.linux-x64-musl"]
-checksum = "sha256:f92a9aed079aa81173abd2cae8ab74444d247cdf2d095b2eb05e3acbb77fd0ff"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.16.0/flux-schema_0.16.0_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/640404026"
+checksum = "sha256:d9a429f6c1c5fe687a1eee25a0c130e4d7abbc560d497a4ee9054ef4dff621ee"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.17.0/flux-schema_0.17.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/669586366"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.macos-arm64"]
-checksum = "sha256:0a05761fe5c0d056ef753b53e5229da942912a3f762bf15bb3288493a3126dcf"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.16.0/flux-schema_0.16.0_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/640404028"
+checksum = "sha256:f98afcba4ef7a135d967c1e724645bdd4fc49aa579ebe85149aa9daab79c9098"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.17.0/flux-schema_0.17.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/669586364"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.macos-x64"]
-checksum = "sha256:80299241f1f6bcbab62c240b086cdb1904ba11e65ef9f7092a5bbe22fd8ccacd"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.16.0/flux-schema_0.16.0_darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/640404030"
+checksum = "sha256:991099f2ebdfca60a5d9d4a64578d0259dfcda2ac388fb0a698ee31950f04e81"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.17.0/flux-schema_0.17.0_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/669586369"
 provenance = "github-attestations"
 
 [tools."github:fluxcd/flux-schema"."platforms.windows-x64"]
-checksum = "sha256:7a2d498dff25414ed185ab277e937bd04adfeb849290e3992e78581fee80ca55"
-url = "https://github.com/fluxcd/flux-schema/releases/download/v0.16.0/flux-schema_0.16.0_windows_amd64.zip"
-url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/640404113"
+checksum = "sha256:c9a91b50f2d26ca5458fc6778b3f207cca50f5f32571ed85c5288a04d83e7a33"
+url = "https://github.com/fluxcd/flux-schema/releases/download/v0.17.0/flux-schema_0.17.0_windows_amd64.zip"
+url_api = "https://api.github.com/repos/fluxcd/flux-schema/releases/assets/669586408"
 provenance = "github-attestations"
 
 [[tools."github:home-operations/flate"]]
