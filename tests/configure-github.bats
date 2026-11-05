@@ -32,11 +32,19 @@ SH
     refute_file_contains "$CALLS" 'rulesets/4'
     refute_file_contains "$CALLS" DELETE
     assert_file_contains "$CALLS" '-f name=flux-image-automation -f type=branch'
+    assert_file_contains "$CALLS" '-f name=main -f type=branch'
     assert_file_contains "$CALLS" '"custom_branch_policies":true'
 }
 
 @test "GitHub configuration does not duplicate an existing environment branch rule" {
     run env POLICIES='[{"id":5,"name":"flux-image-automation","type":"branch"}]' bash scripts/configure-github.sh
+    [ "$status" -eq 0 ]
+    refute_file_contains "$CALLS" '-f name=flux-image-automation'
+    assert_file_contains "$CALLS" '-f name=main -f type=branch'
+}
+
+@test "GitHub configuration leaves both existing environment branch rules alone" {
+    run env POLICIES='[{"id":5,"name":"flux-image-automation","type":"branch"},{"id":6,"name":"main","type":"branch"}]' bash scripts/configure-github.sh
     [ "$status" -eq 0 ]
     refute_file_contains "$CALLS" '--method POST'
 }
