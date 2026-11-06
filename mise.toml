@@ -17,7 +17,7 @@ betterleaks = "v1.9.0"
 flux2 = { version = "2.9.6", slsa_signer_identity = "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v2.1.0", slsa_signer_issuer = "https://token.actions.githubusercontent.com" }
 gh = "2.103.3"
 "github:zizmorcore/zizmor" = "v1.31.1"
-hcloud = "1.70.1"
+hcloud = "1.70.2"
 helm = "4.3.1"
 jq = "1.8.2"
 k9s = "0.51.0"
