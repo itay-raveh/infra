@@ -7,7 +7,7 @@ spec:
   interval: 5m
   url: oci://ghcr.io/itay-raveh/charts/quizmon
   ref:
-    semver: ">=0.0.0"
+    semver: ">=0.1090.1"
     semverFilter: '^[0-9]+\.[0-9]+\.[0-9]+$'
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
