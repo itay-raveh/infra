@@ -18,7 +18,7 @@ flux2 = { version = "2.9.6", slsa_signer_identity = "https://github.com/slsa-fra
 gh = "2.103.3"
 "github:zizmorcore/zizmor" = "v1.31.1"
 hcloud = "1.70.1"
-helm = "4.3.1"
+helm = "4.3.2"
 jq = "1.8.2"
 k9s = "0.51.0"
 kubectl = "1.37.2"
