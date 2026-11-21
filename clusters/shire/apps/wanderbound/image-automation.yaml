@@ -21,7 +21,6 @@ spec:
   policy:
     semver:
       range: '>=0.0.0'
-  digestReflectionPolicy: IfNotPresent
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
@@ -34,9 +33,6 @@ spec:
     kind: GitRepository
     name: flux-system
   git:
-    checkout:
-      ref:
-        branch: main
     commit:
       author:
         email: flux@raveh.dev
@@ -46,4 +42,3 @@ spec:
       branch: flux-image-automation
   update:
     path: ./clusters/shire/apps/wanderbound
-    strategy: Setters
