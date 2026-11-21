@@ -1,5 +1,5 @@
 terraform {
-  required_version = "1.13.1"
+  required_version = "1.13.2"
 
   required_providers {
     hcloud = {
@@ -9,7 +9,7 @@ terraform {
 
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "5.28.0"
+      version = "5.28.1"
     }
 
     talos = {
@@ -29,12 +29,12 @@ terraform {
 
     minio = {
       source  = "aminueza/minio"
-      version = "3.43.0"
+      version = "3.45.0"
     }
 
     aws = {
       source  = "hashicorp/aws"
-      version = "6.66.0"
+      version = "6.69.1"
     }
 
     tailscale = {

@@ -62,7 +62,7 @@ spec:
           db: quizmon_app
   backup:
     enabled: true
-    image: percona/percona-backup-mongodb:2.16.0
+    image: percona/percona-backup-mongodb:2.17.0
     podSecurityContext:
       runAsNonRoot: true
       runAsUser: 1001
