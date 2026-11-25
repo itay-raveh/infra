@@ -4,7 +4,7 @@ terraform {
   required_providers {
     hcloud = {
       source  = "hetznercloud/hcloud"
-      version = "1.70.0"
+      version = "1.70.2"
     }
 
     cloudflare = {
@@ -29,7 +29,7 @@ terraform {
 
     minio = {
       source  = "aminueza/minio"
-      version = "3.45.0"
+      version = "3.46.4"
     }
 
     aws = {
