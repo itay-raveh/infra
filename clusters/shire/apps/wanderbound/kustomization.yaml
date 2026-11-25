@@ -14,4 +14,3 @@ resources:
   - rate-limit.yaml
   - ingressroute.yaml
   - data-backup.yaml
-  - image-automation.yaml

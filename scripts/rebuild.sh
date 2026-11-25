@@ -31,8 +31,7 @@ sops --decrypt bootstrap/cluster-age-key.sops.txt \
       --dry-run=client -o yaml | kubectl apply -f -
 
 echo "==> 6/6: installing Flux and wiring to git via GitHub App"
-flux install \
-  --components-extra=image-reflector-controller,image-automation-controller
+flux install
 sops --decrypt clusters/shire/flux-system/flux-github-app.sops.yaml \
   | kubectl apply -f -
 kubectl apply -k clusters/shire/flux-system

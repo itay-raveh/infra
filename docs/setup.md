@@ -86,5 +86,5 @@ kubectl get nodes
 | Hetzner project and existing state bucket | [providers.tf](../tofu/providers.tf), [backend.tf](../tofu/backend.tf) |
 | Cloudflare account, zone and tokens | [Cloudflare](cloudflare.md) |
 | Tailscale tailnet and OAuth client | [tailscale.tf](../tofu/tailscale.tf) |
-| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml`; Actions environment `flux-image-automation`: `FLUX_APP_ID` and `FLUX_APP_PRIVATE_KEY` |
+| Flux GitHub App | `clusters/shire/flux-system/flux-github-app.sops.yaml` |
 | Hardware, Flux and etcd keys | [Bootstrap](../bootstrap/README.md), [Secrets](secrets.md) |

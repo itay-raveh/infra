@@ -11,7 +11,7 @@ talos_version=$(sed -n 's/.*talos_version *= "\([^"]*\)"/\1/p' tofu/locals.tf)
 flate build all --concurrency 1 --path clusters/shire --kube-version "$kubernetes_version" \
   --skip-secrets=false --skip-crds=false --no-progress -o yaml > "$validation_dir/rendered.yaml"
 kubectl kustomize clusters/shire > "$validation_dir/root.yaml"
-flux install --export --components-extra=image-reflector-controller,image-automation-controller > "$validation_dir/flux.yaml"
+flux install --export > "$validation_dir/flux.yaml"
 # Talos installs this CRD itself, outside the Flux resource graph.
 curl --fail --silent --show-error --retry 3 --max-time 60 \
   "https://raw.githubusercontent.com/siderolabs/talos/$talos_version/internal/app/machined/pkg/controllers/k8s/internal/k8stemplates/testdata/talos-service-account-crd.yaml" \

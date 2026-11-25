@@ -26,7 +26,6 @@ for command in gh git age-plugin-yubikey age-keygen ssh-keygen sops jq openssl w
     command -v "$command" >/dev/null || { echo "error: missing command: $command" >&2; exit 1; }
 done
 gh auth status >/dev/null
-repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 
 read_required() {
     local variable=$1 prompt=$2
@@ -195,8 +194,6 @@ bash scripts/encrypt-sops.sh "$flux_secret" json -- jq -n '{
     }
 }'
 bash scripts/configure-github.sh
-printf '%s' "$FLUX_APP_ID" | gh secret set FLUX_APP_ID --repo "$repo" --env flux-image-automation
-printf '%s\n' "$FLUX_APP_PRIVATE_KEY" | gh secret set FLUX_APP_PRIVATE_KEY --repo "$repo" --env flux-image-automation
 
 unset STATE_PASSPHRASE HCLOUD_TOKEN S3_AK S3_SK CF_TOKEN CF_ACCOUNT_TOKEN
 unset CF_PRIMARY_EMAIL CF_GMAIL_EMAIL CF_PROTON_EMAIL TS_OAUTH_ID TS_OAUTH_SECRET
