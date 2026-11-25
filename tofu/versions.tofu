@@ -34,12 +34,12 @@ terraform {
 
     aws = {
       source  = "hashicorp/aws"
-      version = "6.69.1"
+      version = "6.73.0"
     }
 
     tailscale = {
       source  = "tailscale/tailscale"
-      version = "0.29.2"
+      version = "0.30.0"
     }
 
     sentry = {
